@@ -10,6 +10,7 @@ import { TrackType } from "../types/manifest";
 import { assertNotVoid, assertNumber } from "../utils/assert";
 import { filterMap, findMap } from "../utils/functional";
 import { resolveUrls } from "../utils/url";
+import { parseSegmentData } from "./dash_presentation";
 import type { AdaptationSet, MPD, Period, Representation } from "./types";
 
 const DASH_ARRAY_NODES = [
@@ -122,6 +123,14 @@ function parseRepresentation(
   const codecs = codecsStr?.split(",").map((c) => c.trim());
   assertNotVoid(codecs, "codecs is mandatory");
 
+  const { initUrl, segments } = parseSegmentData(
+    mpd,
+    period,
+    adaptationSet,
+    representation,
+    baseUrl,
+  );
+
   if (mimeType.startsWith("video/")) {
     const width = Number(findMap([representation, adaptationSet], "@_width"));
     assertNumber(width, "width is mandatory");
@@ -135,8 +144,8 @@ function parseRepresentation(
       codecs,
       width,
       height,
-      initUrl: "",
-      segments: [],
+      initUrl,
+      segments,
     };
   }
 
@@ -145,8 +154,8 @@ function parseRepresentation(
       type: TrackType.AUDIO,
       mimeType,
       codecs,
-      initUrl: "",
-      segments: [],
+      initUrl,
+      segments,
     };
   }
 
