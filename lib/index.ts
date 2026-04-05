@@ -1,2 +1,2 @@
 export { Player } from "./player";
-export * from "./types";
+export * from "./types/manifest";

@@ -5,10 +5,10 @@ import type {
   SelectionSet,
   SwitchingSet,
   Track,
-} from "../types";
-import { TrackType } from "../types";
+} from "../types/manifest";
+import { TrackType } from "../types/manifest";
 import { assertNotVoid, assertNumber } from "../utils/assert";
-import { filterMap } from "../utils/functional";
+import { filterMap, findMap } from "../utils/functional";
 import { resolveUrls } from "../utils/url";
 import type { AdaptationSet, MPD, Period, Representation } from "./types";
 
@@ -108,20 +108,18 @@ function parseRepresentation(
   const baseUrl = resolveUrls([options.sourceUrl, ...baseUrls]);
 
   // Common properties
-  const mimeType = representation["@_mimeType"] ?? adaptationSet["@_mimeType"];
+  const mimeType = findMap([representation, adaptationSet], "@_mimeType");
   assertNotVoid(mimeType, "mimeType is mandatory");
 
-  const codecsStr = representation["@_codecs"] ?? adaptationSet["@_codecs"];
+  const codecsStr = findMap([representation, adaptationSet], "@_codecs");
   const codecs = codecsStr?.split(",").map((c) => c.trim());
   assertNotVoid(codecs, "codecs is mandatory");
 
   if (mimeType.startsWith("video/")) {
-    const width = Number(representation["@_width"] ?? adaptationSet["@_width"]);
+    const width = Number(findMap([representation, adaptationSet], "@_width"));
     assertNumber(width, "width is mandatory");
 
-    const height = Number(
-      representation["@_height"] ?? adaptationSet["@_height"],
-    );
+    const height = Number(findMap([representation, adaptationSet], "@_height"));
     assertNumber(height, "height is mandatory");
 
     return {
