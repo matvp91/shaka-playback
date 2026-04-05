@@ -3,5 +3,5 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-	root: dirname(fileURLToPath(import.meta.url)),
+  root: dirname(fileURLToPath(import.meta.url)),
 });
