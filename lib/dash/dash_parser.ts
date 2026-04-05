@@ -6,6 +6,8 @@ import type {
   SwitchingSet,
   Track,
 } from "../types";
+import { TrackType } from "../types";
+import { assertNotVoid } from "../utils/assert";
 import { filterMap } from "../utils/functional";
 import { resolveUrls } from "../utils/url";
 import type { AdaptationSet, MPD, Period, Representation } from "./types";
@@ -104,9 +106,38 @@ function parseRepresentation(
     (node) => node.BaseURL?.["#text"],
   );
   const baseUrl = resolveUrls([options.sourceUrl, ...baseUrls]);
-  console.log(baseUrl);
 
-  return {} as unknown as Track;
+  // Common properties
+  const mimeType = representation["@_mimeType"] ?? adaptationSet["@_mimeType"];
+  assertNotVoid(mimeType, "mimeType is mandatory");
+
+  const codecsStr = representation["@_codecs"] ?? adaptationSet["@_codecs"];
+  const codecs = codecsStr?.split(",").map((c) => c.trim());
+  assertNotVoid(codecs, "codecs is mandatory");
+
+  if (mimeType.startsWith("video/")) {
+    return {
+      type: TrackType.VIDEO,
+      mimeType,
+      codecs,
+      width: 0,
+      height: 0,
+      initUrl: "",
+      segments: [],
+    };
+  }
+
+  if (mimeType.startsWith("audio/")) {
+    return {
+      type: TrackType.AUDIO,
+      mimeType,
+      codecs,
+      initUrl: "",
+      segments: [],
+    };
+  }
+
+  throw new Error("TODO: Map TEXT type");
 }
 
 function groupAdaptationSets(adaptationSets: AdaptationSet[]) {
