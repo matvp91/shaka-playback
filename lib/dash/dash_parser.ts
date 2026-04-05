@@ -74,10 +74,17 @@ function parseAdaptationSets(
   period: Period,
   adaptationSets: AdaptationSet[],
 ): SelectionSet {
+  const switchingSets = adaptationSets.map((adaptationSet) =>
+    parseAdaptationSet(options, mpd, period, adaptationSet),
+  );
+  // Store type of convenience, we don't have to dig down every
+  // time we need a track type.
+  const type = switchingSets[0]?.tracks[0]?.type;
+  assertNotVoid(type, "type is mandatory");
+
   return {
-    switchingSets: adaptationSets.map((adaptationSet) =>
-      parseAdaptationSet(options, mpd, period, adaptationSet),
-    ),
+    type,
+    switchingSets,
   };
 }
 

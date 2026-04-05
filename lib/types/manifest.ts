@@ -7,6 +7,7 @@ export type Presentation = {
 };
 
 export type SelectionSet = {
+  type: TrackType;
   switchingSets: SwitchingSet[];
 };
 
