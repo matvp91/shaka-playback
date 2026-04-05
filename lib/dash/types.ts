@@ -13,6 +13,8 @@ export type AdaptationSet = {
   "@_contentType"?: string;
   "@_mimeType"?: string;
   "@_codecs"?: string;
+  "@_width"?: string;
+  "@_height"?: string;
   BaseURL?: TextNode;
   Representation: Representation[];
 };
@@ -20,6 +22,8 @@ export type AdaptationSet = {
 export type Representation = {
   "@_mimeType"?: string;
   "@_codecs"?: string;
+  "@_width"?: string;
+  "@_height"?: string;
   BaseURL?: TextNode;
 };
 

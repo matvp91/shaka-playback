@@ -7,7 +7,7 @@ import type {
   Track,
 } from "../types";
 import { TrackType } from "../types";
-import { assertNotVoid } from "../utils/assert";
+import { assertNotVoid, assertNumber } from "../utils/assert";
 import { filterMap } from "../utils/functional";
 import { resolveUrls } from "../utils/url";
 import type { AdaptationSet, MPD, Period, Representation } from "./types";
@@ -116,12 +116,20 @@ function parseRepresentation(
   assertNotVoid(codecs, "codecs is mandatory");
 
   if (mimeType.startsWith("video/")) {
+    const width = Number(representation["@_width"] ?? adaptationSet["@_width"]);
+    assertNumber(width, "width is mandatory");
+
+    const height = Number(
+      representation["@_height"] ?? adaptationSet["@_height"],
+    );
+    assertNumber(height, "height is mandatory");
+
     return {
       type: TrackType.VIDEO,
       mimeType,
       codecs,
-      width: 0,
-      height: 0,
+      width,
+      height,
       initUrl: "",
       segments: [],
     };
