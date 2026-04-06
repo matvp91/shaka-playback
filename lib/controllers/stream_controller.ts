@@ -12,7 +12,6 @@ import type {
   Track,
   TrackType,
 } from "../types/manifest";
-import { EventManager } from "../utils/event_manager";
 import { Timer } from "../utils/timer";
 
 type MediaState = {
@@ -24,39 +23,25 @@ type MediaState = {
 };
 
 export class StreamController {
-  private eventManager_ = new EventManager();
   private manifest_: Manifest | null = null;
   private mediaAttached_ = false;
   private mediaStates_ = new Map<TrackType, MediaState>();
 
   constructor(private player_: Player) {
-    this.eventManager_.listen(
-      player_,
-      Events.MANIFEST_PARSED,
-      this.onManifestParsed_,
-    );
-    this.eventManager_.listen(
-      player_,
-      Events.MEDIA_ATTACHED,
-      this.onMediaAttached_,
-    );
-    this.eventManager_.listen(
-      player_,
-      Events.BUFFER_CREATED,
-      this.onBufferCreated_,
-    );
-    this.eventManager_.listen(
-      player_,
-      Events.BUFFER_APPENDED,
-      this.onBufferAppended_,
-    );
+    this.player_.on(Events.MANIFEST_PARSED, this.onManifestParsed_);
+    this.player_.on(Events.MEDIA_ATTACHED, this.onMediaAttached_);
+    this.player_.on(Events.BUFFER_CREATED, this.onBufferCreated_);
+    this.player_.on(Events.BUFFER_APPENDED, this.onBufferAppended_);
   }
 
   destroy() {
     for (const mediaState of this.mediaStates_.values()) {
       mediaState.timer.destroy();
     }
-    this.eventManager_.release();
+    this.player_.off(Events.MANIFEST_PARSED, this.onManifestParsed_);
+    this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
+    this.player_.off(Events.BUFFER_CREATED, this.onBufferCreated_);
+    this.player_.off(Events.BUFFER_APPENDED, this.onBufferAppended_);
     this.manifest_ = null;
     this.mediaStates_.clear();
   }

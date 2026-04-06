@@ -6,7 +6,6 @@ import type {
 import { Events } from "../events";
 import type { Player } from "../player";
 import type { TrackType } from "../types/manifest";
-import { EventManager } from "../utils/event_manager";
 
 type QueueItem = {
   type: TrackType;
@@ -14,32 +13,21 @@ type QueueItem = {
 };
 
 export class BufferController {
-  private eventManager_ = new EventManager();
   private sourceBuffers_ = new Map<TrackType, SourceBuffer>();
   private queue_: QueueItem[] = [];
   private appending_ = false;
   private mediaSource_: MediaSource | null = null;
 
   constructor(private player_: Player) {
-    this.eventManager_.listen(
-      player_,
-      Events.MEDIA_ATTACHED,
-      this.onMediaAttached_,
-    );
-    this.eventManager_.listen(
-      player_,
-      Events.TRACKS_SELECTED,
-      this.onTracksSelected_,
-    );
-    this.eventManager_.listen(
-      player_,
-      Events.SEGMENT_LOADED,
-      this.onSegmentLoaded_,
-    );
+    this.player_.on(Events.MEDIA_ATTACHED, this.onMediaAttached_);
+    this.player_.on(Events.TRACKS_SELECTED, this.onTracksSelected_);
+    this.player_.on(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
   }
 
   destroy() {
-    this.eventManager_.release();
+    this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
+    this.player_.off(Events.TRACKS_SELECTED, this.onTracksSelected_);
+    this.player_.off(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
     this.sourceBuffers_.clear();
     this.queue_ = [];
     this.mediaSource_ = null;
@@ -96,8 +84,7 @@ export class BufferController {
 
     this.appending_ = true;
 
-    this.eventManager_.listen(
-      sb,
+    sb.addEventListener(
       "updateend",
       () => {
         this.appending_ = false;
