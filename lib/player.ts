@@ -20,7 +20,8 @@ export class Player extends EventEmitter<EventMap> {
   }
 
   setConfig(config: Partial<PlayerConfig>) {
-    this.config_ = { ...this.config_, ...config };
+    const oldConfig = this.config_;
+    this.config_ = { ...oldConfig, ...config };
   }
 
   getConfig() {
