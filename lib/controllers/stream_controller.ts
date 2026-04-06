@@ -151,18 +151,18 @@ export class StreamController {
   }
 
   /**
-   * Find the next segment to load based on what's
-   * already buffered for this stream.
+   * Find the next segment to load. Uses lastSegment
+   * to avoid float precision issues with buffer times.
    */
   private getNextSegment_(mediaState: MediaState): Segment | null {
-    const bufferedEnd = this.player_.getBufferedEnd(mediaState.track.type);
+    const { segments } = mediaState.track;
 
-    for (const segment of mediaState.track.segments) {
-      if (segment.end > bufferedEnd) {
-        return segment;
-      }
+    if (!mediaState.lastSegment) {
+      return segments[0] ?? null;
     }
-    return null;
+
+    const lastIndex = segments.indexOf(mediaState.lastSegment);
+    return segments[lastIndex + 1] ?? null;
   }
 
   private checkEndOfStream_() {
