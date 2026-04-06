@@ -1,18 +1,27 @@
 import { EventEmitter } from "@matvp91/eventemitter3";
 import type { PlayerConfig } from "./config";
 import { defaultConfig } from "./config";
-import { fetchManifest } from "./dash/dash_parser";
+import { ManifestController } from "./controllers/manifest_controller";
 import type { EventMap } from "./events";
 import { Events } from "./events";
 
 export class Player extends EventEmitter<EventMap> {
-  private config_ = defaultConfig;
-
+  private config_: PlayerConfig;
   private media_: HTMLMediaElement | null = null;
+  private manifestController_: ManifestController;
 
-  async load(url: string) {
-    const manifest = await fetchManifest(url);
-    console.log(manifest);
+  constructor() {
+    super();
+    this.config_ = defaultConfig;
+    this.manifestController_ = new ManifestController(this);
+  }
+
+  destroy() {
+    this.manifestController_.destroy();
+  }
+
+  load(url: string) {
+    this.emit(Events.MANIFEST_LOADING, { url });
   }
 
   getMedia() {
@@ -20,8 +29,7 @@ export class Player extends EventEmitter<EventMap> {
   }
 
   setConfig(config: Partial<PlayerConfig>) {
-    const oldConfig = this.config_;
-    this.config_ = { ...oldConfig, ...config };
+    this.config_ = { ...this.config_, ...config };
   }
 
   getConfig() {
