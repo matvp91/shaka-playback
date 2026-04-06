@@ -17,12 +17,14 @@ export class BufferController {
     this.player_.on(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.on(Events.TRACKS_SELECTED, this.onTracksSelected_);
     this.player_.on(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
+    this.player_.on(Events.BUFFER_EOS, this.onBufferEos_);
   }
 
   destroy() {
     this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.off(Events.TRACKS_SELECTED, this.onTracksSelected_);
     this.player_.off(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
+    this.player_.off(Events.BUFFER_EOS, this.onBufferEos_);
     this.opQueue_.destroy();
     this.sourceBuffers_.clear();
     this.mediaSource_ = null;
@@ -71,5 +73,15 @@ export class BufferController {
         this.player_.emit(Events.BUFFER_APPENDED, { type });
       },
     });
+  };
+
+  private onBufferEos_ = async () => {
+    const blockers = [...this.sourceBuffers_.keys()].map((type) =>
+      this.opQueue_.block(type),
+    );
+    await Promise.all(blockers);
+    if (this.mediaSource_?.readyState === "open") {
+      this.mediaSource_.endOfStream();
+    }
   };
 }
