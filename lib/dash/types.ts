@@ -1,9 +1,11 @@
 export type MPD = {
+  "@_mediaPresentationDuration"?: string;
   BaseURL?: TextNode;
   Period: Period[];
 };
 
 export type Period = {
+  "@_start"?: string;
   BaseURL?: TextNode;
   SegmentTemplate?: SegmentTemplate;
   AdaptationSet: AdaptationSet[];

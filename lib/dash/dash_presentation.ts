@@ -11,25 +11,13 @@ import type {
   SegmentTimeline,
 } from "./types";
 
-type SegmentData = {
-  initUrl: string;
-  segments: Segment[];
-  startNumber: number;
-  startTime: number;
-};
-
-type SegmentInfo = {
-  time: number;
-  duration: number;
-};
-
 export function parseSegmentData(
   _mpd: MPD,
   period: Period,
   adaptationSet: AdaptationSet,
   representation: Representation,
   baseUrl: string,
-): SegmentData {
+) {
   const st = resolveSegmentTemplate(
     period.SegmentTemplate,
     adaptationSet.SegmentTemplate,
@@ -45,26 +33,22 @@ export function parseSegmentData(
   const media = st["@_media"];
   assertNotVoid(media, "media is mandatory");
 
-  const initUrl = resolveUrl(
-    applyUrlTemplate(initialization, representation),
-    baseUrl,
-  );
-
   const timescale = Number(st["@_timescale"]);
   assertNumber(timescale, "timescale is mandatory");
 
   const presentationTimeOffset = Number(st["@_presentationTimeOffset"] ?? 0);
+  const timeOffset = presentationTimeOffset / timescale;
 
-  const startNumber = Number(st["@_startNumber"]);
-  assertNumber(startNumber, "startNumber is mandatory");
+  const initSegmentUrl = resolveUrl(
+    applyUrlTemplate(initialization, {
+      RepresentationID: representation["@_id"],
+      Bandwidth: representation["@_bandwidth"],
+    }),
+    baseUrl,
+  );
 
-  const firstT = Number(timeline.S[0]?.["@_t"]);
-  assertNumber(firstT, "firstT is mandatory");
-  const startTime = (firstT - presentationTimeOffset) / timescale;
-
-  const infos = expandTimeline(timeline);
   const segments = mapTemplateTimeline(
-    infos,
+    timeline,
     media,
     st,
     representation,
@@ -72,15 +56,14 @@ export function parseSegmentData(
   );
 
   return {
-    initUrl,
+    initSegmentUrl,
     segments,
-    startNumber,
-    startTime,
+    timeOffset,
   };
 }
 
 function mapTemplateTimeline(
-  infos: SegmentInfo[],
+  timeline: SegmentTimeline,
   media: string,
   st: SegmentTemplate,
   representation: Representation,
@@ -88,22 +71,9 @@ function mapTemplateTimeline(
 ): Segment[] {
   const timescale = Number(st["@_timescale"] ?? 1);
   const startNumber = Number(st["@_startNumber"] ?? 1);
-
-  return infos.map<Segment>((info, i) => ({
-    url: resolveUrl(
-      applyUrlTemplate(media, representation, {
-        Number: startNumber,
-        Time: info.time,
-      }),
-      baseUrl,
-    ),
-    duration: info.duration / timescale,
-  }));
-}
-
-function expandTimeline(timeline: SegmentTimeline): SegmentInfo[] {
-  const infos: SegmentInfo[] = [];
+  const segments: Segment[] = [];
   let time = 0;
+  let number = startNumber;
 
   for (const s of timeline.S) {
     const d = Number(s["@_d"]);
@@ -114,47 +84,38 @@ function expandTimeline(timeline: SegmentTimeline): SegmentInfo[] {
     }
 
     for (let i = 0; i <= r; i++) {
-      infos.push({ time, duration: d });
+      const relativeUrl = applyUrlTemplate(media, {
+        RepresentationID: representation["@_id"],
+        Bandwidth: representation["@_bandwidth"],
+        Number: number,
+        Time: time,
+      });
+      const url = resolveUrl(relativeUrl, baseUrl);
+      segments.push({
+        url,
+        start: time / timescale,
+        end: (time + d) / timescale,
+      });
       time += d;
+      number++;
     }
   }
 
-  return infos;
+  return segments;
 }
 
 function applyUrlTemplate(
   template: string,
-  representation: Representation,
-  vars?: { Number?: number; Time?: number },
+  vars: Record<string, string | number | undefined>,
 ): string {
-  let result = template;
-  result = result.replace(
-    /\$RepresentationID\$/g,
-    representation["@_id"] ?? "",
-  );
-  result = result.replace(
-    /\$Bandwidth\$/g,
-    representation["@_bandwidth"] ?? "",
-  );
-  if (vars?.Number != null) {
-    result = result.replace(
-      /\$Number(%0(\d+)d)?\$/g,
-      (_, _fmt, width) =>
-        width
-          ? String(vars.Number).padStart(Number(width), "0")
-          : String(vars.Number),
-    );
-  }
-  if (vars?.Time != null) {
-    result = result.replace(
-      /\$Time(%0(\d+)d)?\$/g,
-      (_, _fmt, width) =>
-        width
-          ? String(vars.Time).padStart(Number(width), "0")
-          : String(vars.Time),
-    );
-  }
-  return result;
+  return template.replace(/\$(\w+)(?:%0(\d+)d)?\$/g, (match, key, width) => {
+    const value = vars[key];
+    if (value == null) {
+      return match;
+    }
+    const str = String(value);
+    return width ? str.padStart(Number(width), "0") : str;
+  });
 }
 
 function resolveSegmentTemplate(

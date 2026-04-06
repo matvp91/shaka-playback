@@ -3,6 +3,8 @@ export type Manifest = {
 };
 
 export type Presentation = {
+  start: number;
+  end: number;
   selectionSets: SelectionSet[];
 };
 
@@ -17,9 +19,11 @@ export type SwitchingSet = {
 
 export type Track = {
   mimeType: string;
-  initUrl: string;
+  codec: string;
+  initSegmentUrl: string;
   segments: Segment[];
-  codecs: string[];
+  timeOffset: number;
+  bandwidth: number;
 } & (
   | {
       type: TrackType.VIDEO;
@@ -39,5 +43,6 @@ export enum TrackType {
 
 export type Segment = {
   url: string;
-  duration: number;
+  start: number;
+  end: number;
 };

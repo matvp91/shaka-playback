@@ -9,6 +9,7 @@ import type {
 import { TrackType } from "../types/manifest";
 import { assertNotVoid, assertNumber } from "../utils/assert";
 import { filterMap, findMap } from "../utils/functional";
+import { parseDuration } from "../utils/time";
 import { resolveUrls } from "../utils/url";
 import { parseSegmentData } from "./dash_presentation";
 import type { AdaptationSet, MPD, Period, Representation } from "./types";
@@ -62,7 +63,16 @@ function parsePeriod(options: Options, mpd: MPD, period: Period): Presentation {
   const group = groupAdaptationSets(period.AdaptationSet);
   const adaptationSetSets = Array.from(group.values());
 
+  const index = mpd.Period.indexOf(period);
+  const nextPeriod = mpd.Period[index + 1];
+  const start = period["@_start"] ? parseDuration(period["@_start"]) : 0;
+  const duration =
+    nextPeriod?.["@_start"] ?? mpd["@_mediaPresentationDuration"];
+  const end = duration ? parseDuration(duration) : start;
+
   return {
+    start,
+    end,
     selectionSets: adaptationSetSets.map((adaptationSets) =>
       parseAdaptationSets(options, mpd, period, adaptationSets),
     ),
@@ -119,11 +129,13 @@ function parseRepresentation(
   const mimeType = findMap([representation, adaptationSet], "@_mimeType");
   assertNotVoid(mimeType, "mimeType is mandatory");
 
-  const codecsStr = findMap([representation, adaptationSet], "@_codecs");
-  const codecs = codecsStr?.split(",").map((c) => c.trim());
-  assertNotVoid(codecs, "codecs is mandatory");
+  const codec = findMap([representation, adaptationSet], "@_codecs");
+  assertNotVoid(codec, "codecs is mandatory");
 
-  const { initUrl, segments } = parseSegmentData(
+  const bandwidth = Number(representation["@_bandwidth"]);
+  assertNumber(bandwidth, "bandwidth is mandatory");
+
+  const segmentData = parseSegmentData(
     mpd,
     period,
     adaptationSet,
@@ -141,11 +153,11 @@ function parseRepresentation(
     return {
       type: TrackType.VIDEO,
       mimeType,
-      codecs,
+      codec,
       width,
       height,
-      initUrl,
-      segments,
+      bandwidth,
+      ...segmentData,
     };
   }
 
@@ -153,9 +165,9 @@ function parseRepresentation(
     return {
       type: TrackType.AUDIO,
       mimeType,
-      codecs,
-      initUrl,
-      segments,
+      codec,
+      bandwidth,
+      ...segmentData,
     };
   }
 
