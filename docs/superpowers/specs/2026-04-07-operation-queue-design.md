@@ -100,7 +100,7 @@ No special queue support needed — `remove()` is just another serialized operat
 | `lib/controllers/buffer_controller.ts` | Replace queue/appending/flush with opQueue_ |
 | `lib/controllers/media_controller.ts` | Remove `endOfStream()` handling (moved to BufferController) |
 | `lib/config.ts` | Add `bufferBehind: number` (default `Infinity`) |
-| `lib/events.ts` | Remove `BUFFER_EOS` event (no longer needed) |
+| `lib/events.ts` | No changes — `BUFFER_EOS` stays, listener moves from MediaController to BufferController |
 
 ## Future extensions (not in scope)
 
