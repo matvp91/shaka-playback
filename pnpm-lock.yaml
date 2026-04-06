@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
+  '@matvp91/eventemitter3':
+    specifier: ^5.0.1
+    version: 5.0.1
   fast-xml-parser:
     specifier: ^5.4.1
     version: 5.5.10
@@ -169,6 +172,10 @@ packages:
   /@jridgewell/sourcemap-codec@1.5.5:
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
     dev: true
+
+  /@matvp91/eventemitter3@5.0.1:
+    resolution: {integrity: sha512-iQu6uItXtjO3pgKNX6hS17HCt+5yHAdVUxFOCylbholUZjKs+24S1N53FkeybeqspST9eOr2uBADfBSVX6ULRQ==}
+    dev: false
 
   /@microsoft/api-extractor-model@7.33.5(@types/node@25.5.2):
     resolution: {integrity: sha512-Xh4dXuusndVQqVz4nEN9xOp0DyzsKxeD2FFJkSPg4arAjDSKPcy6cAc7CaeBPA7kF2wV1fuDlo2p/bNMpVr8yg==}

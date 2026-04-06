@@ -1,2 +1,3 @@
+export * from "./events";
 export { Player } from "./player";
-export * from "./types/manifest";
+export * from "./types";
