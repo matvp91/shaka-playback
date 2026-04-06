@@ -30,6 +30,8 @@
 - [ ] **Step 1: Create Timer class**
 
 ```ts
+import { assertNotVoid } from "./assert";
+
 /**
  * Single-shot timer that schedules a callback.
  * Each tick cancels any pending scheduled call.
@@ -50,7 +52,8 @@ export class Timer {
     this.stop();
     this.id_ = setTimeout(() => {
       this.id_ = null;
-      this.callback_?.();
+      assertNotVoid(this.callback_, "Timer fired after destroy");
+      this.callback_();
     }, seconds * 1000);
     return this;
   }
