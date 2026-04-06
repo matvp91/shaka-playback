@@ -4,10 +4,7 @@ import { Events } from "../events";
 import type { Player } from "../player";
 
 export class ManifestController {
-  private player_: Player;
-
-  constructor(player: Player) {
-    this.player_ = player;
+  constructor(private player_: Player) {
     this.player_.on(Events.MANIFEST_LOADING, this.onManifestLoading_);
   }
 

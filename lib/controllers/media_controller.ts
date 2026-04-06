@@ -3,11 +3,9 @@ import { Events } from "../events";
 import type { Player } from "../player";
 
 export class MediaController {
-  private player_: Player;
   private mediaSource_: MediaSource | null = null;
 
-  constructor(player: Player) {
-    this.player_ = player;
+  constructor(private player_: Player) {
     this.player_.on(Events.MEDIA_ATTACHING, this.onMediaAttaching_);
     this.player_.on(Events.BUFFER_EOS, this.onBufferEos_);
   }

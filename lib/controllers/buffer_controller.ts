@@ -9,14 +9,12 @@ type QueueItem = {
 };
 
 export class BufferController {
-  private player_: Player;
   private sourceBuffers_ = new Map<SelectionSet, SourceBuffer>();
   private queue_: QueueItem[] = [];
   private appending_ = false;
   private mediaSource_: MediaSource | null = null;
 
-  constructor(player: Player) {
-    this.player_ = player;
+  constructor(private player_: Player) {
     this.player_.on(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.on(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
   }
