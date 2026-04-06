@@ -7,7 +7,7 @@ import { MediaController } from "./controllers/media_controller";
 import { StreamController } from "./controllers/stream_controller";
 import type { EventMap } from "./events";
 import { Events } from "./events";
-import type { SelectionSet } from "./types/manifest";
+import type { TrackType } from "./types/manifest";
 
 export class Player extends EventEmitter<EventMap> {
   private config_ = defaultConfig;
@@ -41,8 +41,8 @@ export class Player extends EventEmitter<EventMap> {
     return this.config_;
   }
 
-  getBufferedEnd(selectionSet: SelectionSet): number {
-    return this.bufferController_.getBufferedEnd(selectionSet);
+  getBufferedEnd(type: TrackType): number {
+    return this.bufferController_.getBufferedEnd(type);
   }
 
   attachMedia(media: HTMLMediaElement) {

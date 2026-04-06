@@ -2,6 +2,10 @@ import { Events, Player } from "../lib/index.ts";
 
 const player = new Player();
 
+player.setConfig({
+  bufferGoal: 10,
+});
+
 const video = document.getElementById("videoElement") as HTMLVideoElement;
 
 player.on(Events.MANIFEST_PARSED, ({ manifest }) => {
@@ -12,8 +16,8 @@ player.on(Events.MEDIA_ATTACHED, () => {
   console.log("Media attached, MediaSource open");
 });
 
-player.on(Events.SEGMENT_LOADED, ({ track, segmentIndex }) => {
-  console.log(`Segment loaded: ${track.type} #${segmentIndex}`);
+player.on(Events.SEGMENT_LOADED, ({ track }) => {
+  console.log(`Segment loaded: ${track.type}`);
 });
 
 player.attachMedia(video);

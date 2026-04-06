@@ -1,40 +1,40 @@
 import type {
-  BufferCodecsEvent,
   MediaAttachedEvent,
   SegmentLoadedEvent,
+  TracksSelectedEvent,
 } from "../events";
 import { Events } from "../events";
 import type { Player } from "../player";
-import type { SelectionSet } from "../types/manifest";
+import type { TrackType } from "../types/manifest";
 
 type QueueItem = {
-  selectionSet: SelectionSet;
+  type: TrackType;
   data: ArrayBuffer;
 };
 
 export class BufferController {
-  private sourceBuffers_ = new Map<SelectionSet, SourceBuffer>();
+  private sourceBuffers_ = new Map<TrackType, SourceBuffer>();
   private queue_: QueueItem[] = [];
   private appending_ = false;
   private mediaSource_: MediaSource | null = null;
 
   constructor(private player_: Player) {
     this.player_.on(Events.MEDIA_ATTACHED, this.onMediaAttached_);
-    this.player_.on(Events.BUFFER_CODECS, this.onBufferCodecs_);
+    this.player_.on(Events.TRACKS_SELECTED, this.onTracksSelected_);
     this.player_.on(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
   }
 
   destroy() {
     this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
-    this.player_.off(Events.BUFFER_CODECS, this.onBufferCodecs_);
+    this.player_.off(Events.TRACKS_SELECTED, this.onTracksSelected_);
     this.player_.off(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
     this.sourceBuffers_.clear();
     this.queue_ = [];
     this.mediaSource_ = null;
   }
 
-  getBufferedEnd(selectionSet: SelectionSet): number {
-    const sb = this.sourceBuffers_.get(selectionSet);
+  getBufferedEnd(type: TrackType): number {
+    const sb = this.sourceBuffers_.get(type);
     if (!sb || sb.buffered.length === 0) {
       return 0;
     }
@@ -45,24 +45,24 @@ export class BufferController {
     this.mediaSource_ = event.mediaSource;
   };
 
-  private onBufferCodecs_ = (event: BufferCodecsEvent) => {
+  private onTracksSelected_ = (event: TracksSelectedEvent) => {
     if (!this.mediaSource_) {
       return;
     }
-    for (const { selectionSet, track } of event.tracks) {
-      if (this.sourceBuffers_.has(selectionSet)) {
+    for (const track of event.tracks) {
+      if (this.sourceBuffers_.has(track.type)) {
         continue;
       }
       const mime = `${track.mimeType};codecs="${track.codec}"`;
       const sb = this.mediaSource_.addSourceBuffer(mime);
-      this.sourceBuffers_.set(selectionSet, sb);
+      this.sourceBuffers_.set(track.type, sb);
     }
     this.player_.emit(Events.BUFFER_CREATED);
   };
 
   private onSegmentLoaded_ = (event: SegmentLoadedEvent) => {
     this.queue_.push({
-      selectionSet: event.selectionSet,
+      type: event.track.type,
       data: event.data,
     });
     this.flush_();
@@ -76,7 +76,7 @@ export class BufferController {
     if (!item) {
       return;
     }
-    const sb = this.sourceBuffers_.get(item.selectionSet);
+    const sb = this.sourceBuffers_.get(item.type);
     if (!sb) {
       return;
     }
@@ -88,7 +88,7 @@ export class BufferController {
       () => {
         this.appending_ = false;
         this.player_.emit(Events.BUFFER_APPENDED, {
-          selectionSet: item.selectionSet,
+          type: item.type,
         });
         this.flush_();
       },
