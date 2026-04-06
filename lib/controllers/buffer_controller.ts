@@ -11,6 +11,7 @@ import { OperationQueue } from "./operation_queue";
 
 export class BufferController {
   private sourceBuffers_ = new Map<TrackType, SourceBuffer>();
+  private listeners_ = new Map<TrackType, () => void>();
   private opQueue_ = new OperationQueue();
   private mediaSource_: MediaSource | null = null;
 
@@ -28,6 +29,10 @@ export class BufferController {
     this.player_.off(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
     this.player_.off(Events.BUFFER_EOS, this.onBufferEos_);
     this.player_.off(Events.BUFFER_APPENDED, this.onBufferAppended_);
+    for (const [type, listener] of this.listeners_) {
+      this.sourceBuffers_.get(type)?.removeEventListener("updateend", listener);
+    }
+    this.listeners_.clear();
     this.opQueue_.destroy();
     this.sourceBuffers_.clear();
     this.mediaSource_ = null;
@@ -57,9 +62,11 @@ export class BufferController {
       const sb = this.mediaSource_.addSourceBuffer(mime);
       this.sourceBuffers_.set(track.type, sb);
       this.opQueue_.add(track.type, sb);
-      sb.addEventListener("updateend", () => {
+      const listener = () => {
         this.opQueue_.shiftAndExecuteNext(track.type);
-      });
+      };
+      this.listeners_.set(track.type, listener);
+      sb.addEventListener("updateend", listener);
     }
     this.mediaSource_.duration = event.duration;
     this.player_.emit(Events.BUFFER_CREATED);
