@@ -235,14 +235,7 @@ export class StreamController {
     if (!mediaState) {
       return;
     }
-
-    // If init just loaded, start the update loop.
-    if (!mediaState.lastSegment && mediaState.lastInitSegment) {
-      mediaState.timer.tickNow();
-      return;
-    }
-
-    this.scheduleUpdate_(mediaState);
+    this.scheduleUpdate_(mediaState, 0);
   };
 
   private tryStart_() {
@@ -275,7 +268,7 @@ export class StreamController {
         track,
         lastSegment: null,
         lastInitSegment: null,
-        timer: new Timer(() => this.update_(mediaState)),
+        timer: new Timer(() => this.onUpdate_(mediaState)),
       };
 
       this.mediaStates_.set(selectionSet.type, mediaState);
@@ -291,7 +284,19 @@ export class StreamController {
     });
   }
 
-  private update_(mediaState: MediaState) {
+  private onUpdate_(mediaState: MediaState) {
+    const delay = this.update_(mediaState);
+    if (delay !== null) {
+      this.scheduleUpdate_(mediaState, delay);
+    }
+  }
+
+  /**
+   * Core streaming logic for a single stream.
+   * Returns seconds until next update, or null
+   * if no reschedule is needed.
+   */
+  private update_(mediaState: MediaState): number | null {
     const media = this.player_.getMedia();
     const currentTime = media?.currentTime ?? 0;
     const bufferGoal = this.player_.getConfig().bufferGoal;
@@ -301,34 +306,25 @@ export class StreamController {
     );
 
     if (bufferedEnd - currentTime >= bufferGoal) {
-      // Buffer is full, check again later.
-      mediaState.timer.tickAfter(1);
-      return;
+      return 1;
     }
 
     const segment = this.getNextSegment_(mediaState);
     if (!segment) {
       this.checkEndOfStream_();
-      return;
+      return null;
     }
 
     this.loadSegment_(mediaState, segment);
+    return null;
   }
 
-  private scheduleUpdate_(mediaState: MediaState) {
-    const media = this.player_.getMedia();
-    const currentTime = media?.currentTime ?? 0;
-    const bufferGoal = this.player_.getConfig().bufferGoal;
-
-    const bufferedEnd = this.player_.getBufferedEnd(
-      mediaState.selectionSet,
-    );
-
-    if (bufferedEnd - currentTime >= bufferGoal) {
-      mediaState.timer.tickAfter(1);
-    } else {
-      mediaState.timer.tickNow();
-    }
+  /** Schedule the next update for a media state. */
+  private scheduleUpdate_(
+    mediaState: MediaState,
+    delay: number,
+  ) {
+    mediaState.timer.tickAfter(delay);
   }
 
   /**
