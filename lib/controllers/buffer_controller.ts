@@ -1,4 +1,5 @@
 import type {
+  BufferAppendedEvent,
   MediaAttachedEvent,
   SegmentLoadedEvent,
   TracksSelectedEvent,
@@ -18,6 +19,7 @@ export class BufferController {
     this.player_.on(Events.TRACKS_SELECTED, this.onTracksSelected_);
     this.player_.on(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
     this.player_.on(Events.BUFFER_EOS, this.onBufferEos_);
+    this.player_.on(Events.BUFFER_APPENDED, this.onBufferAppended_);
   }
 
   destroy() {
@@ -25,6 +27,7 @@ export class BufferController {
     this.player_.off(Events.TRACKS_SELECTED, this.onTracksSelected_);
     this.player_.off(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
     this.player_.off(Events.BUFFER_EOS, this.onBufferEos_);
+    this.player_.off(Events.BUFFER_APPENDED, this.onBufferAppended_);
     this.opQueue_.destroy();
     this.sourceBuffers_.clear();
     this.mediaSource_ = null;
@@ -72,6 +75,33 @@ export class BufferController {
       onComplete: () => {
         this.player_.emit(Events.BUFFER_APPENDED, { type });
       },
+    });
+  };
+
+  private onBufferAppended_ = (event: BufferAppendedEvent) => {
+    const { bufferBehind } = this.player_.getConfig();
+    if (!Number.isFinite(bufferBehind)) {
+      return;
+    }
+    const media = this.player_.getMedia();
+    if (!media) {
+      return;
+    }
+    const type = event.type;
+    const sb = this.sourceBuffers_.get(type);
+    if (!sb || sb.buffered.length === 0) {
+      return;
+    }
+    const bufferedStart = sb.buffered.start(0);
+    const evictEnd = media.currentTime - bufferBehind;
+    if (bufferedStart >= evictEnd) {
+      return;
+    }
+    this.opQueue_.enqueue(type, {
+      execute: () => {
+        sb.remove(bufferedStart, evictEnd);
+      },
+      onComplete: () => {},
     });
   };
 
