@@ -1,4 +1,3 @@
-// lib/utils/task_loop.ts
 export class TaskLoop {
   private timer_: ReturnType<typeof setTimeout> | null = null;
   private callback_: () => void;

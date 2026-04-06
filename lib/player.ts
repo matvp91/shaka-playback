@@ -6,13 +6,12 @@ import type { EventMap } from "./events";
 import { Events } from "./events";
 
 export class Player extends EventEmitter<EventMap> {
-  private config_: PlayerConfig;
+  private config_ = defaultConfig;
   private media_: HTMLMediaElement | null = null;
   private manifestController_: ManifestController;
 
   constructor() {
     super();
-    this.config_ = defaultConfig;
     this.manifestController_ = new ManifestController(this);
   }
 
