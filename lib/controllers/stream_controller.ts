@@ -68,20 +68,28 @@ export class StreamController {
       return;
     }
 
-    this.streams_ = presentation.selectionSets.map(
-      (selectionSet) => {
-        const track = selectionSet.switchingSets[0]?.tracks[0];
-        if (!track) {
-          throw new Error("No track available");
-        }
-        return {
-          selectionSet,
-          track,
-          segmentIndex: 0,
-          initLoaded: false,
-        };
-      },
-    );
+    // Pick one SelectionSet per type — multiple of the same
+    // type are alternatives (eg. languages), only one active.
+    const seen = new Set<string>();
+    this.streams_ = [];
+
+    for (const selectionSet of presentation.selectionSets) {
+      if (seen.has(selectionSet.type)) {
+        continue;
+      }
+      seen.add(selectionSet.type);
+
+      const track = selectionSet.switchingSets[0]?.tracks[0];
+      if (!track) {
+        throw new Error("No track available");
+      }
+      this.streams_.push({
+        selectionSet,
+        track,
+        segmentIndex: 0,
+        initLoaded: false,
+      });
+    }
 
     this.taskLoop_.tick();
   }
