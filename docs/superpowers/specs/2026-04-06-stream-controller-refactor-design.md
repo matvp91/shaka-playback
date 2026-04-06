@@ -86,5 +86,6 @@ End-of-stream (`BUFFER_EOS`) is emitted when all MediaStates have finished.
 | `lib/utils/timer.ts` | New file |
 | `lib/utils/task_loop.ts` | Deleted |
 | `lib/controllers/stream_controller.ts` | Major refactor |
-| `lib/events.ts` | May need to update `SegmentLoadedEvent` (remove `segmentIndex`) |
+| `lib/controllers/buffer_controller.ts` | Add `type` to QueueItem and `BUFFER_APPENDED` emit |
+| `lib/events.ts` | Remove `segmentIndex` from SegmentLoadedEvent, add `type` to BufferAppendedEvent |
 | `example/main.ts` | Update to match event changes |

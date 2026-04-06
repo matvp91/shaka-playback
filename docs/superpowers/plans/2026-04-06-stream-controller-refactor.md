@@ -97,10 +97,11 @@ git commit -m "feat: add Timer utility class"
 
 ---
 
-### Task 2: Update events — remove segmentIndex
+### Task 2: Update events
 
 **Files:**
-- Modify: `lib/events.ts:37-42`
+- Modify: `lib/events.ts`
+- Modify: `example/main.ts`
 
 - [ ] **Step 1: Remove segmentIndex from SegmentLoadedEvent**
 
@@ -125,7 +126,83 @@ export type SegmentLoadedEvent = {
 };
 ```
 
-- [ ] **Step 2: Update example to remove segmentIndex usage**
+- [ ] **Step 2: Add type to BufferAppendedEvent**
+
+In `lib/events.ts`, change the `BufferAppendedEvent` type from:
+
+```ts
+export type BufferAppendedEvent = {
+  selectionSet: SelectionSet;
+};
+```
+
+to:
+
+```ts
+export type BufferAppendedEvent = {
+  type: TrackType;
+  selectionSet: SelectionSet;
+};
+```
+
+Add `TrackType` to the import at the top of the file:
+
+```ts
+import type { Manifest, SelectionSet, Track, TrackType } from "./types/manifest";
+```
+
+- [ ] **Step 3: Update BufferController to emit type**
+
+In `lib/controllers/buffer_controller.ts`, the `BUFFER_APPENDED` emit in `flush_()` needs to include `type`. This requires the `QueueItem` to carry the type. Update:
+
+Change `QueueItem` from:
+
+```ts
+type QueueItem = {
+  selectionSet: SelectionSet;
+  data: ArrayBuffer;
+};
+```
+
+to:
+
+```ts
+type QueueItem = {
+  type: TrackType;
+  selectionSet: SelectionSet;
+  data: ArrayBuffer;
+};
+```
+
+Add the import:
+
+```ts
+import type { SelectionSet, TrackType } from "../types/manifest";
+```
+
+Update `onSegmentLoaded_` to include `type`:
+
+```ts
+private onSegmentLoaded_ = (event: SegmentLoadedEvent) => {
+  this.queue_.push({
+    type: event.track.type,
+    selectionSet: event.selectionSet,
+    data: event.data,
+  });
+  this.flush_();
+};
+```
+
+Update the `BUFFER_APPENDED` emit in `flush_()` to include `type`:
+
+```ts
+this.player_.emit(Events.BUFFER_APPENDED, {
+  type: item.type,
+  selectionSet: item.selectionSet,
+});
+```
+
+- [ ] **Step 4: Update example to remove segmentIndex usage**
 
 In `example/main.ts`, change the SEGMENT_LOADED listener from:
 
@@ -143,16 +220,16 @@ player.on(Events.SEGMENT_LOADED, ({ track }) => {
 });
 ```
 
-- [ ] **Step 3: Run type check**
+- [ ] **Step 5: Run type check**
 
 Run: `pnpm tsc`
 Expected: Error in `stream_controller.ts` (still references `segmentIndex`). This is expected — Task 3 fixes it.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add lib/events.ts example/main.ts
-git commit -m "refactor: remove segmentIndex from SegmentLoadedEvent"
+git add lib/events.ts lib/controllers/buffer_controller.ts example/main.ts
+git commit -m "refactor: remove segmentIndex from SegmentLoadedEvent, add type to BufferAppendedEvent"
 ```
 
 ---
@@ -180,6 +257,7 @@ import type {
   SelectionSet,
   Track,
 } from "../types/manifest";
+import { type TrackType } from "../types/manifest";
 import { Timer } from "../utils/timer";
 
 type MediaState = {
@@ -193,7 +271,7 @@ type MediaState = {
 export class StreamController {
   private manifest_: Manifest | null = null;
   private mediaAttached_ = false;
-  private mediaStates_ = new Map<string, MediaState>();
+  private mediaStates_ = new Map<TrackType, MediaState>();
 
   constructor(private player_: Player) {
     this.player_.on(Events.MANIFEST_PARSED, this.onManifestParsed_);
@@ -231,7 +309,7 @@ export class StreamController {
   };
 
   private onBufferAppended_ = (event: BufferAppendedEvent) => {
-    const mediaState = this.mediaStates_.get(event.selectionSet.type);
+    const mediaState = this.mediaStates_.get(event.type);
     if (!mediaState) {
       return;
     }
@@ -271,7 +349,7 @@ export class StreamController {
         timer: new Timer(() => this.onUpdate_(mediaState)),
       };
 
-      this.mediaStates_.set(selectionSet.type, mediaState);
+      this.mediaStates_.set(track.type, mediaState);
     }
 
     // Create all SourceBuffers upfront before any data is
