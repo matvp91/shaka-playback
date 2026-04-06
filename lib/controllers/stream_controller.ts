@@ -108,6 +108,7 @@ export class StreamController {
 
     this.player_.emit(Events.TRACKS_SELECTED, {
       tracks: [...this.mediaStates_.values()].map((ms) => ms.track),
+      duration: presentation.end - presentation.start,
     });
   }
 

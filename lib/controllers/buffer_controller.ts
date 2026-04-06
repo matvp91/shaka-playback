@@ -57,6 +57,7 @@ export class BufferController {
       const sb = this.mediaSource_.addSourceBuffer(mime);
       this.sourceBuffers_.set(track.type, sb);
     }
+    this.mediaSource_.duration = event.duration;
     this.player_.emit(Events.BUFFER_CREATED);
   };
 

@@ -32,6 +32,7 @@ export type MediaAttachedEvent = {
 
 export type TracksSelectedEvent = {
   tracks: Track[];
+  duration: number;
 };
 
 export type SegmentLoadedEvent = {
