@@ -38,11 +38,11 @@ export async function fetchManifest(url: string) {
   });
 }
 
-type Options = {
+type ParseManifestOptions = {
   sourceUrl: string;
 };
 
-async function parseManifest(text: string, options: Options) {
+async function parseManifest(text: string, options: ParseManifestOptions) {
   const parser = new XMLParser({
     ignoreAttributes: false,
     alwaysCreateTextNode: true,
@@ -59,7 +59,11 @@ async function parseManifest(text: string, options: Options) {
   return manifest;
 }
 
-function parsePeriod(options: Options, mpd: MPD, period: Period): Presentation {
+function parsePeriod(
+  options: ParseManifestOptions,
+  mpd: MPD,
+  period: Period,
+): Presentation {
   const group = groupAdaptationSets(period.AdaptationSet);
   const adaptationSetSets = Array.from(group.values());
 
@@ -80,7 +84,7 @@ function parsePeriod(options: Options, mpd: MPD, period: Period): Presentation {
 }
 
 function parseAdaptationSets(
-  options: Options,
+  options: ParseManifestOptions,
   mpd: MPD,
   period: Period,
   adaptationSets: AdaptationSet[],
@@ -100,7 +104,7 @@ function parseAdaptationSets(
 }
 
 function parseAdaptationSet(
-  options: Options,
+  options: ParseManifestOptions,
   mpd: MPD,
   period: Period,
   adaptationSet: AdaptationSet,
@@ -113,7 +117,7 @@ function parseAdaptationSet(
 }
 
 function parseRepresentation(
-  options: Options,
+  options: ParseManifestOptions,
   mpd: MPD,
   period: Period,
   adaptationSet: AdaptationSet,
