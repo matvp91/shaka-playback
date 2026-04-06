@@ -6,16 +6,11 @@ import type {
 import { Events } from "../events";
 import type { Player } from "../player";
 import type { TrackType } from "../types/manifest";
-
-type QueueItem = {
-  type: TrackType;
-  data: ArrayBuffer;
-};
+import { OperationQueue } from "./operation_queue";
 
 export class BufferController {
   private sourceBuffers_ = new Map<TrackType, SourceBuffer>();
-  private queue_: QueueItem[] = [];
-  private appending_ = false;
+  private opQueue_ = new OperationQueue();
   private mediaSource_: MediaSource | null = null;
 
   constructor(private player_: Player) {
@@ -28,8 +23,8 @@ export class BufferController {
     this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.off(Events.TRACKS_SELECTED, this.onTracksSelected_);
     this.player_.off(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
+    this.opQueue_.destroy();
     this.sourceBuffers_.clear();
-    this.queue_ = [];
     this.mediaSource_ = null;
   }
 
@@ -56,46 +51,25 @@ export class BufferController {
       const mime = `${track.mimeType};codecs="${track.codec}"`;
       const sb = this.mediaSource_.addSourceBuffer(mime);
       this.sourceBuffers_.set(track.type, sb);
+      this.opQueue_.add(track.type, sb);
+      sb.addEventListener("updateend", () => {
+        this.opQueue_.shiftAndExecuteNext(track.type);
+      });
     }
     this.mediaSource_.duration = event.duration;
     this.player_.emit(Events.BUFFER_CREATED);
   };
 
   private onSegmentLoaded_ = (event: SegmentLoadedEvent) => {
-    this.queue_.push({
-      type: event.track.type,
-      data: event.data,
-    });
-    this.flush_();
-  };
-
-  private flush_() {
-    if (this.appending_ || this.queue_.length === 0) {
-      return;
-    }
-    const item = this.queue_.shift();
-    if (!item) {
-      return;
-    }
-    const sb = this.sourceBuffers_.get(item.type);
-    if (!sb) {
-      return;
-    }
-
-    this.appending_ = true;
-
-    sb.addEventListener(
-      "updateend",
-      () => {
-        this.appending_ = false;
-        this.player_.emit(Events.BUFFER_APPENDED, {
-          type: item.type,
-        });
-        this.flush_();
+    const type = event.track.type;
+    this.opQueue_.enqueue(type, {
+      execute: () => {
+        const sb = this.sourceBuffers_.get(type);
+        sb?.appendBuffer(event.data);
       },
-      { once: true },
-    );
-
-    sb.appendBuffer(item.data);
-  }
+      onComplete: () => {
+        this.player_.emit(Events.BUFFER_APPENDED, { type });
+      },
+    });
+  };
 }

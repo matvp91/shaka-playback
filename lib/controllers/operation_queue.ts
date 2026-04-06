@@ -80,7 +80,6 @@ export class OperationQueue {
     this.executeNext_(type);
   }
 
-  /** Clear all state. */
   destroy() {
     this.queues_.clear();
     this.sourceBuffers_.clear();
