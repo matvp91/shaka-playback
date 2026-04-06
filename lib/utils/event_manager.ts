@@ -1,4 +1,6 @@
 import { EventEmitter } from "@matvp91/eventemitter3";
+import type { EventMap } from "../events";
+import type { Player } from "../player";
 
 type Binding = {
   remove: () => void;
@@ -8,20 +10,18 @@ type ListenOptions = {
   once?: boolean;
 };
 
-type EmitterCallback = (...args: unknown[]) => void;
+// biome-ignore lint/suspicious/noExplicitAny: callback variance
+type EmitterCallback = (...args: any[]) => void;
 
 type Callback = EmitterCallback | EventListenerOrEventListenerObject;
 
 export class EventManager {
   private bindings_: Binding[] = [];
 
-  listen<
-    E extends EventEmitter.ValidEventTypes,
-    K extends EventEmitter.EventNames<E>,
-  >(
-    target: EventEmitter<E>,
+  listen<K extends keyof EventMap>(
+    target: Player,
     event: K,
-    callback: EventEmitter.EventListener<E, K>,
+    callback: EventMap[K] extends undefined ? () => void : EventMap[K],
     options?: ListenOptions,
   ): void;
   listen(
@@ -30,12 +30,8 @@ export class EventManager {
     callback: EventListenerOrEventListenerObject,
     options?: ListenOptions,
   ): void;
-  listen(
-    target: EventEmitter | EventTarget,
-    event: string,
-    callback: Callback,
-    options?: ListenOptions,
-  ) {
+  // biome-ignore lint/suspicious/noExplicitAny: unifies overloads
+  listen(target: any, event: string, callback: any, options?: ListenOptions) {
     if (options?.once) {
       let binding: Binding;
       const wrapper = (...args: unknown[]) => {
@@ -62,7 +58,7 @@ export class EventManager {
   }
 
   private subscribe_(
-    target: EventEmitter | EventTarget,
+    target: Player | EventTarget,
     event: string,
     callback: Callback,
   ): Binding {
@@ -80,9 +76,10 @@ export class EventManager {
       };
     }
     if (target instanceof EventEmitter) {
-      target.on(event, callback as EmitterCallback);
+      const emitter = target as unknown as EventEmitter;
+      emitter.on(event, callback as EmitterCallback);
       return {
-        remove: () => target.off(event, callback as EmitterCallback),
+        remove: () => emitter.off(event, callback as EmitterCallback),
       };
     }
     throw new Error("Unsupported target");
