@@ -7,28 +7,27 @@ import { Events } from "../events";
 import type { Player } from "../player";
 import type {
   Manifest,
+  Segment,
   SelectionSet,
   Track,
+  TrackType,
 } from "../types/manifest";
-import { TaskLoop } from "../utils/task_loop";
+import { Timer } from "../utils/timer";
 
-type StreamState = {
+type MediaState = {
   selectionSet: SelectionSet;
   track: Track;
-  segmentIndex: number;
-  initLoaded: boolean;
+  lastSegment: Segment | null;
+  lastInitSegment: Segment | null;
+  timer: Timer;
 };
 
 export class StreamController {
-  private taskLoop_: TaskLoop;
   private manifest_: Manifest | null = null;
   private mediaAttached_ = false;
-  private streams_: StreamState[] = [];
-  private loading_ = false;
+  private mediaStates_ = new Map<TrackType, MediaState>();
 
   constructor(private player_: Player) {
-    this.taskLoop_ = new TaskLoop(this.onTick_.bind(this));
-
     this.player_.on(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.on(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.on(Events.BUFFER_CREATED, this.onBufferCreated_);
@@ -36,13 +35,15 @@ export class StreamController {
   }
 
   destroy() {
-    this.taskLoop_.destroy();
+    for (const mediaState of this.mediaStates_.values()) {
+      mediaState.timer.destroy();
+    }
     this.player_.off(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.off(Events.BUFFER_CREATED, this.onBufferCreated_);
     this.player_.off(Events.BUFFER_APPENDED, this.onBufferAppended_);
     this.manifest_ = null;
-    this.streams_ = [];
+    this.mediaStates_.clear();
   }
 
   private onManifestParsed_ = (event: ManifestParsedEvent) => {
@@ -56,12 +57,17 @@ export class StreamController {
   };
 
   private onBufferCreated_ = () => {
-    this.taskLoop_.tick();
+    for (const mediaState of this.mediaStates_.values()) {
+      this.loadInitSegment_(mediaState);
+    }
   };
 
-  private onBufferAppended_ = (_event: BufferAppendedEvent) => {
-    this.loading_ = false;
-    this.taskLoop_.tick();
+  private onBufferAppended_ = (event: BufferAppendedEvent) => {
+    const mediaState = this.mediaStates_.get(event.type);
+    if (!mediaState) {
+      return;
+    }
+    this.scheduleUpdate_(mediaState, 0);
   };
 
   private tryStart_() {
@@ -77,7 +83,6 @@ export class StreamController {
     // Pick one SelectionSet per type — multiple of the same
     // type are alternatives (eg. languages), only one active.
     const seen = new Set<string>();
-    this.streams_ = [];
 
     for (const selectionSet of presentation.selectionSets) {
       if (seen.has(selectionSet.type)) {
@@ -89,101 +94,110 @@ export class StreamController {
       if (!track) {
         throw new Error("No track available");
       }
-      this.streams_.push({
+
+      const mediaState: MediaState = {
         selectionSet,
         track,
-        segmentIndex: 0,
-        initLoaded: false,
-      });
+        lastSegment: null,
+        lastInitSegment: null,
+        timer: new Timer(() => this.onUpdate_(mediaState)),
+      };
+
+      this.mediaStates_.set(track.type, mediaState);
     }
 
-    // Create all SourceBuffers upfront before any data is
-    // appended — MSE spec requires this.
-    this.player_.emit(Events.BUFFER_CODECS, {
-      tracks: this.streams_.map((s) => ({
-        selectionSet: s.selectionSet,
-        track: s.track,
-      })),
+    this.player_.emit(Events.TRACKS_SELECTED, {
+      tracks: [...this.mediaStates_.values()].map((ms) => ms.track),
     });
   }
 
-  private onTick_() {
-    if (this.loading_) {
-      return;
+  private onUpdate_(mediaState: MediaState) {
+    const delay = this.update_(mediaState);
+    if (delay !== null) {
+      this.scheduleUpdate_(mediaState, delay);
     }
+  }
 
-    // Load init segments first.
-    for (const stream of this.streams_) {
-      if (!stream.initLoaded) {
-        this.loadInitSegment_(stream);
-        return;
-      }
-    }
-
+  /**
+   * Core streaming logic for a single stream.
+   * Returns seconds until next update, or null
+   * if no reschedule is needed.
+   */
+  private update_(mediaState: MediaState): number | null {
     const media = this.player_.getMedia();
     const currentTime = media?.currentTime ?? 0;
     const bufferGoal = this.player_.getConfig().bufferGoal;
 
-    // Load next segment for the stream that needs it.
-    for (const stream of this.streams_) {
-      const segment = stream.track.segments[stream.segmentIndex];
-      if (!segment) {
-        continue;
-      }
+    const bufferedEnd = this.player_.getBufferedEnd(mediaState.track.type);
 
-      const bufferedEnd = this.player_.getBufferedEnd(
-        stream.selectionSet,
-      );
-      if (bufferedEnd - currentTime >= bufferGoal) {
-        continue;
-      }
-
-      this.loadSegment_(stream);
-      return;
+    if (bufferedEnd - currentTime >= bufferGoal) {
+      return 1;
     }
 
-    // Signal end of stream when all segments are loaded.
-    const allDone = this.streams_.every(
-      (s) => s.segmentIndex >= s.track.segments.length,
+    const segment = this.getNextSegment_(mediaState);
+    if (!segment) {
+      this.checkEndOfStream_();
+      return null;
+    }
+
+    this.loadSegment_(mediaState, segment);
+    return null;
+  }
+
+  /** Schedule the next update for a media state. */
+  private scheduleUpdate_(mediaState: MediaState, delay: number) {
+    mediaState.timer.tickAfter(delay);
+  }
+
+  /**
+   * Find the next segment to load based on what's
+   * already buffered for this stream.
+   */
+  private getNextSegment_(mediaState: MediaState): Segment | null {
+    const bufferedEnd = this.player_.getBufferedEnd(mediaState.track.type);
+
+    for (const segment of mediaState.track.segments) {
+      if (segment.start >= bufferedEnd) {
+        return segment;
+      }
+    }
+    return null;
+  }
+
+  private checkEndOfStream_() {
+    const allDone = [...this.mediaStates_.values()].every(
+      (ms) => this.getNextSegment_(ms) === null,
     );
     if (allDone) {
       this.player_.emit(Events.BUFFER_EOS);
     }
   }
 
-  private async loadInitSegment_(stream: StreamState) {
-    this.loading_ = true;
-    const response = await fetch(stream.track.initSegmentUrl);
+  private async loadInitSegment_(mediaState: MediaState) {
+    const response = await fetch(mediaState.track.initSegmentUrl);
     const data = await response.arrayBuffer();
 
-    stream.initLoaded = true;
+    mediaState.lastInitSegment = {
+      url: mediaState.track.initSegmentUrl,
+      start: 0,
+      end: 0,
+    };
 
     this.player_.emit(Events.SEGMENT_LOADED, {
-      selectionSet: stream.selectionSet,
-      track: stream.track,
+      track: mediaState.track,
       data,
-      segmentIndex: -1,
     });
   }
 
-  private async loadSegment_(stream: StreamState) {
-    this.loading_ = true;
-    const segment = stream.track.segments[stream.segmentIndex];
-    if (!segment) {
-      return;
-    }
-
+  private async loadSegment_(mediaState: MediaState, segment: Segment) {
     const response = await fetch(segment.url);
     const data = await response.arrayBuffer();
 
-    const segmentIndex = stream.segmentIndex;
-    stream.segmentIndex++;
+    mediaState.lastSegment = segment;
 
     this.player_.emit(Events.SEGMENT_LOADED, {
-      selectionSet: stream.selectionSet,
-      track: stream.track,
+      track: mediaState.track,
       data,
-      segmentIndex,
     });
   }
 }
