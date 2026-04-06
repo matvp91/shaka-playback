@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Refactor StreamController to use per-stream timers, time-based segment selection, and init loading tied to SourceBuffer creation.
+**Goal:** Refactor StreamController to use per-stream timers, time-based segment selection, and init loading tied to SourceBuffer creation. Move BufferController and events to use TrackType as the key instead of SelectionSet.
 
-**Architecture:** Replace TaskLoop with a Timer utility. Each stream gets a MediaState with its own Timer for independent scheduling. Segment selection is time-based (from bufferedEnd) instead of index-based. Init segments load on BUFFER_CREATED, not in the update loop.
+**Architecture:** Replace TaskLoop with a Timer utility. Each stream gets a MediaState with its own Timer for independent scheduling. Segment selection is time-based (from bufferedEnd) instead of index-based. Init segments load on BUFFER_CREATED, not in the update loop. BufferController and all events use TrackType as the key, removing SelectionSet from the buffer layer.
 
 **Tech Stack:** TypeScript, Vite, pnpm, Biome
 
@@ -16,9 +16,11 @@
 |------|--------|----------------|
 | `lib/utils/timer.ts` | Create | Single-shot timer with `tickAfter`/`tickNow`/`stop`/`destroy` |
 | `lib/utils/task_loop.ts` | Delete | Replaced by Timer |
+| `lib/events.ts` | Modify | Rename BUFFER_CODECS → TRACKS_SELECTED, simplify payloads, use TrackType |
+| `lib/controllers/buffer_controller.ts` | Modify | Key by TrackType, listen for TRACKS_SELECTED |
 | `lib/controllers/stream_controller.ts` | Rewrite | MediaState, per-stream timers, time-based segment selection |
-| `lib/events.ts` | Modify | Remove `segmentIndex` from SegmentLoadedEvent |
-| `example/main.ts` | Modify | Adapt SEGMENT_LOADED log to removed field |
+| `lib/player.ts` | Modify | `getBufferedEnd(type: TrackType)` |
+| `example/main.ts` | Modify | Adapt to event changes |
 
 ---
 
@@ -97,112 +99,217 @@ git commit -m "feat: add Timer utility class"
 
 ---
 
-### Task 2: Update events
+### Task 2: Update events and BufferController to use TrackType
 
 **Files:**
 - Modify: `lib/events.ts`
+- Modify: `lib/controllers/buffer_controller.ts`
+- Modify: `lib/player.ts`
 - Modify: `example/main.ts`
 
-- [ ] **Step 1: Remove segmentIndex from SegmentLoadedEvent**
+- [ ] **Step 1: Update events.ts**
 
-In `lib/events.ts`, change the `SegmentLoadedEvent` type from:
+Replace the entire contents of `lib/events.ts` with:
 
 ```ts
+import type { Manifest, Track } from "./types/manifest";
+import type { TrackType } from "./types/manifest";
+
+export const Events = {
+  MANIFEST_LOADING: "manifestLoading",
+  MANIFEST_PARSED: "manifestParsed",
+  MEDIA_ATTACHING: "mediaAttaching",
+  MEDIA_ATTACHED: "mediaAttached",
+  MEDIA_DETACHED: "mediaDetached",
+  TRACKS_SELECTED: "tracksSelected",
+  BUFFER_CREATED: "bufferCreated",
+  SEGMENT_LOADED: "segmentLoaded",
+  BUFFER_APPENDED: "bufferAppended",
+  BUFFER_EOS: "bufferEos",
+};
+
+export type ManifestLoadingEvent = {
+  url: string;
+};
+
+export type ManifestParsedEvent = {
+  manifest: Manifest;
+};
+
+export type MediaAttachingEvent = {
+  media: HTMLMediaElement;
+};
+
+export type MediaAttachedEvent = {
+  media: HTMLMediaElement;
+  mediaSource: MediaSource;
+};
+
+export type TracksSelectedEvent = {
+  tracks: Track[];
+};
+
 export type SegmentLoadedEvent = {
-  selectionSet: SelectionSet;
   track: Track;
   data: ArrayBuffer;
-  segmentIndex: number;
 };
-```
 
-to:
-
-```ts
-export type SegmentLoadedEvent = {
-  selectionSet: SelectionSet;
-  track: Track;
-  data: ArrayBuffer;
-};
-```
-
-- [ ] **Step 2: Add type to BufferAppendedEvent**
-
-In `lib/events.ts`, change the `BufferAppendedEvent` type from:
-
-```ts
-export type BufferAppendedEvent = {
-  selectionSet: SelectionSet;
-};
-```
-
-to:
-
-```ts
 export type BufferAppendedEvent = {
   type: TrackType;
-  selectionSet: SelectionSet;
 };
+
+export interface EventMap {
+  [Events.MANIFEST_LOADING]: (event: ManifestLoadingEvent) => void;
+  [Events.MANIFEST_PARSED]: (event: ManifestParsedEvent) => void;
+  [Events.MEDIA_ATTACHING]: (event: MediaAttachingEvent) => void;
+  [Events.MEDIA_ATTACHED]: (event: MediaAttachedEvent) => void;
+  [Events.MEDIA_DETACHED]: undefined;
+  [Events.TRACKS_SELECTED]: (event: TracksSelectedEvent) => void;
+  [Events.BUFFER_CREATED]: undefined;
+  [Events.SEGMENT_LOADED]: (event: SegmentLoadedEvent) => void;
+  [Events.BUFFER_APPENDED]: (event: BufferAppendedEvent) => void;
+  [Events.BUFFER_EOS]: undefined;
+}
 ```
 
-Add `TrackType` to the import at the top of the file:
+- [ ] **Step 2: Update BufferController**
+
+Replace the entire contents of `lib/controllers/buffer_controller.ts` with:
 
 ```ts
-import type { Manifest, SelectionSet, Track, TrackType } from "./types/manifest";
-```
+import type {
+  MediaAttachedEvent,
+  SegmentLoadedEvent,
+  TracksSelectedEvent,
+} from "../events";
+import { Events } from "../events";
+import type { Player } from "../player";
+import type { TrackType } from "../types/manifest";
 
-- [ ] **Step 3: Update BufferController to emit type**
-
-In `lib/controllers/buffer_controller.ts`, the `BUFFER_APPENDED` emit in `flush_()` needs to include `type`. This requires the `QueueItem` to carry the type. Update:
-
-Change `QueueItem` from:
-
-```ts
 type QueueItem = {
-  selectionSet: SelectionSet;
+  type: TrackType;
   data: ArrayBuffer;
 };
+
+export class BufferController {
+  private sourceBuffers_ = new Map<TrackType, SourceBuffer>();
+  private queue_: QueueItem[] = [];
+  private appending_ = false;
+  private mediaSource_: MediaSource | null = null;
+
+  constructor(private player_: Player) {
+    this.player_.on(Events.MEDIA_ATTACHED, this.onMediaAttached_);
+    this.player_.on(Events.TRACKS_SELECTED, this.onTracksSelected_);
+    this.player_.on(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
+  }
+
+  destroy() {
+    this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
+    this.player_.off(Events.TRACKS_SELECTED, this.onTracksSelected_);
+    this.player_.off(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
+    this.sourceBuffers_.clear();
+    this.queue_ = [];
+    this.mediaSource_ = null;
+  }
+
+  getBufferedEnd(type: TrackType): number {
+    const sb = this.sourceBuffers_.get(type);
+    if (!sb || sb.buffered.length === 0) {
+      return 0;
+    }
+    return sb.buffered.end(sb.buffered.length - 1);
+  }
+
+  private onMediaAttached_ = (event: MediaAttachedEvent) => {
+    this.mediaSource_ = event.mediaSource;
+  };
+
+  private onTracksSelected_ = (event: TracksSelectedEvent) => {
+    if (!this.mediaSource_) {
+      return;
+    }
+    for (const track of event.tracks) {
+      if (this.sourceBuffers_.has(track.type)) {
+        continue;
+      }
+      const mime = `${track.mimeType};codecs="${track.codec}"`;
+      const sb = this.mediaSource_.addSourceBuffer(mime);
+      this.sourceBuffers_.set(track.type, sb);
+    }
+    this.player_.emit(Events.BUFFER_CREATED);
+  };
+
+  private onSegmentLoaded_ = (event: SegmentLoadedEvent) => {
+    this.queue_.push({
+      type: event.track.type,
+      data: event.data,
+    });
+    this.flush_();
+  };
+
+  private flush_() {
+    if (this.appending_ || this.queue_.length === 0) {
+      return;
+    }
+    const item = this.queue_.shift();
+    if (!item) {
+      return;
+    }
+    const sb = this.sourceBuffers_.get(item.type);
+    if (!sb) {
+      return;
+    }
+
+    this.appending_ = true;
+
+    sb.addEventListener(
+      "updateend",
+      () => {
+        this.appending_ = false;
+        this.player_.emit(Events.BUFFER_APPENDED, {
+          type: item.type,
+        });
+        this.flush_();
+      },
+      { once: true },
+    );
+
+    sb.appendBuffer(item.data);
+  }
+}
+```
+
+- [ ] **Step 3: Update Player.getBufferedEnd**
+
+In `lib/player.ts`, change the import from:
+
+```ts
+import type { SelectionSet } from "./types/manifest";
 ```
 
 to:
 
 ```ts
-type QueueItem = {
-  type: TrackType;
-  selectionSet: SelectionSet;
-  data: ArrayBuffer;
-};
+import type { TrackType } from "./types/manifest";
 ```
 
-Add the import:
+Change the `getBufferedEnd` method from:
 
 ```ts
-import type { SelectionSet, TrackType } from "../types/manifest";
+getBufferedEnd(selectionSet: SelectionSet): number {
+  return this.bufferController_.getBufferedEnd(selectionSet);
+}
 ```
 
-Update `onSegmentLoaded_` to include `type`:
+to:
 
 ```ts
-private onSegmentLoaded_ = (event: SegmentLoadedEvent) => {
-  this.queue_.push({
-    type: event.track.type,
-    selectionSet: event.selectionSet,
-    data: event.data,
-  });
-  this.flush_();
-};
+getBufferedEnd(type: TrackType): number {
+  return this.bufferController_.getBufferedEnd(type);
+}
 ```
 
-Update the `BUFFER_APPENDED` emit in `flush_()` to include `type`:
-
-```ts
-this.player_.emit(Events.BUFFER_APPENDED, {
-  type: item.type,
-  selectionSet: item.selectionSet,
-});
-```
-
-- [ ] **Step 4: Update example to remove segmentIndex usage**
+- [ ] **Step 4: Update example**
 
 In `example/main.ts`, change the SEGMENT_LOADED listener from:
 
@@ -223,18 +330,18 @@ player.on(Events.SEGMENT_LOADED, ({ track }) => {
 - [ ] **Step 5: Run type check**
 
 Run: `pnpm tsc`
-Expected: Error in `stream_controller.ts` (still references `segmentIndex`). This is expected — Task 3 fixes it.
+Expected: Errors in `stream_controller.ts` only (still uses old event names and patterns). This is expected — Task 3 fixes it.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add lib/events.ts lib/controllers/buffer_controller.ts example/main.ts
-git commit -m "refactor: remove segmentIndex from SegmentLoadedEvent, add type to BufferAppendedEvent"
+git add lib/events.ts lib/controllers/buffer_controller.ts lib/player.ts example/main.ts
+git commit -m "refactor: use TrackType as key, rename BUFFER_CODECS to TRACKS_SELECTED"
 ```
 
 ---
 
-### Task 3: Refactor StreamController
+### Task 3: Rewrite StreamController
 
 **Files:**
 - Rewrite: `lib/controllers/stream_controller.ts`
@@ -257,7 +364,7 @@ import type {
   SelectionSet,
   Track,
 } from "../types/manifest";
-import { type TrackType } from "../types/manifest";
+import type { TrackType } from "../types/manifest";
 import { Timer } from "../utils/timer";
 
 type MediaState = {
@@ -352,13 +459,8 @@ export class StreamController {
       this.mediaStates_.set(track.type, mediaState);
     }
 
-    // Create all SourceBuffers upfront before any data is
-    // appended — MSE spec requires this.
-    this.player_.emit(Events.BUFFER_CODECS, {
-      tracks: [...this.mediaStates_.values()].map((ms) => ({
-        selectionSet: ms.selectionSet,
-        track: ms.track,
-      })),
+    this.player_.emit(Events.TRACKS_SELECTED, {
+      tracks: [...this.mediaStates_.values()].map((ms) => ms.track),
     });
   }
 
@@ -380,7 +482,7 @@ export class StreamController {
     const bufferGoal = this.player_.getConfig().bufferGoal;
 
     const bufferedEnd = this.player_.getBufferedEnd(
-      mediaState.selectionSet,
+      mediaState.track.type,
     );
 
     if (bufferedEnd - currentTime >= bufferGoal) {
@@ -409,9 +511,11 @@ export class StreamController {
    * Find the next segment to load based on what's
    * already buffered for this stream.
    */
-  private getNextSegment_(mediaState: MediaState): Segment | null {
+  private getNextSegment_(
+    mediaState: MediaState,
+  ): Segment | null {
     const bufferedEnd = this.player_.getBufferedEnd(
-      mediaState.selectionSet,
+      mediaState.track.type,
     );
 
     for (const segment of mediaState.track.segments) {
@@ -432,7 +536,9 @@ export class StreamController {
   }
 
   private async loadInitSegment_(mediaState: MediaState) {
-    const response = await fetch(mediaState.track.initSegmentUrl);
+    const response = await fetch(
+      mediaState.track.initSegmentUrl,
+    );
     const data = await response.arrayBuffer();
 
     mediaState.lastInitSegment = {
@@ -442,7 +548,6 @@ export class StreamController {
     };
 
     this.player_.emit(Events.SEGMENT_LOADED, {
-      selectionSet: mediaState.selectionSet,
       track: mediaState.track,
       data,
     });
@@ -458,7 +563,6 @@ export class StreamController {
     mediaState.lastSegment = segment;
 
     this.player_.emit(Events.SEGMENT_LOADED, {
-      selectionSet: mediaState.selectionSet,
       track: mediaState.track,
       data,
     });

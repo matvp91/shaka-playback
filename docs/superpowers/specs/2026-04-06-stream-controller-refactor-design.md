@@ -2,7 +2,7 @@
 
 ## Summary
 
-Refactor StreamController to use per-stream timers, time-based segment selection, and cleaner init segment handling. This replaces the TaskLoop-driven tick loop with independent per-MediaState scheduling, removes the segmentIndex counter in favor of deriving the next segment from buffer state, and separates init segment loading from the streaming loop.
+Refactor StreamController to use per-stream timers, time-based segment selection, and cleaner init segment handling. This replaces the TaskLoop-driven tick loop with independent per-MediaState scheduling, removes the segmentIndex counter in favor of deriving the next segment from buffer state, and separates init segment loading from the streaming loop. Additionally, moves BufferController and events to use `TrackType` as the key instead of `SelectionSet`.
 
 ## Changes
 
@@ -44,13 +44,26 @@ Key differences from `StreamState`:
 
 ### 3. Storage: `mediaStates_` Map
 
-Replace `streams_: StreamState[]` with `mediaStates_: Map<string, MediaState>` keyed by content type (`selectionSet.type`, e.g. `"video"`, `"audio"`).
+Replace `streams_: StreamState[]` with `mediaStates_: Map<TrackType, MediaState>` keyed by content type slot (`"video"`, `"audio"`, `"text"`).
 
-Benefits:
-- Direct lookup by type instead of array iteration.
-- Natural key for correlating with events (e.g. `BUFFER_APPENDED` carries `selectionSet`).
+The key represents a slot, not a specific SelectionSet. StreamController doesn't own track selection — it streams whatever is in the slot. Selection logic lives elsewhere (Player API, future ABR controller).
 
-### 4. Init segment loading (on BUFFER_CREATED)
+### 4. Events overhaul
+
+- **`BUFFER_CODECS` → `TRACKS_SELECTED`** — renamed and simplified. Payload becomes `{ tracks: Track[] }` (was `{ tracks: { selectionSet, track }[] }`). Reusable for initial setup and future track switching.
+- **`SegmentLoadedEvent`** — remove `segmentIndex`, remove `selectionSet`. Becomes `{ track: Track; data: ArrayBuffer }`.
+- **`BufferAppendedEvent`** — replace `selectionSet` with `type: TrackType`. Becomes `{ type: TrackType }`.
+
+### 5. BufferController: TrackType as key
+
+- `sourceBuffers_: Map<TrackType, SourceBuffer>` (was `Map<SelectionSet, SourceBuffer>`)
+- `getBufferedEnd(type: TrackType)` (was `getBufferedEnd(selectionSet)`)
+- `QueueItem` uses `type: TrackType` instead of `selectionSet`
+- Listens for `TRACKS_SELECTED` instead of `BUFFER_CODECS`
+
+This removes all `SelectionSet` dependency from BufferController. It only needs `Track` (for codec info) and `TrackType` (for the slot key).
+
+### 6. Init segment loading (on BUFFER_CREATED)
 
 Init segments move out of the update loop:
 
@@ -60,18 +73,15 @@ Init segments move out of the update loop:
 
 This separates setup (init) from streaming (media segments) cleanly.
 
-### 5. Update loop (per-MediaState)
+### 7. Update loop (three-layer pattern)
 
-Each MediaState's timer calls `update_(mediaState)`:
-
-1. Find next segment: first segment in `track.segments` where `start >= bufferedEnd` for that stream.
-2. If found and `bufferedEnd - currentTime < bufferGoal` — fetch and emit `SEGMENT_LOADED`.
-3. On `BUFFER_APPENDED` for this stream — schedule next update via `timer.tickNow()` (if buffer still below goal) or `timer.tickAfter(delay)`.
-4. If no next segment and `lastSegment` is the final segment — this stream is done.
+- **`update_(mediaState): number | null`** — does the streaming work (check buffer, find segment, load). Returns seconds to wait before next update, or `null` if no reschedule needed.
+- **`onUpdate_(mediaState)`** — timer callback. Calls `update_()`, feeds the result to `scheduleUpdate_()`.
+- **`scheduleUpdate_(mediaState, delay)`** — schedules the next `onUpdate_` call via `mediaState.timer.tickAfter(delay)`. Entry point for external triggers (buffer appended, seeking).
 
 End-of-stream (`BUFFER_EOS`) is emitted when all MediaStates have finished.
 
-### 6. Removed concepts
+### 8. Removed concepts
 
 - **`TaskLoop`** — replaced by `Timer`.
 - **`segmentIndex`** — replaced by time-based segment selection.
@@ -85,7 +95,8 @@ End-of-stream (`BUFFER_EOS`) is emitted when all MediaStates have finished.
 |------|--------|
 | `lib/utils/timer.ts` | New file |
 | `lib/utils/task_loop.ts` | Deleted |
-| `lib/controllers/stream_controller.ts` | Major refactor |
-| `lib/controllers/buffer_controller.ts` | Add `type` to QueueItem and `BUFFER_APPENDED` emit |
-| `lib/events.ts` | Remove `segmentIndex` from SegmentLoadedEvent, add `type` to BufferAppendedEvent |
+| `lib/events.ts` | Rename BUFFER_CODECS → TRACKS_SELECTED, simplify payloads, use TrackType |
+| `lib/controllers/buffer_controller.ts` | Key by TrackType, listen for TRACKS_SELECTED |
+| `lib/controllers/stream_controller.ts` | Major refactor: MediaState, per-stream timers, time-based segments |
+| `lib/player.ts` | `getBufferedEnd(type: TrackType)` |
 | `example/main.ts` | Update to match event changes |
