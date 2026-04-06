@@ -31,6 +31,7 @@ export class StreamController {
 
     this.player_.on(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.on(Events.MEDIA_ATTACHED, this.onMediaAttached_);
+    this.player_.on(Events.BUFFER_CREATED, this.onBufferCreated_);
     this.player_.on(Events.BUFFER_APPENDED, this.onBufferAppended_);
   }
 
@@ -38,6 +39,7 @@ export class StreamController {
     this.taskLoop_.destroy();
     this.player_.off(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
+    this.player_.off(Events.BUFFER_CREATED, this.onBufferCreated_);
     this.player_.off(Events.BUFFER_APPENDED, this.onBufferAppended_);
     this.manifest_ = null;
     this.streams_ = [];
@@ -51,6 +53,10 @@ export class StreamController {
   private onMediaAttached_ = (_event: MediaAttachedEvent) => {
     this.mediaAttached_ = true;
     this.tryStart_();
+  };
+
+  private onBufferCreated_ = () => {
+    this.taskLoop_.tick();
   };
 
   private onBufferAppended_ = (_event: BufferAppendedEvent) => {
@@ -91,7 +97,14 @@ export class StreamController {
       });
     }
 
-    this.taskLoop_.tick();
+    // Create all SourceBuffers upfront before any data is
+    // appended — MSE spec requires this.
+    this.player_.emit(Events.BUFFER_CODECS, {
+      tracks: this.streams_.map((s) => ({
+        selectionSet: s.selectionSet,
+        track: s.track,
+      })),
+    });
   }
 
   private onTick_() {

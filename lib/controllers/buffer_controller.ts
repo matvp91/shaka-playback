@@ -1,4 +1,8 @@
-import type { MediaAttachedEvent, SegmentLoadedEvent } from "../events";
+import type {
+  BufferCodecsEvent,
+  MediaAttachedEvent,
+  SegmentLoadedEvent,
+} from "../events";
 import { Events } from "../events";
 import type { Player } from "../player";
 import type { SelectionSet } from "../types/manifest";
@@ -16,11 +20,13 @@ export class BufferController {
 
   constructor(private player_: Player) {
     this.player_.on(Events.MEDIA_ATTACHED, this.onMediaAttached_);
+    this.player_.on(Events.BUFFER_CODECS, this.onBufferCodecs_);
     this.player_.on(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
   }
 
   destroy() {
     this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
+    this.player_.off(Events.BUFFER_CODECS, this.onBufferCodecs_);
     this.player_.off(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
     this.sourceBuffers_.clear();
     this.queue_ = [];
@@ -39,29 +45,28 @@ export class BufferController {
     this.mediaSource_ = event.mediaSource;
   };
 
+  private onBufferCodecs_ = (event: BufferCodecsEvent) => {
+    if (!this.mediaSource_) {
+      return;
+    }
+    for (const { selectionSet, track } of event.tracks) {
+      if (this.sourceBuffers_.has(selectionSet)) {
+        continue;
+      }
+      const mime = `${track.mimeType};codecs="${track.codec}"`;
+      const sb = this.mediaSource_.addSourceBuffer(mime);
+      this.sourceBuffers_.set(selectionSet, sb);
+    }
+    this.player_.emit(Events.BUFFER_CREATED);
+  };
+
   private onSegmentLoaded_ = (event: SegmentLoadedEvent) => {
-    this.ensureSourceBuffer_(event.selectionSet, event.track);
     this.queue_.push({
       selectionSet: event.selectionSet,
       data: event.data,
     });
     this.flush_();
   };
-
-  private ensureSourceBuffer_(
-    selectionSet: SelectionSet,
-    track: SegmentLoadedEvent["track"],
-  ) {
-    if (this.sourceBuffers_.has(selectionSet)) {
-      return;
-    }
-    if (!this.mediaSource_) {
-      return;
-    }
-    const mime = `${track.mimeType};codecs="${track.codec}"`;
-    const sb = this.mediaSource_.addSourceBuffer(mime);
-    this.sourceBuffers_.set(selectionSet, sb);
-  }
 
   private flush_() {
     if (this.appending_ || this.queue_.length === 0) {
