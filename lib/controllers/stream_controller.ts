@@ -158,7 +158,7 @@ export class StreamController {
     const bufferedEnd = this.player_.getBufferedEnd(mediaState.track.type);
 
     for (const segment of mediaState.track.segments) {
-      if (segment.start >= bufferedEnd) {
+      if (segment.end > bufferedEnd) {
         return segment;
       }
     }
