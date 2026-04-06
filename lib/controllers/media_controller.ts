@@ -35,10 +35,7 @@ export class MediaController {
   };
 
   private onBufferEos_ = () => {
-    if (
-      this.mediaSource_ &&
-      this.mediaSource_.readyState === "open"
-    ) {
+    if (this.mediaSource_ && this.mediaSource_.readyState === "open") {
       this.mediaSource_.endOfStream();
     }
   };
