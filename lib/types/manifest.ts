@@ -5,29 +5,44 @@ export enum MediaType {
 }
 
 export type Manifest = {
-  groups: MediaGroup[];
+  presentations: Presentation[];
 };
 
 /**
- * Group of streams sharing codec and MIME type,
- * maps 1:1 to a SourceBuffer.
+ * Time-bounded content period,
+ * maps to a DASH Period.
  */
-export type MediaGroup = {
+export type Presentation = {
+  start: number;
+  selectionSets: SelectionSet[];
+};
+
+/**
+ * Groups content by media type,
+ * maps 1:1 to an MSE SourceBuffer.
+ */
+export type SelectionSet = {
   type: MediaType;
+  switchingSets: SwitchingSet[];
+};
+
+/**
+ * CMAF switching set — tracks that can be
+ * seamlessly switched between (same codec).
+ */
+export type SwitchingSet = {
   mimeType: string;
   codec: string;
-  streams: Stream[];
+  timeOffset: number;
+  tracks: Track[];
 };
 
 /**
- * Single quality level as a sequence of segments,
- * seamlessly switchable within a MediaGroup.
+ * Single quality level as a sequence of
+ * segments, discriminated by media type.
  */
-export type Stream = {
-  start: number;
-  end: number;
+export type Track = {
   bandwidth: number;
-  timeOffset: number;
   initSegment: InitSegment;
   segments: Segment[];
 } & (
@@ -41,7 +56,7 @@ export type Stream = {
     }
 );
 
-/** Initialization segment for a stream. */
+/** Initialization segment for a track. */
 export type InitSegment = {
   url: string;
 };
