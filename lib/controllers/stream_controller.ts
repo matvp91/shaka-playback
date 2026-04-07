@@ -1,8 +1,4 @@
-import type {
-  BufferAppendedEvent,
-  ManifestParsedEvent,
-  MediaAttachedEvent,
-} from "../events";
+import type { ManifestParsedEvent, MediaAttachedEvent } from "../events";
 import { Events } from "../events";
 import type { Player } from "../player";
 import type {
@@ -15,14 +11,17 @@ import type {
   SwitchingSet,
   Track,
 } from "../types/manifest";
+import { binarySearch } from "../utils/array";
 import { assertNotVoid } from "../utils/assert";
+import { getBufferInfo } from "../utils/buffer";
 import { Timer } from "../utils/timer";
+
+const TICK_INTERVAL = 0.1;
 
 enum State {
   STOPPED,
   IDLE,
-  LOADING_INIT,
-  LOADING_SEGMENT,
+  LOADING,
   ENDED,
 }
 
@@ -32,7 +31,6 @@ type MediaState = {
   selectionSet: SelectionSet;
   switchingSet: SwitchingSet;
   track: Track;
-  lastSegment: Segment | null;
   lastInitSegment: InitSegment | null;
   timer: Timer;
 };
@@ -46,8 +44,6 @@ export class StreamController {
     this.player_.on(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.on(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.on(Events.MEDIA_DETACHED, this.onMediaDetached_);
-    this.player_.on(Events.BUFFER_CREATED, this.onBufferCreated_);
-    this.player_.on(Events.BUFFER_APPENDED, this.onBufferAppended_);
   }
 
   destroy() {
@@ -57,8 +53,6 @@ export class StreamController {
     this.player_.off(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.off(Events.MEDIA_DETACHED, this.onMediaDetached_);
-    this.player_.off(Events.BUFFER_CREATED, this.onBufferCreated_);
-    this.player_.off(Events.BUFFER_APPENDED, this.onBufferAppended_);
     this.manifest_ = null;
     this.mediaStates_.clear();
   }
@@ -79,27 +73,6 @@ export class StreamController {
       mediaState.timer.stop();
     }
     this.media_ = null;
-  };
-
-  private onBufferCreated_ = () => {
-    for (const mediaState of this.mediaStates_.values()) {
-      this.loadInitSegment_(mediaState);
-    }
-  };
-
-  private onBufferAppended_ = (event: BufferAppendedEvent) => {
-    const mediaState = this.mediaStates_.get(event.type);
-    if (!mediaState) {
-      return;
-    }
-    if (
-      mediaState.state !== State.LOADING_INIT &&
-      mediaState.state !== State.LOADING_SEGMENT
-    ) {
-      return;
-    }
-    mediaState.state = State.IDLE;
-    this.onUpdate_(mediaState);
   };
 
   private tryStart_() {
@@ -128,7 +101,6 @@ export class StreamController {
         selectionSet,
         switchingSet,
         track,
-        lastSegment: null,
         lastInitSegment: null,
         timer: new Timer(() => this.onUpdate_(mediaState)),
       };
@@ -145,101 +117,127 @@ export class StreamController {
       tracks: codecTracks,
       duration: this.computeDuration_(),
     });
+
+    for (const mediaState of this.mediaStates_.values()) {
+      mediaState.timer.tickEvery(TICK_INTERVAL);
+    }
   }
 
   /**
    * Core streaming decision for a single track.
-   * Returns seconds until next poll, or null
-   * if no reschedule is needed.
+   * Runs every tick on a 100ms interval.
    */
-  private update_(mediaState: MediaState): number | null {
+  private update_(mediaState: MediaState) {
     if (mediaState.state !== State.IDLE) {
-      return null;
+      return;
+    }
+    if (!this.media_) {
+      return;
     }
 
-    const currentTime = this.player_.getMedia()?.currentTime ?? 0;
+    const currentTime = this.media_.currentTime;
     const bufferGoal = this.player_.getConfig().bufferGoal;
-    const bufferedEnd = this.player_.getBufferedEnd(
-      mediaState.selectionSet.type,
-    );
+    const bufferInfo = getBufferInfo(this.media_.buffered, currentTime);
 
-    if (bufferedEnd - currentTime >= bufferGoal) {
-      return 1;
+    const lookupTime = bufferInfo ? bufferInfo.end : currentTime;
+
+    if (bufferInfo && bufferInfo.end - currentTime >= bufferGoal) {
+      return;
     }
 
-    const nextSegment = this.getNextSegment_(mediaState);
-    if (nextSegment) {
-      mediaState.state = State.LOADING_SEGMENT;
-      this.loadSegment_(mediaState, nextSegment);
-      return null;
+    if (!this.resolvePresentation_(mediaState, lookupTime)) {
+      return;
     }
 
-    this.advancePresentation_(mediaState);
-    return null;
+    const segment = this.getSegmentForTime_(mediaState.track, lookupTime);
+    if (segment) {
+      this.loadSegment_(mediaState, segment);
+      return;
+    }
+
+    this.checkEndOfStream_();
   }
 
   private onUpdate_(mediaState: MediaState) {
-    const delay = this.update_(mediaState);
-    if (delay !== null) {
-      mediaState.timer.tickAfter(delay);
-    }
+    this.update_(mediaState);
   }
 
   /**
-   * Find the next segment to load.
-   * Pure — no side effects.
+   * Resolve the presentation chain for the given
+   * time. Returns false if a new init segment must
+   * be loaded first (state set to LOADING).
    */
-  private getNextSegment_(mediaState: MediaState): Segment | null {
-    const { segments } = mediaState.track;
-    if (!mediaState.lastSegment) {
-      return segments[0] ?? null;
-    }
-    const lastIndex = segments.indexOf(mediaState.lastSegment);
-    return segments[lastIndex + 1] ?? null;
-  }
-
-  /**
-   * Advance to the next presentation. Throws on
-   * CMAF inconsistency. Sets ENDED when no more
-   * presentations are available.
-   */
-  private advancePresentation_(mediaState: MediaState) {
+  private resolvePresentation_(mediaState: MediaState, time: number): boolean {
     if (!this.manifest_) {
-      return;
+      return false;
     }
 
-    const presentations = this.manifest_.presentations;
-    const currentIndex = presentations.indexOf(mediaState.presentation);
-    const nextPresentation = presentations[currentIndex + 1];
-
-    if (!nextPresentation) {
+    const presentation = this.getPresentationForTime_(time);
+    if (!presentation) {
       mediaState.state = State.ENDED;
       this.checkEndOfStream_();
-      return;
+      return false;
+    }
+
+    if (presentation === mediaState.presentation) {
+      return true;
     }
 
     const type = mediaState.selectionSet.type;
-    const selectionSet = nextPresentation.selectionSets.find(
+    const selectionSet = presentation.selectionSets.find(
       (s) => s.type === type,
     );
-    assertNotVoid(
-      selectionSet,
-      `No SelectionSet for ${type} in next Presentation`,
-    );
+    assertNotVoid(selectionSet, `No SelectionSet for ${type} in Presentation`);
 
     const switchingSet = selectionSet.switchingSets[0];
-    assertNotVoid(switchingSet, "No SwitchingSet in next Presentation");
+    assertNotVoid(switchingSet, "No SwitchingSet in Presentation");
 
     const track = switchingSet.tracks[0];
-    assertNotVoid(track, "No Track in next Presentation");
+    assertNotVoid(track, "No Track in Presentation");
 
-    mediaState.presentation = nextPresentation;
+    mediaState.presentation = presentation;
     mediaState.selectionSet = selectionSet;
     mediaState.switchingSet = switchingSet;
     mediaState.track = track;
-    mediaState.lastSegment = null;
 
-    this.loadInitSegment_(mediaState);
+    if (track.initSegment !== mediaState.lastInitSegment) {
+      this.loadInitSegment_(mediaState);
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Find the presentation that contains the
+   * given time.
+   */
+  private getPresentationForTime_(time: number): Presentation | null {
+    if (!this.manifest_) {
+      return null;
+    }
+    for (const p of this.manifest_.presentations) {
+      if (time >= p.start && time < p.end) {
+        return p;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Binary search for the segment containing the
+   * given time. Returns null if no segment matches.
+   */
+  private getSegmentForTime_(track: Track, time: number): Segment | null {
+    return binarySearch(track.segments, (seg) => {
+      if (time < seg.start) {
+        return -1;
+      }
+      if (time >= seg.end) {
+        return 1;
+      }
+      return 0;
+    });
   }
 
   private checkEndOfStream_() {
@@ -262,17 +260,15 @@ export class StreamController {
     const { initSegment } = mediaState.track;
 
     if (mediaState.lastInitSegment === initSegment) {
-      mediaState.state = State.IDLE;
-      this.onUpdate_(mediaState);
       return;
     }
 
-    mediaState.state = State.LOADING_INIT;
+    mediaState.state = State.LOADING;
 
     const response = await fetch(initSegment.url);
     const data = await response.arrayBuffer();
 
-    if (mediaState.state !== State.LOADING_INIT) {
+    if (mediaState.state !== State.LOADING) {
       return;
     }
 
@@ -284,17 +280,19 @@ export class StreamController {
       data,
       segment: null,
     });
+
+    mediaState.state = State.IDLE;
   }
 
   private async loadSegment_(mediaState: MediaState, segment: Segment) {
+    mediaState.state = State.LOADING;
+
     const response = await fetch(segment.url);
     const data = await response.arrayBuffer();
 
-    if (mediaState.state !== State.LOADING_SEGMENT) {
+    if (mediaState.state !== State.LOADING) {
       return;
     }
-
-    mediaState.lastSegment = segment;
 
     this.player_.emit(Events.BUFFER_APPENDING, {
       type: mediaState.selectionSet.type,
@@ -302,5 +300,7 @@ export class StreamController {
       segment,
       data,
     });
+
+    mediaState.state = State.IDLE;
   }
 }
