@@ -3,7 +3,7 @@ import { Events, Player } from "../lib/index.ts";
 const player = new Player();
 
 player.setConfig({
-  bufferGoal: 10,
+  bufferGoal: 30,
 });
 
 const video = document.getElementById("videoElement") as HTMLVideoElement;
