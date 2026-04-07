@@ -6,6 +6,7 @@ export type MPD = {
 
 export type Period = {
   "@_start"?: string;
+  "@_duration"?: string;
   BaseURL?: TextNode;
   SegmentTemplate?: SegmentTemplate;
   AdaptationSet: AdaptationSet[];
