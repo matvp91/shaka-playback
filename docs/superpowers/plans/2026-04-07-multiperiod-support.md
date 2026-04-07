@@ -318,12 +318,12 @@ function parsePeriod(
     ? parseDuration(period["@_start"])
     : 0;
 
-  const grouped = groupByMediaType(period.AdaptationSet);
+  const grouped = groupAdaptationSets(period.AdaptationSet);
 
   const selectionSets: SelectionSet[] = Array.from(
     grouped.entries(),
-  ).map(([type, adaptationSets]) =>
-    parseSelectionSet(options, mpd, period, type, adaptationSets),
+  ).map(([_key, adaptationSets]) =>
+    parseSelectionSet(options, mpd, period, adaptationSets),
   );
 
   return { start, selectionSets };
@@ -333,15 +333,15 @@ function parseSelectionSet(
   options: ParseManifestOptions,
   mpd: MPD,
   period: Period,
-  type: MediaType,
   adaptationSets: AdaptationSet[],
 ): SelectionSet {
-  const grouped = groupByCodec(adaptationSets);
+  const first = adaptationSets[0];
+  assertNotVoid(first, "No AdaptationSet found");
+  const type = inferMediaType(first);
+  assertNotVoid(type, "Cannot infer media type");
 
-  const switchingSets: SwitchingSet[] = Array.from(
-    grouped.entries(),
-  ).map(([key, sets]) =>
-    parseSwitchingSet(options, mpd, period, type, key, sets),
+  const switchingSets = adaptationSets.map((as) =>
+    parseSwitchingSet(options, mpd, period, as, type),
   );
 
   return { type, switchingSets };
@@ -351,27 +351,22 @@ function parseSwitchingSet(
   options: ParseManifestOptions,
   mpd: MPD,
   period: Period,
+  adaptationSet: AdaptationSet,
   type: MediaType,
-  _key: string,
-  adaptationSets: AdaptationSet[],
 ): SwitchingSet {
-  const firstAs = adaptationSets[0];
-  assertNotVoid(firstAs, "No AdaptationSet found");
-  const firstRep = firstAs.Representation[0];
+  const firstRep = adaptationSet.Representation[0];
   assertNotVoid(firstRep, "No Representation found");
 
-  const mimeType = findMap([firstRep, firstAs], "@_mimeType");
+  const mimeType = findMap([firstRep, adaptationSet], "@_mimeType");
   assertNotVoid(mimeType, "mimeType is mandatory");
 
-  const codec = findMap([firstRep, firstAs], "@_codecs");
+  const codec = findMap([firstRep, adaptationSet], "@_codecs");
   assertNotVoid(codec, "codecs is mandatory");
 
-  const timeOffset = extractTimeOffset(firstAs);
+  const timeOffset = extractTimeOffset(adaptationSet);
 
-  const tracks = adaptationSets.flatMap((as) =>
-    as.Representation.map((rep) =>
-      parseTrack(options, mpd, period, as, rep, type),
-    ),
+  const tracks = adaptationSet.Representation.map((rep) =>
+    parseTrack(options, mpd, period, adaptationSet, rep, type),
   );
 
   return { mimeType, codec, timeOffset, tracks };
@@ -449,44 +444,34 @@ function extractTimeOffset(adaptationSet: AdaptationSet): number {
 }
 
 /**
- * Group AdaptationSets by media type.
- * First level of the two-level grouping.
+ * Group AdaptationSets by @group or inferred
+ * content type. Each group becomes a SelectionSet,
+ * each AdaptationSet within becomes a SwitchingSet.
  */
-function groupByMediaType(
-  adaptationSets: AdaptationSet[],
-): Map<MediaType, AdaptationSet[]> {
-  const groups = new Map<MediaType, AdaptationSet[]>();
-  for (const as of adaptationSets) {
-    const type = inferMediaType(as);
-    if (!type) {
-      continue;
-    }
-    const list = groups.get(type) ?? [];
-    list.push(as);
-    groups.set(type, list);
+function groupAdaptationSets(adaptationSets: AdaptationSet[]) {
+  const groups = new Map<string, AdaptationSet[]>();
+  for (const adaptationSet of adaptationSets) {
+    const key =
+      adaptationSet["@_group"] ?? inferContentType(adaptationSet);
+    const list = groups.get(key) ?? [];
+    list.push(adaptationSet);
+    groups.set(key, list);
   }
   return groups;
 }
 
-/**
- * Group AdaptationSets by codec within a media
- * type. Second level of the two-level grouping.
- */
-function groupByCodec(
-  adaptationSets: AdaptationSet[],
-): Map<string, AdaptationSet[]> {
-  const groups = new Map<string, AdaptationSet[]>();
-  for (const as of adaptationSets) {
-    const rep = as.Representation[0];
-    const sources = rep ? [rep, as] : [as];
-    const mimeType = findMap(sources, "@_mimeType");
-    const codec = findMap(sources, "@_codecs");
-    const key = `${mimeType ?? ""};${codec ?? ""}`;
-    const list = groups.get(key) ?? [];
-    list.push(as);
-    groups.set(key, list);
+function inferContentType(adaptationSet: AdaptationSet) {
+  if (adaptationSet["@_contentType"]) {
+    return adaptationSet["@_contentType"];
   }
-  return groups;
+  const mimeType =
+    adaptationSet["@_mimeType"] ??
+    adaptationSet.Representation[0]?.["@_mimeType"];
+  if (mimeType) {
+    const type = mimeType.split("/")[0] ?? mimeType;
+    return type === "application" ? "text" : type;
+  }
+  return "unknown";
 }
 
 function inferMediaType(adaptationSet: AdaptationSet): MediaType | null {

@@ -165,9 +165,10 @@ StreamController                              BufferController
    `mpd.Period[0]`.
 2. **Extract `Period@start`** — parse duration string into seconds for
    `Presentation.start`.
-3. **Two-level AdaptationSet grouping:**
-   - By media type → SelectionSet.
-   - By codec/mimeType within type → SwitchingSet.
+3. **AdaptationSet grouping:** Group by `@group` attribute or inferred
+   content type (existing `groupAdaptationSets` logic). Each group
+   becomes a SelectionSet, each AdaptationSet within becomes a
+   SwitchingSet.
 4. **Extract `presentationTimeOffset`** from SegmentTemplate at
    AdaptationSet level, store on SwitchingSet as `timeOffset`.
 5. **Remove `start`/`end` computation** on Track.
