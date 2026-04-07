@@ -480,15 +480,13 @@ function inferMediaType(adaptationSet: AdaptationSet): MediaType | null {
   const mimeType =
     adaptationSet["@_mimeType"] ??
     adaptationSet.Representation[0]?.["@_mimeType"];
-  if (mimeType) {
-    if (mimeType.startsWith("video/")) return MediaType.VIDEO;
-    if (mimeType.startsWith("audio/")) return MediaType.AUDIO;
-    if (
-      mimeType.startsWith("text/") ||
-      mimeType.startsWith("application/")
-    ) {
-      return MediaType.TEXT;
-    }
+  if (mimeType?.startsWith("video/")) return MediaType.VIDEO;
+  if (mimeType?.startsWith("audio/")) return MediaType.AUDIO;
+  if (
+    mimeType?.startsWith("text/") ||
+    mimeType?.startsWith("application/")
+  ) {
+    return MediaType.TEXT;
   }
   return null;
 }
