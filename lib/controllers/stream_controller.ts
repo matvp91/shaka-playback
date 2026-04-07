@@ -1,4 +1,9 @@
-import type { ManifestParsedEvent, MediaAttachedEvent } from "../events";
+import type {
+  BufferAppendedEvent,
+  BufferCreatedEvent,
+  ManifestParsedEvent,
+  MediaAttachedEvent,
+} from "../events";
 import { Events } from "../events";
 import type { Player } from "../player";
 import type {
@@ -39,11 +44,14 @@ export class StreamController {
   private manifest_: Manifest | null = null;
   private media_: HTMLMediaElement | null = null;
   private mediaStates_ = new Map<MediaType, MediaState>();
+  private sourceBuffers_ = new Map<MediaType, SourceBuffer>();
 
   constructor(private player_: Player) {
     this.player_.on(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.on(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.on(Events.MEDIA_DETACHED, this.onMediaDetached_);
+    this.player_.on(Events.BUFFER_CREATED, this.onBufferCreated_);
+    this.player_.on(Events.BUFFER_APPENDED, this.onBufferAppended_);
   }
 
   destroy() {
@@ -53,8 +61,11 @@ export class StreamController {
     this.player_.off(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.off(Events.MEDIA_DETACHED, this.onMediaDetached_);
+    this.player_.off(Events.BUFFER_CREATED, this.onBufferCreated_);
+    this.player_.off(Events.BUFFER_APPENDED, this.onBufferAppended_);
     this.manifest_ = null;
     this.mediaStates_.clear();
+    this.sourceBuffers_.clear();
   }
 
   private onManifestParsed_ = (event: ManifestParsedEvent) => {
@@ -65,6 +76,17 @@ export class StreamController {
   private onMediaAttached_ = (event: MediaAttachedEvent) => {
     this.media_ = event.media;
     this.tryStart_();
+  };
+
+  private onBufferCreated_ = (event: BufferCreatedEvent) => {
+    this.sourceBuffers_ = event.sourceBuffers;
+  };
+
+  private onBufferAppended_ = (event: BufferAppendedEvent) => {
+    const mediaState = this.mediaStates_.get(event.type);
+    if (mediaState?.state === State.LOADING) {
+      mediaState.state = State.IDLE;
+    }
   };
 
   private onMediaDetached_ = () => {
@@ -135,17 +157,22 @@ export class StreamController {
       return;
     }
 
+    const type = mediaState.selectionSet.type;
     const currentTime = this.media_.currentTime;
     const bufferGoal = this.player_.getConfig().bufferGoal;
-    const bufferInfo = getBufferInfo(this.media_.buffered, currentTime);
+    const bufferEnd = this.getBufferEnd_(type, currentTime);
+    const lookupTime = bufferEnd ?? currentTime;
 
-    const lookupTime = bufferInfo ? bufferInfo.end : currentTime;
-
-    if (bufferInfo && bufferInfo.end - currentTime >= bufferGoal) {
+    if (bufferEnd !== null && bufferEnd - currentTime >= bufferGoal) {
       return;
     }
 
     if (!this.resolvePresentation_(mediaState, lookupTime)) {
+      return;
+    }
+
+    if (mediaState.track.initSegment !== mediaState.lastInitSegment) {
+      this.loadInitSegment_(mediaState);
       return;
     }
 
@@ -163,9 +190,23 @@ export class StreamController {
   }
 
   /**
+   * Get the end of the buffered range containing
+   * the given time for a specific media type.
+   */
+  private getBufferEnd_(type: MediaType, time: number): number | null {
+    const sb = this.sourceBuffers_.get(type);
+    if (!sb) {
+      return null;
+    }
+    const { maxBufferHole } = this.player_.getConfig();
+    const info = getBufferInfo(sb.buffered, time, maxBufferHole);
+    return info ? info.end : null;
+  }
+
+  /**
    * Resolve the presentation chain for the given
-   * time. Returns false if a new init segment must
-   * be loaded first (state set to LOADING).
+   * time. Updates the full MediaState chain when
+   * the presentation changes.
    */
   private resolvePresentation_(mediaState: MediaState, time: number): boolean {
     if (!this.manifest_) {
@@ -200,11 +241,6 @@ export class StreamController {
     mediaState.switchingSet = switchingSet;
     mediaState.track = track;
 
-    if (track.initSegment !== mediaState.lastInitSegment) {
-      this.loadInitSegment_(mediaState);
-      return false;
-    }
-
     return true;
   }
 
@@ -230,13 +266,17 @@ export class StreamController {
    */
   private getSegmentForTime_(track: Track, time: number): Segment | null {
     return binarySearch(track.segments, (seg) => {
+      if (time >= seg.start && time < seg.end - 0.002) {
+        return 0;
+      }
       if (time < seg.start) {
-        return -1;
+        const tolerance = Math.min(0.25, seg.end - seg.start);
+        if (seg.start - tolerance > time && seg.start > 0) {
+          return -1;
+        }
+        return 0;
       }
-      if (time >= seg.end) {
-        return 1;
-      }
-      return 0;
+      return 1;
     });
   }
 
@@ -280,8 +320,6 @@ export class StreamController {
       data,
       segment: null,
     });
-
-    mediaState.state = State.IDLE;
   }
 
   private async loadSegment_(mediaState: MediaState, segment: Segment) {
@@ -300,7 +338,5 @@ export class StreamController {
       segment,
       data,
     });
-
-    mediaState.state = State.IDLE;
   }
 }

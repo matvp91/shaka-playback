@@ -75,7 +75,9 @@ export class BufferController {
       });
     }
     this.duration_ = event.duration;
-    this.player_.emit(Events.BUFFER_CREATED);
+    this.player_.emit(Events.BUFFER_CREATED, {
+      sourceBuffers: this.sourceBuffers_,
+    });
     this.updateDuration_();
   };
 

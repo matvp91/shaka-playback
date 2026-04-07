@@ -40,6 +40,10 @@ export type BufferCodecsEvent = {
   duration: number;
 };
 
+export type BufferCreatedEvent = {
+  sourceBuffers: Map<MediaType, SourceBuffer>;
+};
+
 export type BufferAppendingEvent = {
   type: MediaType;
   initSegment: InitSegment;
@@ -58,7 +62,7 @@ export interface EventMap {
   [Events.MEDIA_ATTACHED]: (event: MediaAttachedEvent) => void;
   [Events.MEDIA_DETACHED]: undefined;
   [Events.BUFFER_CODECS]: (event: BufferCodecsEvent) => void;
-  [Events.BUFFER_CREATED]: undefined;
+  [Events.BUFFER_CREATED]: (event: BufferCreatedEvent) => void;
   [Events.BUFFER_APPENDING]: (event: BufferAppendingEvent) => void;
   [Events.BUFFER_APPENDED]: (event: BufferAppendedEvent) => void;
   [Events.BUFFER_EOS]: undefined;
