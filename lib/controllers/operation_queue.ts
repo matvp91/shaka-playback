@@ -3,7 +3,7 @@ import { assertNotVoid } from "../utils/assert";
 
 type Operation = {
   execute: () => void;
-  onComplete: () => void;
+  onComplete?: () => void;
 };
 
 export class OperationQueue {
@@ -50,7 +50,6 @@ export class OperationQueue {
           queue.shift();
           this.executeNext_(type);
         },
-        onComplete: () => {},
       };
       const queue = this.queues_.get(type);
       if (!queue) {
@@ -76,7 +75,7 @@ export class OperationQueue {
     }
     const operation = queue.shift();
     assertNotVoid(operation, "Queue not empty but no operation");
-    operation.onComplete();
+    operation.onComplete?.();
     this.executeNext_(type);
   }
 

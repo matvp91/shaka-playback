@@ -153,7 +153,6 @@ export class BufferController {
       execute: () => {
         sb.remove(bufferedStart, evictEnd);
       },
-      onComplete: () => {},
     });
   };
 
