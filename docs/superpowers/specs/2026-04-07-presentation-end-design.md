@@ -47,6 +47,7 @@ look up neighboring periods. Resolve `end` inline using this fallback chain
 3. **`MPD@mediaPresentationDuration`** —
    `parseDuration(mpd.@mediaPresentationDuration)`
 4. **Last segment's `end`** — robustness fallback for sparse manifests
+   (from any track in the presentation)
 
 Each source short-circuits with an early return. An assertion at the end
 ensures `end` is always resolved — if none of the sources produce a value,
