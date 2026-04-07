@@ -152,7 +152,6 @@ export class StreamController {
 
     const segment = this.getNextSegment_(mediaState);
     if (!segment) {
-      this.checkEndOfStream_();
       return null;
     }
 
@@ -183,9 +182,9 @@ export class StreamController {
     }
 
     // Track exhausted — try next presentation.
-    if (this.transitionToNextPresentation_(mediaState)) {
-      return mediaState.track.segments[0] ?? null;
-    }
+    // Transition loads the init segment; the streaming
+    // loop resumes when BUFFER_APPENDED fires.
+    this.transitionToNextPresentation_(mediaState);
 
     return null;
   }
@@ -193,18 +192,20 @@ export class StreamController {
   /**
    * Transition to the next presentation. Updates
    * the media state and loads the new init segment.
-   * Returns true if a transition occurred.
+   * The streaming loop resumes via BUFFER_APPENDED
+   * after the init segment is appended.
    */
-  private transitionToNextPresentation_(mediaState: MediaState): boolean {
+  private transitionToNextPresentation_(mediaState: MediaState) {
     if (!this.manifest_) {
-      return false;
+      return;
     }
 
     const presentations = this.manifest_.presentations;
     const currentIndex = presentations.indexOf(mediaState.presentation);
     const nextPresentation = presentations[currentIndex + 1];
     if (!nextPresentation) {
-      return false;
+      this.checkEndOfStream_();
+      return;
     }
 
     const type = mediaState.selectionSet.type;
@@ -212,17 +213,20 @@ export class StreamController {
       (s) => s.type === type,
     );
     if (!selectionSet) {
-      return false;
+      this.checkEndOfStream_();
+      return;
     }
 
     const switchingSet = selectionSet.switchingSets[0];
     if (!switchingSet) {
-      return false;
+      this.checkEndOfStream_();
+      return;
     }
 
     const track = switchingSet.tracks[0];
     if (!track) {
-      return false;
+      this.checkEndOfStream_();
+      return;
     }
 
     mediaState.presentation = nextPresentation;
@@ -232,17 +236,41 @@ export class StreamController {
     mediaState.lastSegment = null;
 
     this.loadInitSegment_(mediaState);
-
-    return true;
   }
 
+  /**
+   * Check if all media states are exhausted.
+   * Pure check — no side effects on media state.
+   */
   private checkEndOfStream_() {
-    const allDone = [...this.mediaStates_.values()].every(
-      (ms) => this.getNextSegment_(ms) === null,
+    const allDone = [...this.mediaStates_.values()].every((ms) =>
+      this.isTrackExhausted_(ms),
     );
     if (allDone) {
       this.player_.emit(Events.BUFFER_EOS);
     }
+  }
+
+  /**
+   * Check if a media state has no more segments
+   * and no more presentations to transition to.
+   */
+  private isTrackExhausted_(mediaState: MediaState): boolean {
+    const { segments } = mediaState.track;
+    if (!mediaState.lastSegment) {
+      return segments.length === 0;
+    }
+    const lastIndex = segments.indexOf(mediaState.lastSegment);
+    if (lastIndex + 1 < segments.length) {
+      return false;
+    }
+    // Current track done — check for more presentations.
+    if (!this.manifest_) {
+      return true;
+    }
+    const presentations = this.manifest_.presentations;
+    const currentIndex = presentations.indexOf(mediaState.presentation);
+    return currentIndex + 1 >= presentations.length;
   }
 
   /**
