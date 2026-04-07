@@ -1,5 +1,7 @@
 # TODO
 
+Request & error handling — cancellable Request<T> class, type-safe PlayerError with ErrorCode discriminated union, ERROR event. Wire through ManifestController and StreamController. Seek aborts in-flight fetches. See docs/superpowers/specs/2026-04-07-request-and-error-handling-design.md and docs/superpowers/plans/2026-04-07-request-and-error-handling.md.
+
 Merge media_controller and buffer_controller
 
 Create a struct to keep sourceBuffer listeners instead of storing it in listeners_ in buffer_controller.
