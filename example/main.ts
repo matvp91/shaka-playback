@@ -1,6 +1,7 @@
 import { Events, Player } from "../lib/index.ts";
 
 const player = new Player();
+Object.assign(window, { player });
 
 player.setConfig({
   bufferGoal: 30,
