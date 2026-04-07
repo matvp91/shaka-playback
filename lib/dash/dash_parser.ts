@@ -54,8 +54,8 @@ async function parseManifest(text: string, options: ParseManifestOptions) {
     throw new Error("No Period found in manifest");
   }
 
-  const presentations = mpd.Period.map((period) =>
-    parsePeriod(options, mpd, period),
+  const presentations = mpd.Period.map((period, periodIndex) =>
+    parsePeriod(options, mpd, period, periodIndex),
   );
 
   const manifest: Manifest = { presentations };
@@ -67,6 +67,7 @@ function parsePeriod(
   options: ParseManifestOptions,
   mpd: MPD,
   period: Period,
+  periodIndex: number,
 ): Presentation {
   const start = period["@_start"] ? parseDuration(period["@_start"]) : 0;
 
@@ -77,7 +78,51 @@ function parsePeriod(
       parseSelectionSet(options, mpd, period, adaptationSets),
   );
 
-  return { start, selectionSets };
+  const end = resolvePresentationEnd(
+    mpd,
+    period,
+    periodIndex,
+    start,
+    selectionSets,
+  );
+
+  return { start, end, selectionSets };
+}
+
+/**
+ * Resolve presentation end time using the
+ * DASH spec fallback chain:
+ * 1. Period@duration
+ * 2. Next Period@start
+ * 3. MPD@mediaPresentationDuration
+ * 4. Last segment end (robustness fallback)
+ */
+function resolvePresentationEnd(
+  mpd: MPD,
+  period: Period,
+  periodIndex: number,
+  start: number,
+  selectionSets: SelectionSet[],
+): number {
+  const duration = period["@_duration"];
+  if (duration != null) {
+    return start + parseDuration(duration);
+  }
+
+  const nextStart = mpd.Period[periodIndex + 1]?.["@_start"];
+  if (nextStart != null) {
+    return parseDuration(nextStart);
+  }
+
+  const mpdDuration = mpd["@_mediaPresentationDuration"];
+  if (mpdDuration != null) {
+    return parseDuration(mpdDuration);
+  }
+
+  const lastSegmentEnd =
+    selectionSets[0]?.switchingSets[0]?.tracks[0]?.segments.at(-1)?.end;
+  assertNotVoid(lastSegmentEnd, "Cannot resolve presentation end");
+  return lastSegmentEnd;
 }
 
 function parseSelectionSet(
