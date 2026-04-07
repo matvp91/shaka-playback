@@ -1,4 +1,4 @@
-import type { Segment } from "../types/manifest";
+import type { InitSegment, Segment } from "../types/manifest";
 import { assertNotVoid, assertNumber } from "../utils/assert";
 import { findMap } from "../utils/functional";
 import { resolveUrl } from "../utils/url";
@@ -36,9 +36,6 @@ export function parseSegmentData(
   const timescale = Number(st["@_timescale"]);
   assertNumber(timescale, "timescale is mandatory");
 
-  const presentationTimeOffset = Number(st["@_presentationTimeOffset"] ?? 0);
-  const timeOffset = presentationTimeOffset / timescale;
-
   const initSegmentUrl = resolveUrl(
     applyUrlTemplate(initialization, {
       RepresentationID: representation["@_id"],
@@ -56,9 +53,8 @@ export function parseSegmentData(
   );
 
   return {
-    initSegmentUrl,
+    initSegment: { url: initSegmentUrl } satisfies InitSegment,
     segments,
-    timeOffset,
   };
 }
 

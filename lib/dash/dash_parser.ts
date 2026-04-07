@@ -1,15 +1,8 @@
 import { XMLParser } from "fast-xml-parser";
-import type {
-  Manifest,
-  Presentation,
-  SelectionSet,
-  SwitchingSet,
-  Track,
-} from "../types/manifest";
-import { TrackType } from "../types/manifest";
+import type { Manifest, MediaGroup, Stream } from "../types/manifest";
+import { MediaType } from "../types/manifest";
 import { assertNotVoid, assertNumber } from "../utils/assert";
 import { filterMap, findMap } from "../utils/functional";
-import { parseDuration } from "../utils/time";
 import { resolveUrls } from "../utils/url";
 import { parseSegmentData } from "./dash_presentation";
 import type { AdaptationSet, MPD, Period, Representation } from "./types";
@@ -50,10 +43,13 @@ async function parseManifest(text: string, options: ParseManifestOptions) {
   });
   const mpd = parser.parse(text).MPD as MPD;
 
+  const period = mpd.Period[0];
+  if (!period) {
+    throw new Error("No Period found in manifest");
+  }
+
   const manifest: Manifest = {
-    presentations: mpd.Period.map((period) =>
-      parsePeriod(options, mpd, period),
-    ),
+    groups: parsePeriod(options, mpd, period),
   };
 
   return manifest;
@@ -63,24 +59,13 @@ function parsePeriod(
   options: ParseManifestOptions,
   mpd: MPD,
   period: Period,
-): Presentation {
-  const group = groupAdaptationSets(period.AdaptationSet);
-  const adaptationSetSets = Array.from(group.values());
+): MediaGroup[] {
+  const grouped = groupAdaptationSets(period.AdaptationSet);
+  const adaptationSetSets = Array.from(grouped.values());
 
-  const index = mpd.Period.indexOf(period);
-  const nextPeriod = mpd.Period[index + 1];
-  const start = period["@_start"] ? parseDuration(period["@_start"]) : 0;
-  const duration =
-    nextPeriod?.["@_start"] ?? mpd["@_mediaPresentationDuration"];
-  const end = duration ? parseDuration(duration) : start;
-
-  return {
-    start,
-    end,
-    selectionSets: adaptationSetSets.map((adaptationSets) =>
-      parseAdaptationSets(options, mpd, period, adaptationSets),
-    ),
-  };
+  return adaptationSetSets.map((adaptationSets) =>
+    parseAdaptationSets(options, mpd, period, adaptationSets),
+  );
 }
 
 function parseAdaptationSets(
@@ -88,18 +73,30 @@ function parseAdaptationSets(
   mpd: MPD,
   period: Period,
   adaptationSets: AdaptationSet[],
-): SelectionSet {
-  const switchingSets = adaptationSets.map((adaptationSet) =>
+): MediaGroup {
+  const streams = adaptationSets.flatMap((adaptationSet) =>
     parseAdaptationSet(options, mpd, period, adaptationSet),
   );
-  // Store type of convenience, we don't have to dig down every
-  // time we need a track type.
-  const type = switchingSets[0]?.tracks[0]?.type;
-  assertNotVoid(type, "type is mandatory");
+
+  const first = streams[0];
+  assertNotVoid(first, "No streams found");
+
+  const as = adaptationSets[0];
+  assertNotVoid(as, "No AdaptationSet found");
+  const rep = as.Representation[0];
+  assertNotVoid(rep, "No Representation found");
+
+  const mimeType = findMap([rep, as], "@_mimeType");
+  assertNotVoid(mimeType, "mimeType is mandatory");
+
+  const codec = findMap([rep, as], "@_codecs");
+  assertNotVoid(codec, "codecs is mandatory");
 
   return {
-    type,
-    switchingSets,
+    type: first.type,
+    mimeType,
+    codec,
+    streams,
   };
 }
 
@@ -108,12 +105,10 @@ function parseAdaptationSet(
   mpd: MPD,
   period: Period,
   adaptationSet: AdaptationSet,
-): SwitchingSet {
-  return {
-    tracks: adaptationSet.Representation.map((representation) =>
-      parseRepresentation(options, mpd, period, adaptationSet, representation),
-    ),
-  };
+): Stream[] {
+  return adaptationSet.Representation.map((representation) =>
+    parseRepresentation(options, mpd, period, adaptationSet, representation),
+  );
 }
 
 function parseRepresentation(
@@ -122,19 +117,15 @@ function parseRepresentation(
   period: Period,
   adaptationSet: AdaptationSet,
   representation: Representation,
-): Track {
+): Stream {
   const baseUrls = filterMap(
     [mpd, period, adaptationSet, representation],
     (node) => node.BaseURL?.["#text"],
   );
   const baseUrl = resolveUrls([options.sourceUrl, ...baseUrls]);
 
-  // Common properties
   const mimeType = findMap([representation, adaptationSet], "@_mimeType");
   assertNotVoid(mimeType, "mimeType is mandatory");
-
-  const codec = findMap([representation, adaptationSet], "@_codecs");
-  assertNotVoid(codec, "codecs is mandatory");
 
   const bandwidth = Number(representation["@_bandwidth"]);
   assertNumber(bandwidth, "bandwidth is mandatory");
@@ -155,9 +146,7 @@ function parseRepresentation(
     assertNumber(height, "height is mandatory");
 
     return {
-      type: TrackType.VIDEO,
-      mimeType,
-      codec,
+      type: MediaType.VIDEO,
       width,
       height,
       bandwidth,
@@ -167,9 +156,7 @@ function parseRepresentation(
 
   if (mimeType.startsWith("audio/")) {
     return {
-      type: TrackType.AUDIO,
-      mimeType,
-      codec,
+      type: MediaType.AUDIO,
       bandwidth,
       ...segmentData,
     };
