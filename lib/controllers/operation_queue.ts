@@ -1,4 +1,4 @@
-import type { TrackType } from "../types/manifest";
+import type { MediaType } from "../types/manifest";
 import { assertNotVoid } from "../utils/assert";
 
 type Operation = {
@@ -7,14 +7,14 @@ type Operation = {
 };
 
 export class OperationQueue {
-  private queues_ = new Map<TrackType, Operation[]>();
-  private sourceBuffers_ = new Map<TrackType, SourceBuffer>();
+  private queues_ = new Map<MediaType, Operation[]>();
+  private sourceBuffers_ = new Map<MediaType, SourceBuffer>();
 
   /**
    * Register a SourceBuffer for a track type.
    * Stores the reference for updating-state checks.
    */
-  add(type: TrackType, sourceBuffer: SourceBuffer) {
+  add(type: MediaType, sourceBuffer: SourceBuffer) {
     this.queues_.set(type, []);
     this.sourceBuffers_.set(type, sourceBuffer);
   }
@@ -23,7 +23,7 @@ export class OperationQueue {
    * Push an operation onto the queue. Executes
    * immediately if the queue was empty.
    */
-  enqueue(type: TrackType, operation: Operation) {
+  enqueue(type: MediaType, operation: Operation) {
     const queue = this.queues_.get(type);
     if (!queue) {
       return;
@@ -40,7 +40,7 @@ export class OperationQueue {
    * complete and the blocker reaches the front.
    * TODO: Add prepend support for codec switching.
    */
-  block(type: TrackType): Promise<void> {
+  block(type: MediaType): Promise<void> {
     return new Promise((resolve) => {
       const operation: Operation = {
         execute: () => {
@@ -69,7 +69,7 @@ export class OperationQueue {
    * the next one. Called by the controller when
    * the SourceBuffer fires updateend.
    */
-  shiftAndExecuteNext(type: TrackType) {
+  shiftAndExecuteNext(type: MediaType) {
     const queue = this.queues_.get(type);
     if (!queue || queue.length === 0) {
       return;
@@ -86,7 +86,7 @@ export class OperationQueue {
     this.sourceBuffers_.clear();
   }
 
-  private executeNext_(type: TrackType) {
+  private executeNext_(type: MediaType) {
     const queue = this.queues_.get(type);
     if (!queue || queue.length === 0) {
       return;
