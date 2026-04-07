@@ -289,18 +289,11 @@ export class StreamController {
    * end in the first track is the duration.
    */
   private computeDuration_(): number {
-    assertNotVoid(this.manifest_, "Manifest not set");
-    const presentation = this.manifest_.presentations.at(-1);
-    assertNotVoid(presentation, "No presentations");
-    const selectionSet = presentation.selectionSets[0];
-    assertNotVoid(selectionSet, "No selection sets");
-    const switchingSet = selectionSet.switchingSets[0];
-    assertNotVoid(switchingSet, "No switching sets");
-    const track = switchingSet.tracks[0];
-    assertNotVoid(track, "No tracks");
-    const lastSeg = track.segments.at(-1);
-    assertNotVoid(lastSeg, "No segments");
-    return lastSeg.end;
+    const end = this.manifest_?.presentations
+      .at(-1)
+      ?.selectionSets[0]?.switchingSets[0]?.tracks[0]?.segments.at(-1)?.end;
+    assertNotVoid(end, "Cannot compute duration");
+    return end;
   }
 
   private async loadInitSegment_(mediaState: MediaState) {
