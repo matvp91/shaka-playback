@@ -1,9 +1,4 @@
-import type {
-  Manifest,
-  MediaGroup,
-  MediaType,
-  Segment,
-} from "./types/manifest";
+import type { Manifest, MediaType } from "./types/manifest";
 
 export const Events = {
   MANIFEST_LOADING: "manifestLoading",
@@ -11,9 +6,9 @@ export const Events = {
   MEDIA_ATTACHING: "mediaAttaching",
   MEDIA_ATTACHED: "mediaAttached",
   MEDIA_DETACHED: "mediaDetached",
-  MEDIA_GROUPS_UPDATED: "mediaGroupsUpdated",
+  BUFFER_CODECS: "bufferCodecs",
   BUFFER_CREATED: "bufferCreated",
-  SEGMENT_LOADED: "segmentLoaded",
+  BUFFER_APPENDING: "bufferAppending",
   BUFFER_APPENDED: "bufferAppended",
   BUFFER_EOS: "bufferEos",
 };
@@ -35,14 +30,15 @@ export type MediaAttachedEvent = {
   mediaSource: MediaSource;
 };
 
-export type MediaGroupsUpdatedEvent = {
-  groups: MediaGroup[];
+export type BufferCodecsEvent = {
+  tracks: Map<MediaType, { mimeType: string; codec: string }>;
+  duration: number;
 };
 
-export type SegmentLoadedEvent = {
+export type BufferAppendingEvent = {
   type: MediaType;
-  segment: Segment;
   data: ArrayBuffer;
+  timestampOffset: number;
 };
 
 export type BufferAppendedEvent = {
@@ -55,9 +51,9 @@ export interface EventMap {
   [Events.MEDIA_ATTACHING]: (event: MediaAttachingEvent) => void;
   [Events.MEDIA_ATTACHED]: (event: MediaAttachedEvent) => void;
   [Events.MEDIA_DETACHED]: undefined;
-  [Events.MEDIA_GROUPS_UPDATED]: (event: MediaGroupsUpdatedEvent) => void;
+  [Events.BUFFER_CODECS]: (event: BufferCodecsEvent) => void;
   [Events.BUFFER_CREATED]: undefined;
-  [Events.SEGMENT_LOADED]: (event: SegmentLoadedEvent) => void;
+  [Events.BUFFER_APPENDING]: (event: BufferAppendingEvent) => void;
   [Events.BUFFER_APPENDED]: (event: BufferAppendedEvent) => void;
   [Events.BUFFER_EOS]: undefined;
 }
