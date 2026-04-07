@@ -1,3 +1,4 @@
+import type { PlayerError } from "./errors";
 import type {
   InitSegment,
   Manifest,
@@ -16,6 +17,7 @@ export const Events = {
   BUFFER_APPENDING: "bufferAppending",
   BUFFER_APPENDED: "bufferAppended",
   BUFFER_EOS: "bufferEos",
+  ERROR: "error",
 };
 
 export type ManifestLoadingEvent = {
@@ -55,6 +57,10 @@ export type BufferAppendedEvent = {
   type: MediaType;
 };
 
+export type ErrorEvent = {
+  error: PlayerError;
+};
+
 export interface EventMap {
   [Events.MANIFEST_LOADING]: (event: ManifestLoadingEvent) => void;
   [Events.MANIFEST_PARSED]: (event: ManifestParsedEvent) => void;
@@ -66,4 +72,5 @@ export interface EventMap {
   [Events.BUFFER_APPENDING]: (event: BufferAppendingEvent) => void;
   [Events.BUFFER_APPENDED]: (event: BufferAppendedEvent) => void;
   [Events.BUFFER_EOS]: undefined;
+  [Events.ERROR]: (event: ErrorEvent) => void;
 }
