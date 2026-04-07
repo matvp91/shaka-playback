@@ -25,6 +25,7 @@ export type MediaGroup = {
  */
 export type Stream = {
   bandwidth: number;
+  timeOffset: number;
   initSegment: InitSegment;
   segments: Segment[];
 } & (

@@ -36,6 +36,9 @@ export function parseSegmentData(
   const timescale = Number(st["@_timescale"]);
   assertNumber(timescale, "timescale is mandatory");
 
+  const presentationTimeOffset = Number(st["@_presentationTimeOffset"] ?? 0);
+  const timeOffset = presentationTimeOffset / timescale;
+
   const initSegmentUrl = resolveUrl(
     applyUrlTemplate(initialization, {
       RepresentationID: representation["@_id"],
@@ -53,6 +56,7 @@ export function parseSegmentData(
   );
 
   return {
+    timeOffset,
     initSegment: { url: initSegmentUrl } satisfies InitSegment,
     segments,
   };
