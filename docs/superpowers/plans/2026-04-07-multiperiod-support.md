@@ -793,6 +793,7 @@ import type {
   SwitchingSet,
   Track,
 } from "../types/manifest";
+import { assertNotVoid } from "../utils/assert";
 import { Timer } from "../utils/timer";
 
 type MediaState = {
@@ -865,9 +866,7 @@ export class StreamController {
     }
 
     const presentation = this.manifest_.presentations[0];
-    if (!presentation) {
-      throw new Error("No Presentation found");
-    }
+    assertNotVoid(presentation, "No Presentation found");
 
     const codecTracks = new Map<
       MediaType,
@@ -876,14 +875,10 @@ export class StreamController {
 
     for (const selectionSet of presentation.selectionSets) {
       const switchingSet = selectionSet.switchingSets[0];
-      if (!switchingSet) {
-        continue;
-      }
+      assertNotVoid(switchingSet, "No SwitchingSet available");
 
       const track = switchingSet.tracks[0];
-      if (!track) {
-        throw new Error("No Track available");
-      }
+      assertNotVoid(track, "No Track available");
 
       const mediaState: MediaState = {
         presentation,
@@ -1040,29 +1035,23 @@ export class StreamController {
    * presentation's start + max segment end.
    */
   /**
-   * Compute total duration from the last segment
-   * end across all presentations. Segment times
-   * are already in presentation time.
+   * Get total duration. Segment times are in
+   * presentation time, so the last segment's
+   * end in the first track is the duration.
    */
   private computeDuration_(): number {
-    if (!this.manifest_) {
-      return 0;
-    }
-    let maxEnd = 0;
-    for (const presentation of this.manifest_.presentations) {
-      for (const selectionSet of presentation.selectionSets) {
-        for (const switchingSet of selectionSet.switchingSets) {
-          for (const track of switchingSet.tracks) {
-            const lastSeg =
-              track.segments[track.segments.length - 1];
-            if (lastSeg && lastSeg.end > maxEnd) {
-              maxEnd = lastSeg.end;
-            }
-          }
-        }
-      }
-    }
-    return maxEnd;
+    assertNotVoid(this.manifest_, "Manifest not set");
+    const presentation = this.manifest_.presentations.at(-1);
+    assertNotVoid(presentation, "No presentations");
+    const selectionSet = presentation.selectionSets[0];
+    assertNotVoid(selectionSet, "No selection sets");
+    const switchingSet = selectionSet.switchingSets[0];
+    assertNotVoid(switchingSet, "No switching sets");
+    const track = switchingSet.tracks[0];
+    assertNotVoid(track, "No tracks");
+    const lastSeg = track.segments.at(-1);
+    assertNotVoid(lastSeg, "No segments");
+    return lastSeg.end;
   }
 
   private async loadInitSegment_(mediaState: MediaState) {
