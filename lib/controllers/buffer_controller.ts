@@ -6,7 +6,9 @@ import type {
 } from "../events";
 import { Events } from "../events";
 import type { Player } from "../player";
-import type { MediaType } from "../types/manifest";
+import type { InitSegment, MediaType } from "../types/manifest";
+import { assertNotVoid } from "../utils/assert";
+import { parseBaseMediaDecodeTime, parseTimescale } from "../utils/mp4";
 import { OperationQueue } from "./operation_queue";
 
 export class BufferController {
@@ -14,6 +16,7 @@ export class BufferController {
   private opQueue_ = new OperationQueue();
   private mediaSource_: MediaSource | null = null;
   private duration_ = 0;
+  private timescaleCache_ = new Map<InitSegment, number>();
 
   constructor(private player_: Player) {
     this.player_.on(Events.MEDIA_ATTACHING, this.onMediaAttaching_);
@@ -81,7 +84,16 @@ export class BufferController {
   };
 
   private onBufferAppending_ = (event: BufferAppendingEvent) => {
-    const { type, data, timestampOffset } = event;
+    const { type, initSegment, data, segment } = event;
+
+    if (!segment) {
+      this.timescaleCache_.set(initSegment, parseTimescale(data));
+    }
+
+    const timestampOffset = segment
+      ? this.computeTimestampOffset_(initSegment, segment, data)
+      : undefined;
+
     this.opQueue_.enqueue(type, {
       execute: () => {
         const sb = this.sourceBuffers_.get(type);
@@ -101,6 +113,22 @@ export class BufferController {
       },
     });
   };
+
+  /**
+   * Derive timestampOffset from mp4 container data.
+   * Uses cached timescale from the init segment and
+   * baseMediaDecodeTime from the media segment.
+   */
+  private computeTimestampOffset_(
+    initSegment: InitSegment,
+    segment: { start: number },
+    data: ArrayBuffer,
+  ): number {
+    const timescale = this.timescaleCache_.get(initSegment);
+    assertNotVoid(timescale, "Init segment not parsed");
+    const mediaTime = parseBaseMediaDecodeTime(data) / timescale;
+    return segment.start - mediaTime;
+  }
 
   private onBufferAppended_ = (event: BufferAppendedEvent) => {
     const { bufferBehind } = this.player_.getConfig();
