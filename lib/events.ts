@@ -1,4 +1,9 @@
-import type { Manifest, MediaType } from "./types/manifest";
+import type {
+  InitSegment,
+  Manifest,
+  MediaType,
+  Segment,
+} from "./types/manifest";
 
 export const Events = {
   MANIFEST_LOADING: "manifestLoading",
@@ -37,8 +42,9 @@ export type BufferCodecsEvent = {
 
 export type BufferAppendingEvent = {
   type: MediaType;
+  initSegment: InitSegment;
   data: ArrayBuffer;
-  timestampOffset?: number;
+  segment?: Segment;
 };
 
 export type BufferAppendedEvent = {
