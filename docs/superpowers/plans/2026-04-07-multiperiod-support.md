@@ -474,11 +474,9 @@ function inferContentType(adaptationSet: AdaptationSet) {
 
 function inferMediaType(adaptationSet: AdaptationSet): MediaType | null {
   const contentType = adaptationSet["@_contentType"];
-  if (contentType) {
-    if (contentType === "video") return MediaType.VIDEO;
-    if (contentType === "audio") return MediaType.AUDIO;
-    if (contentType === "text") return MediaType.TEXT;
-  }
+  if (contentType === "video") return MediaType.VIDEO;
+  if (contentType === "audio") return MediaType.AUDIO;
+  if (contentType === "text") return MediaType.TEXT;
   const mimeType =
     adaptationSet["@_mimeType"] ??
     adaptationSet.Representation[0]?.["@_mimeType"];
