@@ -46,11 +46,10 @@ between (same codec). ABR operates within a SwitchingSet.
 - `tracks: Track[]`
 
 **Track** — individual quality level. Maps to a DASH Representation.
-- `bandwidth: number`
-- `initSegment: InitSegment`
-- `segments: Segment[]`
-- `width: number` (video only)
-- `height: number` (video only)
+Discriminated union on `type: MediaType`:
+- Base: `bandwidth`, `initSegment`, `segments[]`
+- `VIDEO`: adds `width: number`, `height: number`
+- `AUDIO`: no additional fields
 
 **InitSegment** — unchanged.
 - `url: string`
@@ -111,7 +110,7 @@ StreamController and BufferController, inspired by hls.js.
 
 | Event              | Purpose                        | Payload |
 |--------------------|--------------------------------|---------|
-| `BUFFER_CODECS`    | Create SourceBuffers           | Codec info per media type |
+| `BUFFER_CODECS`    | Create SourceBuffers           | Codec info per media type, duration |
 | `BUFFER_APPENDING` | Append data (init or media)    | Type, data, timestampOffset? |
 | `BUFFER_EOS`       | End the stream                 | — |
 
@@ -193,11 +192,22 @@ StreamController                              BufferController
 
 - **`onBufferCodecs_()`** creates SourceBuffers from codec info. Emits
   `BUFFER_CREATED`.
-- **`onBufferAppending_()`** sets `sourceBuffer.timestampOffset` when
-  provided, then calls `appendBuffer()`. Handles both init and media
-  segments uniformly.
-- **Duration** computed from the last presentation's `start` plus the
-  maximum `segment.end` across its active tracks.
+- **`onBufferAppending_()`** enqueues a single operation that:
+  1. Sets `sourceBuffer.timestampOffset` synchronously when an offset is
+     provided (safe inside a queued operation — no concurrent mutations).
+  2. Calls `appendBuffer()` with the data (init or media, treated
+     uniformly).
+  This mirrors hls.js: `timestampOffset` is a synchronous property
+  assignment that piggybacks on the append operation, not a separate
+  queue entry.
+- **`updateDuration_()`** sets `mediaSource.duration`. Triggered after
+  `BUFFER_CREATED`. Duration value is received via `BUFFER_CODECS` event
+  payload — StreamController computes it, BufferController stores and
+  applies it. Guards:
+  - `mediaSource.readyState === "open"`
+  - Value actually changed
+  - Enqueued through the operation queue (setting duration while a
+    SourceBuffer is updating throws `InvalidStateError`)
 - Buffer eviction, EOS handling, operation queue unchanged.
 
 ### ManifestController
