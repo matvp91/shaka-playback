@@ -36,6 +36,7 @@ type MediaState = {
   selectionSet: SelectionSet;
   switchingSet: SwitchingSet;
   track: Track;
+  lastSegment: Segment | null;
   lastInitSegment: InitSegment | null;
   timer: Timer;
 };
@@ -123,6 +124,7 @@ export class StreamController {
         selectionSet,
         switchingSet,
         track,
+        lastSegment: null,
         lastInitSegment: null,
         timer: new Timer(() => this.onUpdate_(mediaState)),
       };
@@ -161,11 +163,16 @@ export class StreamController {
     const currentTime = this.media_.currentTime;
     const bufferGoal = this.player_.getConfig().bufferGoal;
     const bufferEnd = this.getBufferEnd_(type, currentTime);
-    const lookupTime = bufferEnd ?? currentTime;
 
     if (bufferEnd !== null && bufferEnd - currentTime >= bufferGoal) {
       return;
     }
+
+    if (bufferEnd === null) {
+      mediaState.lastSegment = null;
+    }
+
+    const lookupTime = bufferEnd ?? currentTime;
 
     if (!this.resolvePresentation_(mediaState, lookupTime)) {
       return;
@@ -176,7 +183,10 @@ export class StreamController {
       return;
     }
 
-    const segment = this.getSegmentForTime_(mediaState.track, lookupTime);
+    const segment = mediaState.lastSegment
+      ? this.getNextSegment_(mediaState)
+      : this.getSegmentForTime_(mediaState.track, lookupTime);
+
     if (segment) {
       this.loadSegment_(mediaState, segment);
       return;
@@ -240,6 +250,7 @@ export class StreamController {
     mediaState.selectionSet = selectionSet;
     mediaState.switchingSet = switchingSet;
     mediaState.track = track;
+    mediaState.lastSegment = null;
 
     return true;
   }
@@ -261,16 +272,31 @@ export class StreamController {
   }
 
   /**
+   * Find the next segment after lastSegment
+   * in the current track.
+   */
+  private getNextSegment_(mediaState: MediaState): Segment | null {
+    const { segments } = mediaState.track;
+    assertNotVoid(mediaState.lastSegment, "No last segment");
+    const lastIndex = segments.indexOf(mediaState.lastSegment);
+    return segments[lastIndex + 1] ?? null;
+  }
+
+  /**
    * Binary search for the segment containing the
    * given time. Returns null if no segment matches.
    */
   private getSegmentForTime_(track: Track, time: number): Segment | null {
+    const { maxSegmentLookupTolerance } = this.player_.getConfig();
     return binarySearch(track.segments, (seg) => {
-      if (time >= seg.start && time < seg.end - 0.002) {
+      if (time >= seg.start && time < seg.end) {
         return 0;
       }
       if (time < seg.start) {
-        const tolerance = Math.min(0.25, seg.end - seg.start);
+        const tolerance = Math.min(
+          maxSegmentLookupTolerance,
+          seg.end - seg.start,
+        );
         if (seg.start - tolerance > time && seg.start > 0) {
           return -1;
         }
@@ -324,6 +350,7 @@ export class StreamController {
 
   private async loadSegment_(mediaState: MediaState, segment: Segment) {
     mediaState.state = State.LOADING;
+    mediaState.lastSegment = segment;
 
     const response = await fetch(segment.url);
     const data = await response.arrayBuffer();
