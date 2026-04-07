@@ -7,16 +7,21 @@ import { Events } from "../events";
 import type { Player } from "../player";
 import type {
   Manifest,
-  MediaGroup,
   MediaType,
+  Presentation,
   Segment,
-  Stream,
+  SelectionSet,
+  SwitchingSet,
+  Track,
 } from "../types/manifest";
+import { assertNotVoid } from "../utils/assert";
 import { Timer } from "../utils/timer";
 
 type MediaState = {
-  group: MediaGroup;
-  stream: Stream;
+  presentation: Presentation;
+  selectionSet: SelectionSet;
+  switchingSet: SwitchingSet;
+  track: Track;
   lastSegment: Segment | null;
   lastInitSegment: string | null;
   timer: Timer;
@@ -81,36 +86,42 @@ export class StreamController {
       return;
     }
 
-    // Pick one MediaGroup per type — multiple of the same
-    // type are alternatives (eg. languages), only one active.
-    const seen = new Set<string>();
-    const activeGroups: MediaGroup[] = [];
+    const presentation = this.manifest_.presentations[0];
+    assertNotVoid(presentation, "No Presentation found");
 
-    for (const group of this.manifest_.groups) {
-      if (seen.has(group.type)) {
-        continue;
-      }
-      seen.add(group.type);
+    const codecTracks = new Map<
+      MediaType,
+      { mimeType: string; codec: string }
+    >();
 
-      const stream = group.streams[0];
-      if (!stream) {
-        throw new Error("No stream available");
-      }
+    for (const selectionSet of presentation.selectionSets) {
+      const switchingSet = selectionSet.switchingSets[0];
+      assertNotVoid(switchingSet, "No SwitchingSet available");
+
+      const track = switchingSet.tracks[0];
+      assertNotVoid(track, "No Track available");
 
       const mediaState: MediaState = {
-        group,
-        stream,
+        presentation,
+        selectionSet,
+        switchingSet,
+        track,
         lastSegment: null,
         lastInitSegment: null,
         timer: new Timer(() => this.onUpdate_(mediaState)),
       };
 
-      this.mediaStates_.set(group.type, mediaState);
-      activeGroups.push(group);
+      this.mediaStates_.set(selectionSet.type, mediaState);
+
+      codecTracks.set(selectionSet.type, {
+        mimeType: switchingSet.mimeType,
+        codec: switchingSet.codec,
+      });
     }
 
-    this.player_.emit(Events.MEDIA_GROUPS_UPDATED, {
-      groups: activeGroups,
+    this.player_.emit(Events.BUFFER_CODECS, {
+      tracks: codecTracks,
+      duration: this.computeDuration_(),
     });
   }
 
@@ -122,7 +133,7 @@ export class StreamController {
   }
 
   /**
-   * Core streaming logic for a single stream.
+   * Core streaming logic for a single track.
    * Returns seconds until next update, or null
    * if no reschedule is needed.
    */
@@ -131,7 +142,9 @@ export class StreamController {
     const currentTime = media?.currentTime ?? 0;
     const bufferGoal = this.player_.getConfig().bufferGoal;
 
-    const bufferedEnd = this.player_.getBufferedEnd(mediaState.group.type);
+    const bufferedEnd = this.player_.getBufferedEnd(
+      mediaState.selectionSet.type,
+    );
 
     if (bufferedEnd - currentTime >= bufferGoal) {
       return 1;
@@ -147,24 +160,80 @@ export class StreamController {
     return null;
   }
 
-  /** Schedule the next update for a media state. */
   private scheduleUpdate_(mediaState: MediaState, delay: number) {
     mediaState.timer.tickAfter(delay);
   }
 
   /**
-   * Find the next segment to load. Uses lastSegment
-   * to avoid float precision issues with buffer times.
+   * Find the next segment to load. When the
+   * current track is exhausted, transitions to
+   * the next presentation if available.
    */
   private getNextSegment_(mediaState: MediaState): Segment | null {
-    const { segments } = mediaState.stream;
+    const { segments } = mediaState.track;
 
     if (!mediaState.lastSegment) {
       return segments[0] ?? null;
     }
 
     const lastIndex = segments.indexOf(mediaState.lastSegment);
-    return segments[lastIndex + 1] ?? null;
+    const next = segments[lastIndex + 1];
+    if (next) {
+      return next;
+    }
+
+    // Track exhausted — try next presentation.
+    if (this.transitionToNextPresentation_(mediaState)) {
+      return mediaState.track.segments[0] ?? null;
+    }
+
+    return null;
+  }
+
+  /**
+   * Transition to the next presentation. Updates
+   * the media state and loads the new init segment.
+   * Returns true if a transition occurred.
+   */
+  private transitionToNextPresentation_(mediaState: MediaState): boolean {
+    if (!this.manifest_) {
+      return false;
+    }
+
+    const presentations = this.manifest_.presentations;
+    const currentIndex = presentations.indexOf(mediaState.presentation);
+    const nextPresentation = presentations[currentIndex + 1];
+    if (!nextPresentation) {
+      return false;
+    }
+
+    const type = mediaState.selectionSet.type;
+    const selectionSet = nextPresentation.selectionSets.find(
+      (s) => s.type === type,
+    );
+    if (!selectionSet) {
+      return false;
+    }
+
+    const switchingSet = selectionSet.switchingSets[0];
+    if (!switchingSet) {
+      return false;
+    }
+
+    const track = switchingSet.tracks[0];
+    if (!track) {
+      return false;
+    }
+
+    mediaState.presentation = nextPresentation;
+    mediaState.selectionSet = selectionSet;
+    mediaState.switchingSet = switchingSet;
+    mediaState.track = track;
+    mediaState.lastSegment = null;
+
+    this.loadInitSegment_(mediaState);
+
+    return true;
   }
 
   private checkEndOfStream_() {
@@ -176,17 +245,42 @@ export class StreamController {
     }
   }
 
+  /**
+   * Get total duration. Segment times are in
+   * presentation time, so the last segment's
+   * end in the first track is the duration.
+   */
+  private computeDuration_(): number {
+    assertNotVoid(this.manifest_, "Manifest not set");
+    const presentation = this.manifest_.presentations.at(-1);
+    assertNotVoid(presentation, "No presentations");
+    const selectionSet = presentation.selectionSets[0];
+    assertNotVoid(selectionSet, "No selection sets");
+    const switchingSet = selectionSet.switchingSets[0];
+    assertNotVoid(switchingSet, "No switching sets");
+    const track = switchingSet.tracks[0];
+    assertNotVoid(track, "No tracks");
+    const lastSeg = track.segments.at(-1);
+    assertNotVoid(lastSeg, "No segments");
+    return lastSeg.end;
+  }
+
   private async loadInitSegment_(mediaState: MediaState) {
-    const { initSegment } = mediaState.stream;
+    const { initSegment } = mediaState.track;
+
+    if (mediaState.lastInitSegment === initSegment.url) {
+      return;
+    }
+
     const response = await fetch(initSegment.url);
     const data = await response.arrayBuffer();
 
     mediaState.lastInitSegment = initSegment.url;
 
-    this.player_.emit(Events.SEGMENT_LOADED, {
-      type: mediaState.group.type,
-      segment: { url: initSegment.url, start: 0, end: 0 },
+    this.player_.emit(Events.BUFFER_APPENDING, {
+      type: mediaState.selectionSet.type,
       data,
+      timestampOffset: this.getTimestampOffset_(mediaState),
     });
   }
 
@@ -196,10 +290,14 @@ export class StreamController {
 
     mediaState.lastSegment = segment;
 
-    this.player_.emit(Events.SEGMENT_LOADED, {
-      type: mediaState.group.type,
-      segment,
+    this.player_.emit(Events.BUFFER_APPENDING, {
+      type: mediaState.selectionSet.type,
       data,
+      timestampOffset: this.getTimestampOffset_(mediaState),
     });
+  }
+
+  private getTimestampOffset_(mediaState: MediaState): number {
+    return mediaState.presentation.start - mediaState.switchingSet.timeOffset;
   }
 }
