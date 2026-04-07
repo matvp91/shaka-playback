@@ -24,12 +24,13 @@ type MediaState = {
 
 export class StreamController {
   private manifest_: Manifest | null = null;
-  private mediaAttached_ = false;
+  private media_: HTMLMediaElement | null = null;
   private mediaStates_ = new Map<TrackType, MediaState>();
 
   constructor(private player_: Player) {
     this.player_.on(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.on(Events.MEDIA_ATTACHED, this.onMediaAttached_);
+    this.player_.on(Events.MEDIA_DETACHED, this.onMediaDetached_);
     this.player_.on(Events.BUFFER_CREATED, this.onBufferCreated_);
     this.player_.on(Events.BUFFER_APPENDED, this.onBufferAppended_);
   }
@@ -40,6 +41,7 @@ export class StreamController {
     }
     this.player_.off(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
+    this.player_.off(Events.MEDIA_DETACHED, this.onMediaDetached_);
     this.player_.off(Events.BUFFER_CREATED, this.onBufferCreated_);
     this.player_.off(Events.BUFFER_APPENDED, this.onBufferAppended_);
     this.manifest_ = null;
@@ -51,9 +53,13 @@ export class StreamController {
     this.tryStart_();
   };
 
-  private onMediaAttached_ = (_event: MediaAttachedEvent) => {
-    this.mediaAttached_ = true;
+  private onMediaAttached_ = (event: MediaAttachedEvent) => {
+    this.media_ = event.media;
     this.tryStart_();
+  };
+
+  private onMediaDetached_ = () => {
+    this.media_ = null;
   };
 
   private onBufferCreated_ = () => {
@@ -71,7 +77,7 @@ export class StreamController {
   };
 
   private tryStart_() {
-    if (!this.manifest_ || !this.mediaAttached_) {
+    if (!this.manifest_ || !this.media_) {
       return;
     }
 

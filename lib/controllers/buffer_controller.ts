@@ -1,6 +1,6 @@
 import type {
   BufferAppendedEvent,
-  MediaAttachedEvent,
+  MediaAttachingEvent,
   SegmentLoadedEvent,
   TracksSelectedEvent,
 } from "../events";
@@ -11,12 +11,11 @@ import { OperationQueue } from "./operation_queue";
 
 export class BufferController {
   private sourceBuffers_ = new Map<TrackType, SourceBuffer>();
-  private listeners_ = new Map<TrackType, () => void>();
   private opQueue_ = new OperationQueue();
   private mediaSource_: MediaSource | null = null;
 
   constructor(private player_: Player) {
-    this.player_.on(Events.MEDIA_ATTACHED, this.onMediaAttached_);
+    this.player_.on(Events.MEDIA_ATTACHING, this.onMediaAttaching_);
     this.player_.on(Events.TRACKS_SELECTED, this.onTracksSelected_);
     this.player_.on(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
     this.player_.on(Events.BUFFER_EOS, this.onBufferEos_);
@@ -24,15 +23,11 @@ export class BufferController {
   }
 
   destroy() {
-    this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
+    this.player_.off(Events.MEDIA_ATTACHING, this.onMediaAttaching_);
     this.player_.off(Events.TRACKS_SELECTED, this.onTracksSelected_);
     this.player_.off(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
     this.player_.off(Events.BUFFER_EOS, this.onBufferEos_);
     this.player_.off(Events.BUFFER_APPENDED, this.onBufferAppended_);
-    for (const [type, listener] of this.listeners_) {
-      this.sourceBuffers_.get(type)?.removeEventListener("updateend", listener);
-    }
-    this.listeners_.clear();
     this.opQueue_.destroy();
     this.sourceBuffers_.clear();
     this.mediaSource_ = null;
@@ -46,8 +41,21 @@ export class BufferController {
     return sb.buffered.end(sb.buffered.length - 1);
   }
 
-  private onMediaAttached_ = (event: MediaAttachedEvent) => {
-    this.mediaSource_ = event.mediaSource;
+  private onMediaAttaching_ = (event: MediaAttachingEvent) => {
+    this.mediaSource_ = new MediaSource();
+
+    this.mediaSource_.addEventListener(
+      "sourceopen",
+      () => {
+        this.player_.emit(Events.MEDIA_ATTACHED, {
+          media: event.media,
+          mediaSource: this.mediaSource_,
+        });
+      },
+      { once: true },
+    );
+
+    event.media.src = URL.createObjectURL(this.mediaSource_);
   };
 
   private onTracksSelected_ = (event: TracksSelectedEvent) => {
@@ -62,11 +70,9 @@ export class BufferController {
       const sb = this.mediaSource_.addSourceBuffer(mime);
       this.sourceBuffers_.set(track.type, sb);
       this.opQueue_.add(track.type, sb);
-      const listener = () => {
+      sb.addEventListener("updateend", () => {
         this.opQueue_.shiftAndExecuteNext(track.type);
-      };
-      this.listeners_.set(track.type, listener);
-      sb.addEventListener("updateend", listener);
+      });
     }
     this.mediaSource_.duration = event.duration;
     this.player_.emit(Events.BUFFER_CREATED);
