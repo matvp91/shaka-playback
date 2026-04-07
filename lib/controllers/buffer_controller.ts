@@ -11,12 +11,16 @@ import { assertNotVoid } from "../utils/assert";
 import { parseBaseMediaDecodeTime, parseTimescale } from "../utils/mp4";
 import { OperationQueue } from "./operation_queue";
 
+type InitSegmentInfo = {
+  timescale: number;
+};
+
 export class BufferController {
   private sourceBuffers_ = new Map<MediaType, SourceBuffer>();
   private opQueue_ = new OperationQueue();
   private mediaSource_: MediaSource | null = null;
   private duration_ = 0;
-  private timescaleCache_ = new Map<InitSegment, number>();
+  private initSegmentInfo_ = new Map<InitSegment, InitSegmentInfo>();
 
   constructor(private player_: Player) {
     this.player_.on(Events.MEDIA_ATTACHING, this.onMediaAttaching_);
@@ -87,7 +91,9 @@ export class BufferController {
     const { type, initSegment, data, segment } = event;
 
     if (!segment) {
-      this.timescaleCache_.set(initSegment, parseTimescale(data));
+      this.initSegmentInfo_.set(initSegment, {
+        timescale: parseTimescale(data),
+      });
     }
 
     const timestampOffset = segment
@@ -124,9 +130,9 @@ export class BufferController {
     segment: { start: number },
     data: ArrayBuffer,
   ): number {
-    const timescale = this.timescaleCache_.get(initSegment);
-    assertNotVoid(timescale, "Init segment not parsed");
-    const mediaTime = parseBaseMediaDecodeTime(data) / timescale;
+    const info = this.initSegmentInfo_.get(initSegment);
+    assertNotVoid(info, "Init segment not parsed");
+    const mediaTime = parseBaseMediaDecodeTime(data) / info.timescale;
     return segment.start - mediaTime;
   }
 

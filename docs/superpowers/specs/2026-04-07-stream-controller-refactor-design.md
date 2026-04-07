@@ -130,13 +130,13 @@ type BufferAppendingEvent = {
   type: MediaType;
   initSegment: InitSegment;
   data: ArrayBuffer;
-  segment?: Segment;
+  segment: Segment | null;
 };
 ```
 
 - `initSegment` is always present — buffer controller uses it as cache
   key for timescale
-- `segment` present = media segment; absent = init segment
+- `segment` non-null = media segment; null = init segment
 - `timestampOffset` removed — buffer controller derives it
 
 No other events change.

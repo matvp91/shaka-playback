@@ -47,7 +47,7 @@ export type BufferAppendingEvent = {
   type: MediaType;
   initSegment: InitSegment;
   data: ArrayBuffer;
-  segment?: Segment;
+  segment: Segment | null;
 };
 ```
 
