@@ -7,25 +7,25 @@ import { Events } from "../events";
 import type { Player } from "../player";
 import type {
   Manifest,
+  MediaGroup,
+  MediaType,
   Segment,
-  SelectionSet,
-  Track,
-  TrackType,
+  Stream,
 } from "../types/manifest";
 import { Timer } from "../utils/timer";
 
 type MediaState = {
-  selectionSet: SelectionSet;
-  track: Track;
+  group: MediaGroup;
+  stream: Stream;
   lastSegment: Segment | null;
-  lastInitSegment: Segment | null;
+  lastInitSegment: string | null;
   timer: Timer;
 };
 
 export class StreamController {
   private manifest_: Manifest | null = null;
   private media_: HTMLMediaElement | null = null;
-  private mediaStates_ = new Map<TrackType, MediaState>();
+  private mediaStates_ = new Map<MediaType, MediaState>();
 
   constructor(private player_: Player) {
     this.player_.on(Events.MANIFEST_PARSED, this.onManifestParsed_);
@@ -81,40 +81,36 @@ export class StreamController {
       return;
     }
 
-    const presentation = this.manifest_.presentations[0];
-    if (!presentation) {
-      return;
-    }
-
-    // Pick one SelectionSet per type — multiple of the same
+    // Pick one MediaGroup per type — multiple of the same
     // type are alternatives (eg. languages), only one active.
     const seen = new Set<string>();
+    const activeGroups: MediaGroup[] = [];
 
-    for (const selectionSet of presentation.selectionSets) {
-      if (seen.has(selectionSet.type)) {
+    for (const group of this.manifest_.groups) {
+      if (seen.has(group.type)) {
         continue;
       }
-      seen.add(selectionSet.type);
+      seen.add(group.type);
 
-      const track = selectionSet.switchingSets[0]?.tracks[0];
-      if (!track) {
-        throw new Error("No track available");
+      const stream = group.streams[0];
+      if (!stream) {
+        throw new Error("No stream available");
       }
 
       const mediaState: MediaState = {
-        selectionSet,
-        track,
+        group,
+        stream,
         lastSegment: null,
         lastInitSegment: null,
         timer: new Timer(() => this.onUpdate_(mediaState)),
       };
 
-      this.mediaStates_.set(track.type, mediaState);
+      this.mediaStates_.set(group.type, mediaState);
+      activeGroups.push(group);
     }
 
-    this.player_.emit(Events.TRACKS_SELECTED, {
-      tracks: [...this.mediaStates_.values()].map((ms) => ms.track),
-      duration: presentation.end - presentation.start,
+    this.player_.emit(Events.MEDIA_GROUPS_UPDATED, {
+      groups: activeGroups,
     });
   }
 
@@ -135,7 +131,7 @@ export class StreamController {
     const currentTime = media?.currentTime ?? 0;
     const bufferGoal = this.player_.getConfig().bufferGoal;
 
-    const bufferedEnd = this.player_.getBufferedEnd(mediaState.track.type);
+    const bufferedEnd = this.player_.getBufferedEnd(mediaState.group.type);
 
     if (bufferedEnd - currentTime >= bufferGoal) {
       return 1;
@@ -161,7 +157,7 @@ export class StreamController {
    * to avoid float precision issues with buffer times.
    */
   private getNextSegment_(mediaState: MediaState): Segment | null {
-    const { segments } = mediaState.track;
+    const { segments } = mediaState.stream;
 
     if (!mediaState.lastSegment) {
       return segments[0] ?? null;
@@ -181,17 +177,15 @@ export class StreamController {
   }
 
   private async loadInitSegment_(mediaState: MediaState) {
-    const response = await fetch(mediaState.track.initSegmentUrl);
+    const { initSegment } = mediaState.stream;
+    const response = await fetch(initSegment.url);
     const data = await response.arrayBuffer();
 
-    mediaState.lastInitSegment = {
-      url: mediaState.track.initSegmentUrl,
-      start: 0,
-      end: 0,
-    };
+    mediaState.lastInitSegment = initSegment.url;
 
     this.player_.emit(Events.SEGMENT_LOADED, {
-      track: mediaState.track,
+      type: mediaState.group.type,
+      segment: { url: initSegment.url, start: 0, end: 0 },
       data,
     });
   }
@@ -203,7 +197,8 @@ export class StreamController {
     mediaState.lastSegment = segment;
 
     this.player_.emit(Events.SEGMENT_LOADED, {
-      track: mediaState.track,
+      type: mediaState.group.type,
+      segment,
       data,
     });
   }
