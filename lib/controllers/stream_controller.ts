@@ -289,6 +289,7 @@ export class StreamController {
    * end in the first track is the duration.
    */
   private computeDuration_(): number {
+    // TODO: Use start / end per presentation
     const end = this.manifest_?.presentations
       .at(-1)
       ?.selectionSets[0]?.switchingSets[0]?.tracks[0]?.segments.at(-1)?.end;
