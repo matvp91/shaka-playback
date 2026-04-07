@@ -88,7 +88,10 @@ export class BufferController {
         if (!sb) {
           return;
         }
-        if (sb.timestampOffset !== timestampOffset) {
+        if (
+          timestampOffset !== undefined &&
+          sb.timestampOffset !== timestampOffset
+        ) {
           sb.timestampOffset = timestampOffset;
         }
         sb.appendBuffer(data);

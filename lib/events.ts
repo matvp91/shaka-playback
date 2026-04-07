@@ -38,7 +38,7 @@ export type BufferCodecsEvent = {
 export type BufferAppendingEvent = {
   type: MediaType;
   data: ArrayBuffer;
-  timestampOffset: number;
+  timestampOffset?: number;
 };
 
 export type BufferAppendedEvent = {

@@ -6,6 +6,7 @@ import type {
 import { Events } from "../events";
 import type { Player } from "../player";
 import type {
+  InitSegment,
   Manifest,
   MediaType,
   Presentation,
@@ -15,7 +16,12 @@ import type {
   Track,
 } from "../types/manifest";
 import { assertNotVoid } from "../utils/assert";
+import { parseBaseMediaDecodeTime, parseTimescale } from "../utils/mp4";
 import { Timer } from "../utils/timer";
+
+type InitSegmentMeta = {
+  timescale: number;
+};
 
 type MediaState = {
   presentation: Presentation;
@@ -24,6 +30,7 @@ type MediaState = {
   track: Track;
   lastSegment: Segment | null;
   lastInitSegment: string | null;
+  lastTimestampOffset: number | null;
   timer: Timer;
 };
 
@@ -31,6 +38,7 @@ export class StreamController {
   private manifest_: Manifest | null = null;
   private media_: HTMLMediaElement | null = null;
   private mediaStates_ = new Map<MediaType, MediaState>();
+  private initSegmentMeta_ = new Map<InitSegment, InitSegmentMeta>();
 
   constructor(private player_: Player) {
     this.player_.on(Events.MANIFEST_PARSED, this.onManifestParsed_);
@@ -108,6 +116,7 @@ export class StreamController {
         track,
         lastSegment: null,
         lastInitSegment: null,
+        lastTimestampOffset: null,
         timer: new Timer(() => this.onUpdate_(mediaState)),
       };
 
@@ -234,6 +243,7 @@ export class StreamController {
     mediaState.switchingSet = switchingSet;
     mediaState.track = track;
     mediaState.lastSegment = null;
+    mediaState.lastTimestampOffset = null;
 
     this.loadInitSegment_(mediaState);
   }
@@ -305,10 +315,13 @@ export class StreamController {
 
     mediaState.lastInitSegment = initSegment.url;
 
+    this.initSegmentMeta_.set(initSegment, {
+      timescale: parseTimescale(data),
+    });
+
     this.player_.emit(Events.BUFFER_APPENDING, {
       type: mediaState.selectionSet.type,
       data,
-      timestampOffset: this.getTimestampOffset_(mediaState),
     });
   }
 
@@ -318,14 +331,34 @@ export class StreamController {
 
     mediaState.lastSegment = segment;
 
+    if (mediaState.lastTimestampOffset === null) {
+      mediaState.lastTimestampOffset = this.computeTimestampOffset_(
+        mediaState,
+        segment,
+        data,
+      );
+    }
+
     this.player_.emit(Events.BUFFER_APPENDING, {
       type: mediaState.selectionSet.type,
       data,
-      timestampOffset: this.getTimestampOffset_(mediaState),
+      timestampOffset: mediaState.lastTimestampOffset,
     });
   }
 
-  private getTimestampOffset_(mediaState: MediaState): number {
-    return mediaState.presentation.start - mediaState.switchingSet.timeOffset;
+  /**
+   * Derive timestampOffset from the actual media
+   * container. Uses timescale from the init segment
+   * and baseMediaDecodeTime from the media segment.
+   */
+  private computeTimestampOffset_(
+    mediaState: MediaState,
+    segment: Segment,
+    data: ArrayBuffer,
+  ): number {
+    const meta = this.initSegmentMeta_.get(mediaState.track.initSegment);
+    assertNotVoid(meta, "Init segment not parsed");
+    const mediaTime = parseBaseMediaDecodeTime(data) / meta.timescale;
+    return segment.start - mediaTime;
   }
 }

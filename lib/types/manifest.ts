@@ -33,7 +33,6 @@ export type SelectionSet = {
 export type SwitchingSet = {
   mimeType: string;
   codec: string;
-  timeOffset: number;
   tracks: Track[];
 };
 

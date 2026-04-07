@@ -114,13 +114,11 @@ function parseSwitchingSet(
   const codec = findMap([firstRep, adaptationSet], "@_codecs");
   assertNotVoid(codec, "codecs is mandatory");
 
-  const timeOffset = extractTimeOffset(adaptationSet);
-
   const tracks = adaptationSet.Representation.map((rep) =>
     parseTrack(options, mpd, period, adaptationSet, rep, type),
   );
 
-  return { mimeType, codec, timeOffset, tracks };
+  return { mimeType, codec, tracks };
 }
 
 function parseTrack(
@@ -173,21 +171,6 @@ function parseTrack(
   }
 
   throw new Error("TODO: Map TEXT type");
-}
-
-/**
- * Extract presentationTimeOffset from the
- * AdaptationSet's SegmentTemplate, normalized
- * to seconds.
- */
-function extractTimeOffset(adaptationSet: AdaptationSet): number {
-  const st = adaptationSet.SegmentTemplate;
-  if (!st) {
-    return 0;
-  }
-  const timescale = Number(st["@_timescale"] ?? 1);
-  const pto = Number(st["@_presentationTimeOffset"] ?? 0);
-  return pto / timescale;
 }
 
 /**
