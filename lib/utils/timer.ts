@@ -1,7 +1,8 @@
 import { assertNotVoid } from "./assert";
 
 /**
- * Single-shot timer that schedules a callback.
+ * Timer that schedules a callback as a
+ * single-shot or repeating interval.
  * Each tick cancels any pending scheduled call.
  */
 export class Timer {
@@ -34,6 +35,16 @@ export class Timer {
     return this.tickAfter(0);
   }
 
+  /**
+   * Schedule the callback to repeat at a fixed
+   * interval in seconds. Cancels any pending tick.
+   */
+  tickEvery(seconds: number): this {
+    this.stop();
+    this.scheduleRepeating_(seconds);
+    return this;
+  }
+
   /** Cancel any pending scheduled tick. */
   stop(): this {
     if (this.id_ !== null) {
@@ -47,5 +58,19 @@ export class Timer {
   destroy() {
     this.stop();
     this.callback_ = null;
+  }
+
+  /**
+   * Reschedule first, then call the callback.
+   * If the callback calls stop(), the pending
+   * timeout gets cleared.
+   */
+  private scheduleRepeating_(seconds: number) {
+    this.id_ = setTimeout(() => {
+      this.id_ = null;
+      assertNotVoid(this.callback_, "Timer fired after destroy");
+      this.scheduleRepeating_(seconds);
+      this.callback_();
+    }, seconds * 1000);
   }
 }
