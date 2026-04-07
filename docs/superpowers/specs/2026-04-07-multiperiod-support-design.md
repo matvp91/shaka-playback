@@ -71,9 +71,13 @@ Discriminated union on `type: MediaType`:
 
 ### Design Decisions
 
-1. **Raw model.** Values stay as close to the source format as possible. No
-   computed or derived fields. Controllers derive what they need (e.g., MSE
-   `timestampOffset` from `presentation.start - switchingSet.timeOffset`).
+1. **Presentation-time model.** Segment `start`/`end` times are in
+   presentation time (computed during parsing as
+   `(mediaTime - PTO) / timescale + periodStart`). This unifies the model
+   with `currentTime`, `buffered.end()`, and buffer eviction — all of
+   which operate in presentation time. The only raw value retained is
+   `timeOffset` on SwitchingSet, needed to compute MSE `timestampOffset`
+   (`presentation.start - switchingSet.timeOffset`).
 
 2. **Presentations are independent.** No cross-period metadata or
    compatibility flags. Controllers determine SourceBuffer compatibility at

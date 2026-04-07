@@ -176,7 +176,7 @@ export type BufferCodecsEvent = {
 export type BufferAppendingEvent = {
   type: MediaType;
   data: ArrayBuffer;
-  timestampOffset?: number;
+  timestampOffset: number;
 };
 
 export type BufferAppendedEvent = {
@@ -216,12 +216,20 @@ Update the parser to iterate all periods and produce the new 4-level hierarchy.
 
 - [ ] **Step 1: Update dash_presentation.ts return shape**
 
-In `lib/dash/dash_presentation.ts`, the `parseSegmentData` function currently returns `{ start, end, timeOffset, initSegment, segments }`. Remove `start`, `end`, and `timeOffset` from the return value. `timeOffset` will be extracted at the AdaptationSet level in the parser instead.
+In `lib/dash/dash_presentation.ts`, update `parseSegmentData` to:
+1. Compute `periodStart` locally from `period["@_start"]` (already has access to the Period object).
+2. Compute segment times in presentation time: `(time - PTO) / timescale + periodStart`.
+3. Remove `start`, `end`, and `timeOffset` from the return value (timeOffset moves to the parser at the AdaptationSet level).
 
-Replace the return statement at the end of `parseSegmentData`:
+The function signature stays the same — no new parameters needed.
+
+Replace the `presentationTimeOffset` / `timeOffset` lines and the return:
 
 ```typescript
-// Old return:
+// Old:
+const presentationTimeOffset = Number(st["@_presentationTimeOffset"] ?? 0);
+const timeOffset = presentationTimeOffset / timescale;
+// ...
 return {
   start: segments[0]?.start ?? 0,
   end: segments[segments.length - 1]?.end ?? 0,
@@ -230,12 +238,71 @@ return {
   segments,
 };
 
-// New return:
+// New:
+const pto = Number(st["@_presentationTimeOffset"] ?? 0);
+const periodStart = period["@_start"]
+  ? parseDuration(period["@_start"])
+  : 0;
+const segments = mapTemplateTimeline(
+  timeline, media, st, representation, baseUrl, pto, periodStart,
+);
 const initSegment: InitSegment = { url: initSegmentUrl };
 return { initSegment, segments };
 ```
 
-Also remove the `presentationTimeOffset` and `timeOffset` computation lines above the return (the two lines computing `presentationTimeOffset` and `timeOffset`). These will be handled in the parser at the AdaptationSet level.
+Add `parseDuration` import at the top of `dash_presentation.ts`:
+
+```typescript
+import { parseDuration } from "../utils/time";
+```
+
+Update `mapTemplateTimeline` to accept `pto` and `periodStart`, and compute presentation-time segment boundaries:
+
+```typescript
+function mapTemplateTimeline(
+  timeline: SegmentTimeline,
+  media: string,
+  st: SegmentTemplate,
+  representation: Representation,
+  baseUrl: string,
+  pto: number,
+  periodStart: number,
+): Segment[] {
+  const timescale = Number(st["@_timescale"] ?? 1);
+  const startNumber = Number(st["@_startNumber"] ?? 1);
+  const segments: Segment[] = [];
+  let time = 0;
+  let number = startNumber;
+
+  for (const s of timeline.S) {
+    const d = Number(s["@_d"]);
+    const r = Number(s["@_r"] ?? 0);
+
+    if (s["@_t"] != null) {
+      time = Number(s["@_t"]);
+    }
+
+    for (let i = 0; i <= r; i++) {
+      const relativeUrl = applyUrlTemplate(media, {
+        RepresentationID: representation["@_id"],
+        Bandwidth: representation["@_bandwidth"],
+        Number: number,
+        Time: time,
+      });
+      const url = resolveUrl(relativeUrl, baseUrl);
+      segments.push({
+        url,
+        start: (time - pto) / timescale + periodStart,
+        end: (time - pto + d) / timescale + periodStart,
+      });
+      time += d;
+      number++;
+    }
+  }
+
+  return segments;
+}
+```
 
 - [ ] **Step 2: Rewrite dash_parser.ts**
 
@@ -608,10 +675,7 @@ export class BufferController {
         if (!sb) {
           return;
         }
-        if (
-          timestampOffset !== undefined &&
-          sb.timestampOffset !== timestampOffset
-        ) {
+        if (sb.timestampOffset !== timestampOffset) {
           sb.timestampOffset = timestampOffset;
         }
         sb.appendBuffer(data);
@@ -975,27 +1039,30 @@ export class StreamController {
    * Compute total duration from the last
    * presentation's start + max segment end.
    */
+  /**
+   * Compute total duration from the last segment
+   * end across all presentations. Segment times
+   * are already in presentation time.
+   */
   private computeDuration_(): number {
     if (!this.manifest_) {
       return 0;
     }
-    const presentations = this.manifest_.presentations;
-    const last = presentations[presentations.length - 1];
-    if (!last) {
-      return 0;
-    }
     let maxEnd = 0;
-    for (const selectionSet of last.selectionSets) {
-      for (const switchingSet of selectionSet.switchingSets) {
-        for (const track of switchingSet.tracks) {
-          const lastSeg = track.segments[track.segments.length - 1];
-          if (lastSeg && lastSeg.end > maxEnd) {
-            maxEnd = lastSeg.end;
+    for (const presentation of this.manifest_.presentations) {
+      for (const selectionSet of presentation.selectionSets) {
+        for (const switchingSet of selectionSet.switchingSets) {
+          for (const track of switchingSet.tracks) {
+            const lastSeg =
+              track.segments[track.segments.length - 1];
+            if (lastSeg && lastSeg.end > maxEnd) {
+              maxEnd = lastSeg.end;
+            }
           }
         }
       }
     }
-    return last.start + maxEnd;
+    return maxEnd;
   }
 
   private async loadInitSegment_(mediaState: MediaState) {
@@ -1010,14 +1077,10 @@ export class StreamController {
 
     mediaState.lastInitSegment = initSegment.url;
 
-    const offset =
-      mediaState.presentation.start -
-      mediaState.switchingSet.timeOffset;
-
     this.player_.emit(Events.BUFFER_APPENDING, {
       type: mediaState.selectionSet.type,
       data,
-      timestampOffset: offset,
+      timestampOffset: this.getTimestampOffset_(mediaState),
     });
   }
 
@@ -1033,7 +1096,15 @@ export class StreamController {
     this.player_.emit(Events.BUFFER_APPENDING, {
       type: mediaState.selectionSet.type,
       data,
+      timestampOffset: this.getTimestampOffset_(mediaState),
     });
+  }
+
+  private getTimestampOffset_(mediaState: MediaState): number {
+    return (
+      mediaState.presentation.start -
+      mediaState.switchingSet.timeOffset
+    );
   }
 }
 ```
