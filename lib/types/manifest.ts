@@ -24,6 +24,8 @@ export type MediaGroup = {
  * seamlessly switchable within a MediaGroup.
  */
 export type Stream = {
+  start: number;
+  end: number;
   bandwidth: number;
   timeOffset: number;
   initSegment: InitSegment;

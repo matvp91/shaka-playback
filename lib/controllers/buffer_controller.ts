@@ -7,7 +7,6 @@ import type {
 import { Events } from "../events";
 import type { Player } from "../player";
 import type { MediaType } from "../types/manifest";
-import { getGroupDuration } from "../utils/manifest_util";
 import { OperationQueue } from "./operation_queue";
 
 export class BufferController {
@@ -75,7 +74,13 @@ export class BufferController {
         this.opQueue_.shiftAndExecuteNext(group.type);
       });
     }
-    const duration = Math.max(...event.groups.map(getGroupDuration));
+    let duration = 0;
+    for (const group of event.groups) {
+      const last = group.streams[group.streams.length - 1];
+      if (last && last.end > duration) {
+        duration = last.end;
+      }
+    }
     this.mediaSource_.duration = duration;
     this.player_.emit(Events.BUFFER_CREATED);
   };

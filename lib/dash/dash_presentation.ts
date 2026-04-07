@@ -56,6 +56,8 @@ export function parseSegmentData(
   );
 
   return {
+    start: segments[0]?.start ?? 0,
+    end: segments[segments.length - 1]?.end ?? 0,
     timeOffset,
     initSegment: { url: initSegmentUrl } satisfies InitSegment,
     segments,
