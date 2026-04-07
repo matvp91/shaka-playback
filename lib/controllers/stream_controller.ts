@@ -74,7 +74,10 @@ export class StreamController {
   };
 
   private onMediaDetached_ = () => {
-    this.stopMediaStates_();
+    for (const mediaState of this.mediaStates_.values()) {
+      mediaState.state = State.STOPPED;
+      mediaState.timer.stop();
+    }
     this.media_ = null;
   };
 
@@ -299,12 +302,5 @@ export class StreamController {
       segment,
       data,
     });
-  }
-
-  private stopMediaStates_() {
-    for (const mediaState of this.mediaStates_.values()) {
-      mediaState.state = State.STOPPED;
-      mediaState.timer.stop();
-    }
   }
 }
