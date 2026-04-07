@@ -52,7 +52,6 @@ export class StreamController {
 
   destroy() {
     for (const mediaState of this.mediaStates_.values()) {
-      mediaState.state = State.STOPPED;
       mediaState.timer.destroy();
     }
     this.player_.off(Events.MANIFEST_PARSED, this.onManifestParsed_);
