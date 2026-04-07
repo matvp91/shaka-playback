@@ -51,7 +51,10 @@ export class StreamController {
   }
 
   destroy() {
-    this.stopMediaStates_();
+    for (const mediaState of this.mediaStates_.values()) {
+      mediaState.state = State.STOPPED;
+      mediaState.timer.destroy();
+    }
     this.player_.off(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.off(Events.MEDIA_DETACHED, this.onMediaDetached_);
@@ -267,6 +270,10 @@ export class StreamController {
     const response = await fetch(initSegment.url);
     const data = await response.arrayBuffer();
 
+    if (mediaState.state !== State.LOADING_INIT) {
+      return;
+    }
+
     mediaState.lastInitSegment = initSegment;
 
     this.player_.emit(Events.BUFFER_APPENDING, {
@@ -280,6 +287,10 @@ export class StreamController {
   private async loadSegment_(mediaState: MediaState, segment: Segment) {
     const response = await fetch(segment.url);
     const data = await response.arrayBuffer();
+
+    if (mediaState.state !== State.LOADING_SEGMENT) {
+      return;
+    }
 
     mediaState.lastSegment = segment;
 
