@@ -1,22 +1,23 @@
 import type {
   BufferAppendedEvent,
   MediaAttachingEvent,
+  MediaGroupsUpdatedEvent,
   SegmentLoadedEvent,
-  TracksSelectedEvent,
 } from "../events";
 import { Events } from "../events";
 import type { Player } from "../player";
-import type { TrackType } from "../types/manifest";
+import type { MediaType } from "../types/manifest";
+import { getGroupDuration } from "../utils/manifest_util";
 import { OperationQueue } from "./operation_queue";
 
 export class BufferController {
-  private sourceBuffers_ = new Map<TrackType, SourceBuffer>();
+  private sourceBuffers_ = new Map<MediaType, SourceBuffer>();
   private opQueue_ = new OperationQueue();
   private mediaSource_: MediaSource | null = null;
 
   constructor(private player_: Player) {
     this.player_.on(Events.MEDIA_ATTACHING, this.onMediaAttaching_);
-    this.player_.on(Events.TRACKS_SELECTED, this.onTracksSelected_);
+    this.player_.on(Events.MEDIA_GROUPS_UPDATED, this.onMediaGroupsUpdated_);
     this.player_.on(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
     this.player_.on(Events.BUFFER_EOS, this.onBufferEos_);
     this.player_.on(Events.BUFFER_APPENDED, this.onBufferAppended_);
@@ -24,7 +25,7 @@ export class BufferController {
 
   destroy() {
     this.player_.off(Events.MEDIA_ATTACHING, this.onMediaAttaching_);
-    this.player_.off(Events.TRACKS_SELECTED, this.onTracksSelected_);
+    this.player_.off(Events.MEDIA_GROUPS_UPDATED, this.onMediaGroupsUpdated_);
     this.player_.off(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
     this.player_.off(Events.BUFFER_EOS, this.onBufferEos_);
     this.player_.off(Events.BUFFER_APPENDED, this.onBufferAppended_);
@@ -33,7 +34,7 @@ export class BufferController {
     this.mediaSource_ = null;
   }
 
-  getBufferedEnd(type: TrackType): number {
+  getBufferedEnd(type: MediaType): number {
     const sb = this.sourceBuffers_.get(type);
     if (!sb || sb.buffered.length === 0) {
       return 0;
@@ -58,28 +59,29 @@ export class BufferController {
     event.media.src = URL.createObjectURL(this.mediaSource_);
   };
 
-  private onTracksSelected_ = (event: TracksSelectedEvent) => {
+  private onMediaGroupsUpdated_ = (event: MediaGroupsUpdatedEvent) => {
     if (!this.mediaSource_) {
       return;
     }
-    for (const track of event.tracks) {
-      if (this.sourceBuffers_.has(track.type)) {
+    for (const group of event.groups) {
+      if (this.sourceBuffers_.has(group.type)) {
         continue;
       }
-      const mime = `${track.mimeType};codecs="${track.codec}"`;
+      const mime = `${group.mimeType};codecs="${group.codec}"`;
       const sb = this.mediaSource_.addSourceBuffer(mime);
-      this.sourceBuffers_.set(track.type, sb);
-      this.opQueue_.add(track.type, sb);
+      this.sourceBuffers_.set(group.type, sb);
+      this.opQueue_.add(group.type, sb);
       sb.addEventListener("updateend", () => {
-        this.opQueue_.shiftAndExecuteNext(track.type);
+        this.opQueue_.shiftAndExecuteNext(group.type);
       });
     }
-    this.mediaSource_.duration = event.duration;
+    const duration = Math.max(...event.groups.map(getGroupDuration));
+    this.mediaSource_.duration = duration;
     this.player_.emit(Events.BUFFER_CREATED);
   };
 
   private onSegmentLoaded_ = (event: SegmentLoadedEvent) => {
-    const type = event.track.type;
+    const { type } = event;
     this.opQueue_.enqueue(type, {
       execute: () => {
         const sb = this.sourceBuffers_.get(type);
