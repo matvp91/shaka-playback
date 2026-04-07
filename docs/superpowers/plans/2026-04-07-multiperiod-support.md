@@ -231,10 +231,8 @@ return {
 };
 
 // New return:
-return {
-  initSegment: { url: initSegmentUrl } satisfies InitSegment,
-  segments,
-};
+const initSegment: InitSegment = { url: initSegmentUrl };
+return { initSegment, segments };
 ```
 
 Also remove the `presentationTimeOffset` and `timeOffset` computation lines above the return (the two lines computing `presentationTimeOffset` and `timeOffset`). These will be handled in the parser at the AdaptationSet level.
