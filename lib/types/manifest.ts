@@ -14,6 +14,7 @@ export type Manifest = {
  */
 export type Presentation = {
   start: number;
+  end: number;
   selectionSets: SelectionSet[];
 };
 
