@@ -30,19 +30,7 @@ const DASH_ARRAY_NODES = [
   "Event",
 ];
 
-export async function fetchManifest(url: string) {
-  const response = await fetch(url);
-  const text = await response.text();
-  return parseManifest(text, {
-    sourceUrl: url,
-  });
-}
-
-type ParseManifestOptions = {
-  sourceUrl: string;
-};
-
-async function parseManifest(text: string, options: ParseManifestOptions) {
+export async function parseManifest(text: string, sourceUrl: string) {
   const parser = new XMLParser({
     ignoreAttributes: false,
     alwaysCreateTextNode: true,
@@ -55,7 +43,7 @@ async function parseManifest(text: string, options: ParseManifestOptions) {
   }
 
   const presentations = mpd.Period.map((period, periodIndex) =>
-    parsePeriod(options, mpd, period, periodIndex),
+    parsePeriod(sourceUrl, mpd, period, periodIndex),
   );
 
   const manifest: Manifest = { presentations };
@@ -64,7 +52,7 @@ async function parseManifest(text: string, options: ParseManifestOptions) {
 }
 
 function parsePeriod(
-  options: ParseManifestOptions,
+  sourceUrl: string,
   mpd: MPD,
   period: Period,
   periodIndex: number,
@@ -75,7 +63,7 @@ function parsePeriod(
 
   const selectionSets: SelectionSet[] = Array.from(grouped.entries()).map(
     ([_key, adaptationSets]) =>
-      parseSelectionSet(options, mpd, period, adaptationSets),
+      parseSelectionSet(sourceUrl, mpd, period, adaptationSets),
   );
 
   const end = resolvePresentationEnd(
@@ -126,7 +114,7 @@ function resolvePresentationEnd(
 }
 
 function parseSelectionSet(
-  options: ParseManifestOptions,
+  sourceUrl: string,
   mpd: MPD,
   period: Period,
   adaptationSets: AdaptationSet[],
@@ -137,14 +125,14 @@ function parseSelectionSet(
   assertNotVoid(type, "Cannot infer media type");
 
   const switchingSets = adaptationSets.map((as) =>
-    parseSwitchingSet(options, mpd, period, as, type),
+    parseSwitchingSet(sourceUrl, mpd, period, as, type),
   );
 
   return { type, switchingSets };
 }
 
 function parseSwitchingSet(
-  options: ParseManifestOptions,
+  sourceUrl: string,
   mpd: MPD,
   period: Period,
   adaptationSet: AdaptationSet,
@@ -160,14 +148,14 @@ function parseSwitchingSet(
   assertNotVoid(codec, "codecs is mandatory");
 
   const tracks = adaptationSet.Representation.map((rep) =>
-    parseTrack(options, mpd, period, adaptationSet, rep, type),
+    parseTrack(sourceUrl, mpd, period, adaptationSet, rep, type),
   );
 
   return { mimeType, codec, tracks };
 }
 
 function parseTrack(
-  options: ParseManifestOptions,
+  sourceUrl: string,
   mpd: MPD,
   period: Period,
   adaptationSet: AdaptationSet,
@@ -178,7 +166,7 @@ function parseTrack(
     [mpd, period, adaptationSet, representation],
     (node) => node.BaseURL?.["#text"],
   );
-  const baseUrl = resolveUrls([options.sourceUrl, ...baseUrls]);
+  const baseUrl = resolveUrls([sourceUrl, ...baseUrls]);
 
   const bandwidth = Number(representation["@_bandwidth"]);
   assertNumber(bandwidth, "bandwidth is mandatory");
