@@ -29,7 +29,7 @@ type MediaState = {
   switchingSet: SwitchingSet;
   track: Track;
   lastSegment: Segment | null;
-  lastInitSegment: string | null;
+  lastInitSegment: InitSegment | null;
   lastTimestampOffset: number | null;
   timer: Timer;
 };
@@ -306,14 +306,14 @@ export class StreamController {
   private async loadInitSegment_(mediaState: MediaState) {
     const { initSegment } = mediaState.track;
 
-    if (mediaState.lastInitSegment === initSegment.url) {
+    if (mediaState.lastInitSegment === initSegment) {
       return;
     }
 
     const response = await fetch(initSegment.url);
     const data = await response.arrayBuffer();
 
-    mediaState.lastInitSegment = initSegment.url;
+    mediaState.lastInitSegment = initSegment;
 
     this.initSegmentMeta_.set(initSegment, {
       timescale: parseTimescale(data),
