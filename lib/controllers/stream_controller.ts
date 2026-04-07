@@ -99,7 +99,7 @@ export class StreamController {
       return;
     }
     mediaState.state = State.IDLE;
-    this.update_(mediaState);
+    this.onUpdate_(mediaState);
   };
 
   private tryStart_() {
@@ -263,7 +263,7 @@ export class StreamController {
 
     if (mediaState.lastInitSegment === initSegment) {
       mediaState.state = State.IDLE;
-      this.update_(mediaState);
+      this.onUpdate_(mediaState);
       return;
     }
 
