@@ -1,8 +1,8 @@
 import type {
   BufferAppendedEvent,
+  BufferAppendingEvent,
+  BufferCodecsEvent,
   MediaAttachingEvent,
-  MediaGroupsUpdatedEvent,
-  SegmentLoadedEvent,
 } from "../events";
 import { Events } from "../events";
 import type { Player } from "../player";
@@ -13,19 +13,20 @@ export class BufferController {
   private sourceBuffers_ = new Map<MediaType, SourceBuffer>();
   private opQueue_ = new OperationQueue();
   private mediaSource_: MediaSource | null = null;
+  private duration_ = 0;
 
   constructor(private player_: Player) {
     this.player_.on(Events.MEDIA_ATTACHING, this.onMediaAttaching_);
-    this.player_.on(Events.MEDIA_GROUPS_UPDATED, this.onMediaGroupsUpdated_);
-    this.player_.on(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
+    this.player_.on(Events.BUFFER_CODECS, this.onBufferCodecs_);
+    this.player_.on(Events.BUFFER_APPENDING, this.onBufferAppending_);
     this.player_.on(Events.BUFFER_EOS, this.onBufferEos_);
     this.player_.on(Events.BUFFER_APPENDED, this.onBufferAppended_);
   }
 
   destroy() {
     this.player_.off(Events.MEDIA_ATTACHING, this.onMediaAttaching_);
-    this.player_.off(Events.MEDIA_GROUPS_UPDATED, this.onMediaGroupsUpdated_);
-    this.player_.off(Events.SEGMENT_LOADED, this.onSegmentLoaded_);
+    this.player_.off(Events.BUFFER_CODECS, this.onBufferCodecs_);
+    this.player_.off(Events.BUFFER_APPENDING, this.onBufferAppending_);
     this.player_.off(Events.BUFFER_EOS, this.onBufferEos_);
     this.player_.off(Events.BUFFER_APPENDED, this.onBufferAppended_);
     this.opQueue_.destroy();
@@ -58,39 +59,39 @@ export class BufferController {
     event.media.src = URL.createObjectURL(this.mediaSource_);
   };
 
-  private onMediaGroupsUpdated_ = (event: MediaGroupsUpdatedEvent) => {
+  private onBufferCodecs_ = (event: BufferCodecsEvent) => {
     if (!this.mediaSource_) {
       return;
     }
-    for (const group of event.groups) {
-      if (this.sourceBuffers_.has(group.type)) {
+    for (const [type, { mimeType, codec }] of event.tracks) {
+      if (this.sourceBuffers_.has(type)) {
         continue;
       }
-      const mime = `${group.mimeType};codecs="${group.codec}"`;
+      const mime = `${mimeType};codecs="${codec}"`;
       const sb = this.mediaSource_.addSourceBuffer(mime);
-      this.sourceBuffers_.set(group.type, sb);
-      this.opQueue_.add(group.type, sb);
+      this.sourceBuffers_.set(type, sb);
+      this.opQueue_.add(type, sb);
       sb.addEventListener("updateend", () => {
-        this.opQueue_.shiftAndExecuteNext(group.type);
+        this.opQueue_.shiftAndExecuteNext(type);
       });
     }
-    let duration = 0;
-    for (const group of event.groups) {
-      const last = group.streams[group.streams.length - 1];
-      if (last && last.end > duration) {
-        duration = last.end;
-      }
-    }
-    this.mediaSource_.duration = duration;
+    this.duration_ = event.duration;
     this.player_.emit(Events.BUFFER_CREATED);
+    this.updateDuration_();
   };
 
-  private onSegmentLoaded_ = (event: SegmentLoadedEvent) => {
-    const { type } = event;
+  private onBufferAppending_ = (event: BufferAppendingEvent) => {
+    const { type, data, timestampOffset } = event;
     this.opQueue_.enqueue(type, {
       execute: () => {
         const sb = this.sourceBuffers_.get(type);
-        sb?.appendBuffer(event.data);
+        if (!sb) {
+          return;
+        }
+        if (sb.timestampOffset !== timestampOffset) {
+          sb.timestampOffset = timestampOffset;
+        }
+        sb.appendBuffer(data);
       },
       onComplete: () => {
         this.player_.emit(Events.BUFFER_APPENDED, { type });
@@ -124,6 +125,32 @@ export class BufferController {
       onComplete: () => {},
     });
   };
+
+  /**
+   * Set mediaSource.duration through the operation
+   * queue to avoid InvalidStateError when a
+   * SourceBuffer is updating.
+   */
+  private updateDuration_() {
+    if (!this.mediaSource_ || this.mediaSource_.readyState !== "open") {
+      return;
+    }
+    const duration = this.duration_;
+    if (this.mediaSource_.duration === duration) {
+      return;
+    }
+    const types = [...this.sourceBuffers_.keys()];
+    const blockers = types.map((type) => this.opQueue_.block(type));
+    Promise.all(blockers).then(() => {
+      if (
+        this.mediaSource_ &&
+        this.mediaSource_.readyState === "open" &&
+        this.mediaSource_.duration !== duration
+      ) {
+        this.mediaSource_.duration = duration;
+      }
+    });
+  }
 
   private onBufferEos_ = async () => {
     const blockers = [...this.sourceBuffers_.keys()].map((type) =>
