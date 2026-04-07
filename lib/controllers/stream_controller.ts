@@ -1,3 +1,4 @@
+import { ErrorCode } from "../errors";
 import type {
   BufferAppendedEvent,
   BufferCreatedEvent,
@@ -19,6 +20,7 @@ import type {
 import { binarySearch } from "../utils/array";
 import { assertNotVoid } from "../utils/assert";
 import { getBufferInfo } from "../utils/buffer";
+import { Request } from "../utils/request";
 import { Timer } from "../utils/timer";
 
 const TICK_INTERVAL = 0.1;
@@ -26,12 +28,12 @@ const TICK_INTERVAL = 0.1;
 enum State {
   STOPPED,
   IDLE,
-  LOADING,
   ENDED,
 }
 
 type MediaState = {
   state: State;
+  request: Request<"arraybuffer"> | null;
   presentation: Presentation;
   selectionSet: SelectionSet;
   switchingSet: SwitchingSet;
@@ -57,6 +59,7 @@ export class StreamController {
 
   destroy() {
     for (const mediaState of this.mediaStates_.values()) {
+      mediaState.request?.cancel();
       mediaState.timer.destroy();
     }
     this.player_.off(Events.MANIFEST_PARSED, this.onManifestParsed_);
@@ -76,6 +79,7 @@ export class StreamController {
 
   private onMediaAttached_ = (event: MediaAttachedEvent) => {
     this.media_ = event.media;
+    this.media_.addEventListener("seeking", this.onSeeking_);
     this.tryStart_();
   };
 
@@ -85,8 +89,8 @@ export class StreamController {
 
   private onBufferAppended_ = (event: BufferAppendedEvent) => {
     const mediaState = this.mediaStates_.get(event.type);
-    if (mediaState?.state === State.LOADING) {
-      mediaState.state = State.IDLE;
+    if (mediaState) {
+      mediaState.request = null;
     }
   };
 
@@ -95,6 +99,7 @@ export class StreamController {
       mediaState.state = State.STOPPED;
       mediaState.timer.stop();
     }
+    this.media_?.removeEventListener("seeking", this.onSeeking_);
     this.media_ = null;
   };
 
@@ -120,6 +125,7 @@ export class StreamController {
 
       const mediaState: MediaState = {
         state: State.IDLE,
+        request: null,
         presentation,
         selectionSet,
         switchingSet,
@@ -152,7 +158,7 @@ export class StreamController {
    * Runs every tick on a 100ms interval.
    */
   private update_(mediaState: MediaState) {
-    if (mediaState.state !== State.IDLE) {
+    if (mediaState.state !== State.IDLE || mediaState.request) {
       return;
     }
     if (!this.media_) {
@@ -322,6 +328,21 @@ export class StreamController {
     return end;
   }
 
+  private onSeeking_ = () => {
+    for (const mediaState of this.mediaStates_.values()) {
+      if (
+        mediaState.state === State.STOPPED ||
+        mediaState.state === State.ENDED
+      ) {
+        continue;
+      }
+      mediaState.request?.cancel();
+      mediaState.request = null;
+      mediaState.lastSegment = null;
+      mediaState.state = State.IDLE;
+    }
+  };
+
   private async loadInitSegment_(mediaState: MediaState) {
     const { initSegment } = mediaState.track;
 
@@ -329,41 +350,95 @@ export class StreamController {
       return;
     }
 
-    mediaState.state = State.LOADING;
+    const type = mediaState.selectionSet.type;
+    const request = new Request(initSegment.url, "arraybuffer");
+    mediaState.request = request;
 
-    const response = await fetch(initSegment.url);
-    const data = await response.arrayBuffer();
+    try {
+      const data = await request.response;
 
-    if (mediaState.state !== State.LOADING) {
-      return;
+      if (mediaState.request !== request) {
+        return;
+      }
+
+      mediaState.lastInitSegment = initSegment;
+
+      this.player_.emit(Events.BUFFER_APPENDING, {
+        type,
+        initSegment,
+        data,
+        segment: null,
+      });
+    } catch (error) {
+      if (mediaState.request !== request) {
+        return;
+      }
+      mediaState.request = null;
+
+      if (error instanceof DOMException && error.name === "AbortError") {
+        this.player_.emit(Events.ERROR, {
+          error: {
+            code: ErrorCode.SEGMENT_CANCELLED,
+            fatal: false,
+            data: { url: initSegment.url, mediaType: type },
+          },
+        });
+        return;
+      }
+
+      this.player_.emit(Events.ERROR, {
+        error: {
+          code: ErrorCode.SEGMENT_LOAD_FAILED,
+          fatal: true,
+          data: { url: initSegment.url, mediaType: type, status: null },
+        },
+      });
     }
-
-    mediaState.lastInitSegment = initSegment;
-
-    this.player_.emit(Events.BUFFER_APPENDING, {
-      type: mediaState.selectionSet.type,
-      initSegment,
-      data,
-      segment: null,
-    });
   }
 
   private async loadSegment_(mediaState: MediaState, segment: Segment) {
-    mediaState.state = State.LOADING;
+    const type = mediaState.selectionSet.type;
+    const request = new Request(segment.url, "arraybuffer");
+    mediaState.request = request;
     mediaState.lastSegment = segment;
 
-    const response = await fetch(segment.url);
-    const data = await response.arrayBuffer();
+    try {
+      const data = await request.response;
 
-    if (mediaState.state !== State.LOADING) {
-      return;
+      if (mediaState.request !== request) {
+        return;
+      }
+
+      this.player_.emit(Events.BUFFER_APPENDING, {
+        type,
+        initSegment: mediaState.track.initSegment,
+        segment,
+        data,
+      });
+    } catch (error) {
+      if (mediaState.request !== request) {
+        return;
+      }
+      mediaState.request = null;
+
+      if (error instanceof DOMException && error.name === "AbortError") {
+        this.player_.emit(Events.ERROR, {
+          error: {
+            code: ErrorCode.SEGMENT_CANCELLED,
+            fatal: false,
+            data: { url: segment.url, mediaType: type },
+          },
+        });
+        return;
+      }
+
+      this.player_.emit(Events.ERROR, {
+        error: {
+          code: ErrorCode.SEGMENT_LOAD_FAILED,
+          fatal: true,
+          data: { url: segment.url, mediaType: type, status: null },
+        },
+      });
     }
-
-    this.player_.emit(Events.BUFFER_APPENDING, {
-      type: mediaState.selectionSet.type,
-      initSegment: mediaState.track.initSegment,
-      segment,
-      data,
-    });
   }
 }
