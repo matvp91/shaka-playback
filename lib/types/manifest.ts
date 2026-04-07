@@ -1,64 +1,50 @@
-export type Manifest = {
-  presentations: Presentation[];
-};
-
-/**
- * Simultaneously decoded Selection Sets producing
- * a multimedia experience.
- */
-export type Presentation = {
-  start: number;
-  end: number;
-  selectionSets: SelectionSet[];
-};
-
-/**
- * Mutually exclusive Switching Sets, one active
- * at a time (eg. language, codec).
- */
-export type SelectionSet = {
-  type: TrackType;
-  switchingSets: SwitchingSet[];
-};
-
-/**
- * Alternative encodings of the same content,
- * seamlessly switchable.
- */
-export type SwitchingSet = {
-  tracks: Track[];
-};
-
-/**
- * Single media stream as a sequence of Segments.
- */
-export type Track = {
-  mimeType: string;
-  codec: string;
-  initSegmentUrl: string;
-  segments: Segment[];
-  timeOffset: number;
-  bandwidth: number;
-} & (
-  | {
-      type: TrackType.VIDEO;
-      width: number;
-      height: number;
-    }
-  | {
-      type: TrackType.AUDIO;
-    }
-);
-
-export enum TrackType {
+export enum MediaType {
   VIDEO = "video",
   AUDIO = "audio",
   TEXT = "text",
 }
 
+export type Manifest = {
+  groups: MediaGroup[];
+};
+
 /**
- * Addressable media object, one or more
- * consecutive Segments from a Track.
+ * Group of streams sharing codec and MIME type,
+ * maps 1:1 to a SourceBuffer.
+ */
+export type MediaGroup = {
+  type: MediaType;
+  mimeType: string;
+  codec: string;
+  streams: Stream[];
+};
+
+/**
+ * Single quality level as a sequence of segments,
+ * seamlessly switchable within a MediaGroup.
+ */
+export type Stream = {
+  bandwidth: number;
+  initSegment: InitSegment;
+  segments: Segment[];
+} & (
+  | {
+      type: MediaType.VIDEO;
+      width: number;
+      height: number;
+    }
+  | {
+      type: MediaType.AUDIO;
+    }
+);
+
+/** Initialization segment for a stream. */
+export type InitSegment = {
+  url: string;
+};
+
+/**
+ * Addressable media chunk with precise timing.
  */
 export type Segment = {
   url: string;
