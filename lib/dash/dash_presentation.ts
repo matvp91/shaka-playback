@@ -1,6 +1,7 @@
 import type { InitSegment, Segment } from "../types/manifest";
 import { assertNotVoid, assertNumber } from "../utils/assert";
 import { findMap } from "../utils/functional";
+import { parseDuration } from "../utils/time";
 import { resolveUrl } from "../utils/url";
 import type {
   AdaptationSet,
@@ -36,8 +37,8 @@ export function parseSegmentData(
   const timescale = Number(st["@_timescale"]);
   assertNumber(timescale, "timescale is mandatory");
 
-  const presentationTimeOffset = Number(st["@_presentationTimeOffset"] ?? 0);
-  const timeOffset = presentationTimeOffset / timescale;
+  const pto = Number(st["@_presentationTimeOffset"] ?? 0);
+  const periodStart = period["@_start"] ? parseDuration(period["@_start"]) : 0;
 
   const initSegmentUrl = resolveUrl(
     applyUrlTemplate(initialization, {
@@ -53,15 +54,12 @@ export function parseSegmentData(
     st,
     representation,
     baseUrl,
+    pto,
+    periodStart,
   );
 
-  return {
-    start: segments[0]?.start ?? 0,
-    end: segments[segments.length - 1]?.end ?? 0,
-    timeOffset,
-    initSegment: { url: initSegmentUrl } satisfies InitSegment,
-    segments,
-  };
+  const initSegment: InitSegment = { url: initSegmentUrl };
+  return { initSegment, segments };
 }
 
 function mapTemplateTimeline(
@@ -70,6 +68,8 @@ function mapTemplateTimeline(
   st: SegmentTemplate,
   representation: Representation,
   baseUrl: string,
+  pto: number,
+  periodStart: number,
 ): Segment[] {
   const timescale = Number(st["@_timescale"] ?? 1);
   const startNumber = Number(st["@_startNumber"] ?? 1);
@@ -95,8 +95,8 @@ function mapTemplateTimeline(
       const url = resolveUrl(relativeUrl, baseUrl);
       segments.push({
         url,
-        start: time / timescale,
-        end: (time + d) / timescale,
+        start: (time - pto) / timescale + periodStart,
+        end: (time - pto + d) / timescale + periodStart,
       });
       time += d;
       number++;
