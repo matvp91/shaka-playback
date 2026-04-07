@@ -16,8 +16,8 @@ player.on(Events.MEDIA_ATTACHED, () => {
   console.log("Media attached, MediaSource open");
 });
 
-player.on(Events.SEGMENT_LOADED, ({ track }) => {
-  console.log(`Segment loaded: ${track.type}`);
+player.on(Events.SEGMENT_LOADED, ({ type }) => {
+  console.log(`Segment loaded: ${type}`);
 });
 
 player.attachMedia(video);
