@@ -41,14 +41,6 @@ export class BufferController {
     this.mediaSource_ = null;
   }
 
-  getBufferedEnd(type: MediaType): number {
-    const sb = this.sourceBuffers_.get(type);
-    if (!sb || sb.buffered.length === 0) {
-      return 0;
-    }
-    return sb.buffered.end(sb.buffered.length - 1);
-  }
-
   private onMediaAttaching_ = (event: MediaAttachingEvent) => {
     this.mediaSource_ = new MediaSource();
 

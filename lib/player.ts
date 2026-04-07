@@ -6,7 +6,6 @@ import { ManifestController } from "./controllers/manifest_controller";
 import { StreamController } from "./controllers/stream_controller";
 import type { EventMap } from "./events";
 import { Events } from "./events";
-import type { MediaType } from "./types/manifest";
 
 export class Player extends EventEmitter<EventMap> {
   private config_ = defaultConfig;
@@ -36,10 +35,6 @@ export class Player extends EventEmitter<EventMap> {
 
   getConfig() {
     return this.config_;
-  }
-
-  getBufferedEnd(type: MediaType): number {
-    return this.bufferController_.getBufferedEnd(type);
   }
 
   attachMedia(media: HTMLMediaElement) {
