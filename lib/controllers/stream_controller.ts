@@ -283,16 +283,9 @@ export class StreamController {
     return currentIndex + 1 >= presentations.length;
   }
 
-  /**
-   * Get total duration. Segment times are in
-   * presentation time, so the last segment's
-   * end in the first track is the duration.
-   */
+  /** Get total presentation duration. */
   private computeDuration_(): number {
-    // TODO: Use start / end per presentation
-    const end = this.manifest_?.presentations
-      .at(-1)
-      ?.selectionSets[0]?.switchingSets[0]?.tracks[0]?.segments.at(-1)?.end;
+    const end = this.manifest_?.presentations.at(-1)?.end;
     assertNotVoid(end, "Cannot compute duration");
     return end;
   }
