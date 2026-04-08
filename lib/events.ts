@@ -1,6 +1,5 @@
 import type { RequestType } from "./net/network_service";
-import type { Request } from "./net/request";
-import type { Response } from "./net/response";
+import type { Request, Response } from "./net/types";
 import type {
   InitSegment,
   Manifest,
