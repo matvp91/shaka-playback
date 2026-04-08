@@ -16,4 +16,4 @@ So that's what this is. One manifest model any protocol maps onto. One pipeline 
 
 It's early. DASH VOD works. Buffering, seeking, gap recovery. ABR, live, HLS, DRM? Not yet. But the code stays small, the architecture stays clean, and adding stuff hasn't meant fighting what's already there. That's the whole point.
 
-Built on the shoulders of [Shaka Player](https://github.com/shaka-project/shaka-player), [hls.js](https://github.com/video-dev/hls.js), and SVTA's [Common Media Library](https://github.com/streaming-video-technology-alliance/common-media-library).
+Built on the shoulders of [Shaka Player](https://github.com/shaka-project/shaka-player), [hls.js](https://github.com/video-dev/hls.js), and [Common Media Library](https://github.com/streaming-video-technology-alliance/common-media-library).
