@@ -1,5 +1,4 @@
 export * from "./events";
-export * from "./net/request";
-export * from "./net/response";
+export * from "./net/types";
 export { Player } from "./player";
 export * from "./types";

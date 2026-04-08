@@ -1,11 +1,7 @@
 import { Events } from "../events";
 import type { Player } from "../player";
-import {
-  ABORTED,
-  type Request,
-  type Response,
-  type ResponseType,
-} from "./types";
+import type { Request, Response, ResponseType } from "./types";
+import { ABORTED } from "./types";
 
 export enum RequestType {
   MANIFEST = "manifest",
@@ -42,8 +38,9 @@ export class NetworkService {
     url: string,
     responseType: T,
   ): Request<T> {
-    const { promise, resolve, reject } =
-      Promise.withResolvers<Response<T> | typeof ABORTED>();
+    const { promise, resolve, reject } = Promise.withResolvers<
+      Response<T> | typeof ABORTED
+    >();
 
     const controller = new AbortController();
 
@@ -57,17 +54,14 @@ export class NetworkService {
       promise,
     };
 
-    this.entries_.set(
-      request,
-      { controller, resolve, reject } as RequestEntry,
-    );
+    this.entries_.set(request, { controller, resolve, reject } as RequestEntry);
 
     this.player_.emit(Events.NETWORK_REQUEST, {
       type,
       request,
     });
 
-    this.fetch_(type, request, controller.signal)
+    this.fetch_(request, controller.signal)
       .then((response) => {
         request.inFlight = false;
         this.entries_.delete(request);
@@ -109,7 +103,6 @@ export class NetworkService {
   }
 
   private async fetch_<T extends ResponseType>(
-    type: RequestType,
     request: Request<T>,
     signal: AbortSignal,
   ): Promise<Response<T>> {
@@ -122,14 +115,13 @@ export class NetworkService {
     });
 
     if (!res.ok) {
-      throw new Error(
-        `HTTP ${res.status} ${res.statusText}`,
-      );
+      throw new Error(`HTTP ${res.status} ${res.statusText}`);
     }
 
-    const data = request.responseType === "text"
-      ? await res.text()
-      : await res.arrayBuffer();
+    const data =
+      request.responseType === "text"
+        ? await res.text()
+        : await res.arrayBuffer();
     const timeElapsed = performance.now() - start;
 
     return {
@@ -143,8 +135,5 @@ export class NetworkService {
 }
 
 function isAbortError(error: unknown) {
-  return (
-    error instanceof DOMException &&
-    error.name === "AbortError"
-  );
+  return error instanceof DOMException && error.name === "AbortError";
 }

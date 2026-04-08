@@ -6,8 +6,8 @@ import type {
 import { Events } from "../events";
 import type { NetworkService } from "../net/network_service";
 import { RequestType } from "../net/network_service";
-import { ABORTED } from "../net/types";
 import type { Request } from "../net/types";
+import { ABORTED } from "../net/types";
 import type { Player } from "../player";
 import type {
   InitSegment,
