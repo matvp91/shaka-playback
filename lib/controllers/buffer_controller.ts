@@ -47,6 +47,7 @@ export class BufferController {
     this.mediaSource_.addEventListener(
       "sourceopen",
       () => {
+        assertNotVoid(this.mediaSource_, "No MediaSource");
         this.player_.emit(Events.MEDIA_ATTACHED, {
           media: event.media,
           mediaSource: this.mediaSource_,

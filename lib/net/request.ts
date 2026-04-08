@@ -1,8 +1,7 @@
 import type { Response } from "./response";
+import { resolversSymbol } from "./types";
 
 export type HttpMethod = "GET" | "POST";
-
-export const resolversSymbol = Symbol("promiseResolvers");
 
 /**
  * Network request with built-in cancellation

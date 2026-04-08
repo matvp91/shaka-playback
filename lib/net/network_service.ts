@@ -1,8 +1,8 @@
 import { Events } from "../events";
 import type { Player } from "../player";
 import type { Request } from "./request";
-import { resolversSymbol } from "./request";
 import { Response } from "./response";
+import { resolversSymbol } from "./types";
 
 export enum RequestType {
   MANIFEST = "manifest",

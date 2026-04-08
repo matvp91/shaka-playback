@@ -22,7 +22,7 @@ export const Events = {
   BUFFER_EOS: "bufferEos",
   NETWORK_REQUEST: "networkRequest",
   NETWORK_RESPONSE: "networkResponse",
-};
+} as const;
 
 export type ManifestLoadingEvent = {
   url: string;
