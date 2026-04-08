@@ -5,7 +5,6 @@ import {
   readMdhd,
   readTfdt,
 } from "@svta/cml-iso-bmff";
-
 import { assertNotVoid } from "./assert";
 
 /**
