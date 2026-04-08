@@ -219,25 +219,20 @@ method needed.
 ### Events
 
 No changes to event structure, only the payload types update
-to use the new `Request` and `Response` types. Since event
-handlers don't know the specific response type at compile time,
-events use `unknown` for the generic parameter:
+to use the new `Request` and `Response` types:
 
 ```typescript
 NETWORK_REQUEST: {
   type: RequestType;
-  request: Request<unknown>;
+  request: Request<ResponseType>;
 }
 
 NETWORK_RESPONSE: {
   type: RequestType;
-  request: Request<unknown>;
-  response: Response<unknown>;
+  request: Request<ResponseType>;
+  response: Response<ResponseType>;
 }
 ```
-
-Event listeners that need typed access can narrow via
-`request.responseType`.
 
 ## Data Flow
 
