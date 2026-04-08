@@ -257,15 +257,17 @@ export class StreamController {
   }
 
   /**
-   * Find the presentation that contains the
-   * given time.
+   * Find the presentation for the given time.
+   * Returns the first presentation whose end is
+   * past the time, which handles gaps between
+   * presentations and float-precision at boundaries.
    */
   private getPresentationForTime_(time: number): Presentation | null {
     if (!this.manifest_) {
       return null;
     }
     for (const p of this.manifest_.presentations) {
-      if (time >= p.start && time < p.end) {
+      if (time < p.end) {
         return p;
       }
     }
