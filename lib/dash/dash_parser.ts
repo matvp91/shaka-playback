@@ -1,3 +1,4 @@
+import { decodeIso8601Duration } from "@svta/cml-iso-8601";
 import { XMLParser } from "fast-xml-parser";
 import type {
   Manifest,
@@ -5,11 +6,10 @@ import type {
   SelectionSet,
   SwitchingSet,
   Track,
-} from "../types/manifest";
-import { MediaType } from "../types/manifest";
+} from "../types";
+import { MediaType } from "../types";
 import { assertNotVoid, assertNumber } from "../utils/assert";
 import { filterMap, findMap } from "../utils/functional";
-import { parseDuration } from "../utils/time";
 import { resolveUrls } from "../utils/url";
 import { parseSegmentData } from "./dash_presentation";
 import type { AdaptationSet, MPD, Period, Representation } from "./types";
@@ -57,7 +57,9 @@ function parsePeriod(
   period: Period,
   periodIndex: number,
 ): Presentation {
-  const start = period["@_start"] ? parseDuration(period["@_start"]) : 0;
+  const start = period["@_start"]
+    ? decodeIso8601Duration(period["@_start"])
+    : 0;
 
   const grouped = groupAdaptationSets(period.AdaptationSet);
 
@@ -94,17 +96,17 @@ function resolvePresentationEnd(
 ): number {
   const duration = period["@_duration"];
   if (duration != null) {
-    return start + parseDuration(duration);
+    return start + decodeIso8601Duration(duration);
   }
 
   const nextStart = mpd.Period[periodIndex + 1]?.["@_start"];
   if (nextStart != null) {
-    return parseDuration(nextStart);
+    return decodeIso8601Duration(nextStart);
   }
 
   const mpdDuration = mpd["@_mediaPresentationDuration"];
   if (mpdDuration != null) {
-    return parseDuration(mpdDuration);
+    return decodeIso8601Duration(mpdDuration);
   }
 
   const lastSegmentEnd =

@@ -1,8 +1,4 @@
-export enum MediaType {
-  VIDEO = "video",
-  AUDIO = "audio",
-  TEXT = "text",
-}
+import type { MediaType } from "./base";
 
 export type Manifest = {
   presentations: Presentation[];

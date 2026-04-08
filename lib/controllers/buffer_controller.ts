@@ -6,7 +6,7 @@ import type {
 } from "../events";
 import { Events } from "../events";
 import type { Player } from "../player";
-import type { InitSegment, MediaType } from "../types/manifest";
+import type { InitSegment, MediaType } from "../types";
 import { assertNotVoid } from "../utils/assert";
 import { parseBaseMediaDecodeTime, parseTimescale } from "../utils/mp4";
 import { OperationQueue } from "./operation_queue";
@@ -62,12 +62,11 @@ export class BufferController {
     if (!this.mediaSource_) {
       return;
     }
-    for (const [type, { mimeType, codec }] of event.tracks) {
+    for (const [type, track] of event.mediaTracks) {
       if (this.sourceBuffers_.has(type)) {
         continue;
       }
-      const mime = `${mimeType};codecs="${codec}"`;
-      const sb = this.mediaSource_.addSourceBuffer(mime);
+      const sb = this.mediaSource_.addSourceBuffer(track.mimeType);
       this.sourceBuffers_.set(type, sb);
       this.opQueue_.add(type, sb);
       sb.addEventListener("updateend", () => {

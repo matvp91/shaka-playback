@@ -2,9 +2,10 @@ import type { PlayerError } from "./errors";
 import type {
   InitSegment,
   Manifest,
+  MediaTrack,
   MediaType,
   Segment,
-} from "./types/manifest";
+} from "./types";
 
 export const Events = {
   MANIFEST_LOADING: "manifestLoading",
@@ -38,7 +39,7 @@ export type MediaAttachedEvent = {
 };
 
 export type BufferCodecsEvent = {
-  tracks: Map<MediaType, { mimeType: string; codec: string }>;
+  mediaTracks: Map<MediaType, MediaTrack>;
   duration: number;
 };
 

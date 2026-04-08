@@ -1,7 +1,7 @@
-import type { InitSegment, Segment } from "../types/manifest";
+import { decodeIso8601Duration } from "@svta/cml-iso-8601";
+import type { InitSegment, Segment } from "../types";
 import { assertNotVoid, assertNumber } from "../utils/assert";
 import { findMap } from "../utils/functional";
-import { parseDuration } from "../utils/time";
 import { resolveUrl } from "../utils/url";
 import type {
   AdaptationSet,
@@ -38,7 +38,9 @@ export function parseSegmentData(
   assertNumber(timescale, "timescale is mandatory");
 
   const pto = Number(st["@_presentationTimeOffset"] ?? 0);
-  const periodStart = period["@_start"] ? parseDuration(period["@_start"]) : 0;
+  const periodStart = period["@_start"]
+    ? decodeIso8601Duration(period["@_start"])
+    : 0;
 
   const initSegmentUrl = resolveUrl(
     applyUrlTemplate(initialization, {

@@ -1,4 +1,4 @@
-import type { InitSegment, Segment } from "../types/manifest";
+import type { InitSegment, Segment } from "../types";
 
 /**
  * Segment fetcher with cancellation. One instance

@@ -8,14 +8,16 @@ import type { Player } from "../player";
 import type {
   InitSegment,
   Manifest,
+  MediaTrack,
   MediaType,
   Presentation,
   Segment,
   Track,
-} from "../types/manifest";
+} from "../types";
 import { binarySearch } from "../utils/array";
 import { assertNotVoid } from "../utils/assert";
 import { getBufferInfo } from "../utils/buffer";
+import { getMimeType } from "../utils/codec";
 import { Timer } from "../utils/timer";
 import { SegmentFetch } from "./segment_fetch";
 
@@ -91,10 +93,7 @@ export class StreamController {
     const presentation = this.manifest_.presentations[0];
     assertNotVoid(presentation, "No Presentation found");
 
-    const codecTracks = new Map<
-      MediaType,
-      { mimeType: string; codec: string }
-    >();
+    const mediaTracks = new Map<MediaType, MediaTrack>();
 
     for (const selectionSet of presentation.selectionSets) {
       const switchingSet = selectionSet.switchingSets[0];
@@ -117,15 +116,14 @@ export class StreamController {
       };
 
       this.mediaStates_.set(type, mediaState);
-
-      codecTracks.set(type, {
-        mimeType: switchingSet.mimeType,
-        codec: switchingSet.codec,
+      mediaTracks.set(type, {
+        type,
+        mimeType: getMimeType(switchingSet.mimeType, switchingSet.codec),
       });
     }
 
     this.player_.emit(Events.BUFFER_CODECS, {
-      tracks: codecTracks,
+      mediaTracks,
       duration: this.computeDuration_(),
     });
 
