@@ -8,12 +8,6 @@ export enum RequestType {
   SEGMENT = "segment",
 }
 
-type RequestEntry = {
-  controller: AbortController;
-  resolve: (value: Response | typeof ABORTED) => void;
-  reject: (reason: unknown) => void;
-};
-
 /**
  * Central service for all network requests.
  * Created by Player, passed to controllers.
@@ -21,7 +15,7 @@ type RequestEntry = {
  * state management, and cancellation.
  */
 export class NetworkService {
-  private entries_ = new Map<Request, RequestEntry>();
+  private controllers_ = new Map<Request, AbortController>();
 
   constructor(private player_: Player) {}
 
@@ -38,70 +32,74 @@ export class NetworkService {
     url: string,
     responseType: T,
   ): Request<T> {
-    const { promise, resolve, reject } = Promise.withResolvers<
-      Response<T> | typeof ABORTED
-    >();
-
     const controller = new AbortController();
 
-    const request: Request<T> = {
+    const request = {
       url,
       method: "GET",
       headers: new Headers(),
       responseType,
       inFlight: true,
       cancelled: false,
-      promise,
-    };
+    } as Request<T>;
 
-    this.entries_.set(request, { controller, resolve, reject } as RequestEntry);
+    this.controllers_.set(request, controller);
 
     this.player_.emit(Events.NETWORK_REQUEST, {
       type,
       request,
     });
 
-    this.fetch_(request, controller.signal)
-      .then((response) => {
-        request.inFlight = false;
-        this.entries_.delete(request);
-
-        this.player_.emit(Events.NETWORK_RESPONSE, {
-          type,
-          request,
-          response,
-        });
-
-        resolve(response);
-      })
-      .catch((error) => {
-        request.inFlight = false;
-        this.entries_.delete(request);
-
-        if (isAbortError(error)) {
-          resolve(ABORTED);
-        } else {
-          reject(error);
-        }
-      });
+    request.promise = this.doFetch_(type, request, controller.signal);
 
     return request;
   }
 
   /** Cancel an in-flight request. */
   cancel(request: Request) {
-    const entry = this.entries_.get(request);
-    if (!entry) {
+    const controller = this.controllers_.get(request);
+    if (!controller) {
       return;
     }
 
     request.cancelled = true;
     request.inFlight = false;
-    entry.controller.abort();
-    entry.resolve(ABORTED);
-    this.entries_.delete(request);
+    controller.abort();
+    this.controllers_.delete(request);
   }
 
+  /**
+   * Fetch lifecycle orchestrator. Calls fetch_,
+   * emits NETWORK_RESPONSE on success, and cleans
+   * up state in all cases.
+   */
+  private async doFetch_<T extends ResponseType>(
+    type: RequestType,
+    request: Request<T>,
+    signal: AbortSignal,
+  ): Promise<Response<T> | typeof ABORTED> {
+    try {
+      const response = await this.fetch_(request, signal);
+
+      this.player_.emit(Events.NETWORK_RESPONSE, {
+        type,
+        request,
+        response,
+      });
+
+      return response;
+    } catch (error) {
+      if (isAbortError(error)) {
+        return ABORTED;
+      }
+      throw error;
+    } finally {
+      request.inFlight = false;
+      this.controllers_.delete(request);
+    }
+  }
+
+  /** Pure HTTP fetch. Request in, Response out. */
   private async fetch_<T extends ResponseType>(
     request: Request<T>,
     signal: AbortSignal,
