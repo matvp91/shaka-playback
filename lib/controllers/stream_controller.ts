@@ -196,7 +196,24 @@ export class StreamController {
       return;
     }
 
-    this.checkEndOfStream_();
+    if (mediaState.lastSegment) {
+      // Sequential path: all segments in current
+      // presentation exhausted. Advance to the next
+      // presentation by resolving at the boundary.
+      this.resolvePresentation_(mediaState, mediaState.presentation.end);
+      return;
+    }
+
+    // Seek path: no segment found at lookupTime.
+    // SourceBuffer.buffered has limited float precision,
+    // so bufferEnd may never exactly reach the duration.
+    // A microsecond tolerance (Shaka v2) prevents an
+    // infinite no-op loop when all content is buffered.
+    const duration = this.computeDuration_();
+    if (lookupTime >= duration - 1e-6) {
+      mediaState.state = State.ENDED;
+      this.checkEndOfStream_();
+    }
   }
 
   private onUpdate_(mediaState: MediaState) {
@@ -241,7 +258,10 @@ export class StreamController {
     const selectionSet = presentation.selectionSets.find(
       (s) => s.type === mediaState.type,
     );
-    assertNotVoid(selectionSet, `No SelectionSet for ${mediaState.type} in Presentation`);
+    assertNotVoid(
+      selectionSet,
+      `No SelectionSet for ${mediaState.type} in Presentation`,
+    );
 
     const switchingSet = selectionSet.switchingSets[0];
     assertNotVoid(switchingSet, "No SwitchingSet in Presentation");
