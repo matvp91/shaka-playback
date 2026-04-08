@@ -175,12 +175,11 @@ export class StreamController {
     }
 
     if (mediaState.track.initSegment !== mediaState.lastInitSegment) {
-      this.loadInitSegment_(mediaState);
+      this.loadSegment_(mediaState, mediaState.track.initSegment, null);
       return;
     }
 
-    mediaState.lastSegment = segment;
-    this.loadSegment_(mediaState, segment);
+    this.loadSegment_(mediaState, mediaState.track.initSegment, segment);
   }
 
   /**
@@ -221,51 +220,37 @@ export class StreamController {
   }
 
   /**
-   * Fetch init segment and emit BUFFER_APPENDING.
+   * Fetch an init or media segment and emit
+   * BUFFER_APPENDING. State is updated only after
+   * the fetch resolves, never before.
    */
-  private async loadInitSegment_(mediaState: MediaState) {
-    const { initSegment } = mediaState.track;
+  private async loadSegment_(
+    mediaState: MediaState,
+    initSegment: InitSegment,
+    segment: Segment | null,
+  ) {
+    const url = segment?.url ?? initSegment.url;
 
     mediaState.lastRequest = this.networkService_.request(
       RequestType.SEGMENT,
-      initSegment.url,
+      url,
       "arrayBuffer",
     );
 
     const response = await mediaState.lastRequest.promise;
-
     if (response === ABORTED) {
       return;
     }
 
-    mediaState.lastInitSegment = initSegment;
+    if (segment) {
+      mediaState.lastSegment = segment;
+    } else {
+      mediaState.lastInitSegment = initSegment;
+    }
+
     this.player_.emit(Events.BUFFER_APPENDING, {
       type: mediaState.type,
       initSegment,
-      data: response.data,
-      segment: null,
-    });
-  }
-
-  /**
-   * Fetch media segment and emit BUFFER_APPENDING.
-   */
-  private async loadSegment_(mediaState: MediaState, segment: Segment) {
-    mediaState.lastRequest = this.networkService_.request(
-      RequestType.SEGMENT,
-      segment.url,
-      "arrayBuffer",
-    );
-
-    const response = await mediaState.lastRequest.promise;
-
-    if (response === ABORTED) {
-      return;
-    }
-
-    this.player_.emit(Events.BUFFER_APPENDING, {
-      type: mediaState.type,
-      initSegment: mediaState.track.initSegment,
       segment,
       data: response.data,
     });
