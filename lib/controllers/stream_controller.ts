@@ -1,6 +1,4 @@
-import { ErrorCode } from "../errors";
 import type {
-  BufferAppendedEvent,
   BufferCreatedEvent,
   ManifestParsedEvent,
   MediaAttachedEvent,
@@ -18,25 +16,19 @@ import type {
 import { binarySearch } from "../utils/array";
 import { assertNotVoid } from "../utils/assert";
 import { getBufferInfo } from "../utils/buffer";
-import { Request } from "../utils/request";
 import { Timer } from "../utils/timer";
+import { SegmentFetch } from "./segment_fetch";
 
 const TICK_INTERVAL = 0.1;
 
-enum State {
-  STOPPED,
-  IDLE,
-  ENDED,
-}
-
 type MediaState = {
-  state: State;
   type: MediaType;
-  request: Request<"arraybuffer"> | null;
+  ended: boolean;
   presentation: Presentation;
   track: Track;
   lastSegment: Segment | null;
   lastInitSegment: InitSegment | null;
+  fetch: SegmentFetch;
   timer: Timer;
 };
 
@@ -51,19 +43,17 @@ export class StreamController {
     this.player_.on(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.on(Events.MEDIA_DETACHED, this.onMediaDetached_);
     this.player_.on(Events.BUFFER_CREATED, this.onBufferCreated_);
-    this.player_.on(Events.BUFFER_APPENDED, this.onBufferAppended_);
   }
 
   destroy() {
     for (const mediaState of this.mediaStates_.values()) {
-      mediaState.request?.cancel();
+      mediaState.fetch.cancel();
       mediaState.timer.destroy();
     }
     this.player_.off(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.off(Events.MEDIA_DETACHED, this.onMediaDetached_);
     this.player_.off(Events.BUFFER_CREATED, this.onBufferCreated_);
-    this.player_.off(Events.BUFFER_APPENDED, this.onBufferAppended_);
     this.manifest_ = null;
     this.mediaStates_.clear();
     this.sourceBuffers_.clear();
@@ -84,16 +74,9 @@ export class StreamController {
     this.sourceBuffers_ = event.sourceBuffers;
   };
 
-  private onBufferAppended_ = (event: BufferAppendedEvent) => {
-    const mediaState = this.mediaStates_.get(event.type);
-    if (mediaState) {
-      mediaState.request = null;
-    }
-  };
-
   private onMediaDetached_ = () => {
     for (const mediaState of this.mediaStates_.values()) {
-      mediaState.state = State.STOPPED;
+      mediaState.fetch.cancel();
       mediaState.timer.stop();
     }
     this.media_?.removeEventListener("seeking", this.onSeeking_);
@@ -123,14 +106,14 @@ export class StreamController {
       const type = selectionSet.type;
 
       const mediaState: MediaState = {
-        state: State.IDLE,
         type,
-        request: null,
+        ended: false,
         presentation,
         track,
         lastSegment: null,
         lastInitSegment: null,
-        timer: new Timer(() => this.onUpdate_(mediaState)),
+        fetch: new SegmentFetch(),
+        timer: new Timer(() => this.update_(mediaState)),
       };
 
       this.mediaStates_.set(type, mediaState);
@@ -153,20 +136,20 @@ export class StreamController {
 
   /**
    * Core streaming decision for a single track.
-   * Runs every tick on a 100ms interval.
+   * Runs every tick on a 100ms interval. Synchronous
+   * — kicks off async fetch but does not await.
    */
   private update_(mediaState: MediaState) {
-    if (mediaState.state !== State.IDLE || mediaState.request) {
+    if (mediaState.ended || mediaState.fetch.isLoading()) {
       return;
     }
     if (!this.media_) {
       return;
     }
 
-    const type = mediaState.type;
     const currentTime = this.media_.currentTime;
     const bufferGoal = this.player_.getConfig().bufferGoal;
-    const bufferEnd = this.getBufferEnd_(type, currentTime);
+    const bufferEnd = this.getBufferEnd_(mediaState.type, currentTime);
 
     if (bufferEnd !== null && bufferEnd - currentTime >= bufferGoal) {
       return;
@@ -178,7 +161,40 @@ export class StreamController {
 
     const lookupTime = bufferEnd ?? currentTime;
 
-    if (!this.resolvePresentation_(mediaState, lookupTime)) {
+    const segment = mediaState.lastSegment
+      ? this.getNextSegment_(mediaState)
+      : this.getSegmentForTime_(mediaState.track, lookupTime);
+
+    if (!segment) {
+      // Resolve time: sequential path uses the
+      // presentation boundary, time-based path uses
+      // the lookup time (seek or buffer-lost).
+      const time = mediaState.lastSegment
+        ? mediaState.presentation.end
+        : lookupTime;
+
+      const presentation = this.getPresentationForTime_(time);
+      if (!presentation) {
+        mediaState.ended = true;
+        this.checkEndOfStream_();
+        return;
+      }
+
+      if (presentation !== mediaState.presentation) {
+        mediaState.presentation = presentation;
+        mediaState.track = this.getTrackForType_(presentation, mediaState.type);
+        mediaState.lastSegment = null;
+        return;
+      }
+
+      // Same presentation, no segment — check EOS.
+      // Float precision means bufferEnd may never
+      // exactly reach the duration (Shaka v2).
+      const duration = this.computeDuration_();
+      if (lookupTime >= duration - 1e-6) {
+        mediaState.ended = true;
+        this.checkEndOfStream_();
+      }
       return;
     }
 
@@ -187,93 +203,47 @@ export class StreamController {
       return;
     }
 
-    const segment = mediaState.lastSegment
-      ? this.getNextSegment_(mediaState)
-      : this.getSegmentForTime_(mediaState.track, lookupTime);
-
-    if (segment) {
-      this.loadSegment_(mediaState, segment);
-      return;
-    }
-
-    if (mediaState.lastSegment) {
-      // Sequential path: all segments in current
-      // presentation exhausted. Advance to the next
-      // presentation by resolving at the boundary.
-      this.resolvePresentation_(mediaState, mediaState.presentation.end);
-      return;
-    }
-
-    // Seek path: no segment found at lookupTime.
-    // SourceBuffer.buffered has limited float precision,
-    // so bufferEnd may never exactly reach the duration.
-    // A microsecond tolerance (Shaka v2) prevents an
-    // infinite no-op loop when all content is buffered.
-    const duration = this.computeDuration_();
-    if (lookupTime >= duration - 1e-6) {
-      mediaState.state = State.ENDED;
-      this.checkEndOfStream_();
-    }
-  }
-
-  private onUpdate_(mediaState: MediaState) {
-    this.update_(mediaState);
+    mediaState.lastSegment = segment;
+    this.loadSegment_(mediaState, segment);
   }
 
   /**
-   * Get the end of the buffered range containing
-   * the given time for a specific media type.
+   * Fetch init segment and emit BUFFER_APPENDING.
    */
-  private getBufferEnd_(type: MediaType, time: number): number | null {
-    const sb = this.sourceBuffers_.get(type);
-    if (!sb) {
-      return null;
+  private async loadInitSegment_(mediaState: MediaState) {
+    const { initSegment } = mediaState.track;
+
+    // Returns null when the request was aborted.
+    const data = await mediaState.fetch.fetch(initSegment);
+    if (!data) {
+      return;
     }
-    const { maxBufferHole } = this.player_.getConfig();
-    const info = getBufferInfo(sb.buffered, time, maxBufferHole);
-    return info ? info.end : null;
+
+    mediaState.lastInitSegment = initSegment;
+    this.player_.emit(Events.BUFFER_APPENDING, {
+      type: mediaState.type,
+      initSegment,
+      data,
+      segment: null,
+    });
   }
 
   /**
-   * Resolve the presentation chain for the given
-   * time. Updates presentation and track when
-   * the presentation changes.
+   * Fetch media segment and emit BUFFER_APPENDING.
    */
-  private resolvePresentation_(mediaState: MediaState, time: number): boolean {
-    if (!this.manifest_) {
-      return false;
+  private async loadSegment_(mediaState: MediaState, segment: Segment) {
+    // Returns null when the request was aborted.
+    const data = await mediaState.fetch.fetch(segment);
+    if (!data) {
+      return;
     }
 
-    const presentation = this.getPresentationForTime_(time);
-    if (!presentation) {
-      mediaState.state = State.ENDED;
-      this.checkEndOfStream_();
-      return false;
-    }
-
-    if (presentation === mediaState.presentation) {
-      return true;
-    }
-
-    const selectionSet = presentation.selectionSets.find(
-      (s) => s.type === mediaState.type,
-    );
-    assertNotVoid(
-      selectionSet,
-      `No SelectionSet for ${mediaState.type} in Presentation`,
-    );
-
-    const switchingSet = selectionSet.switchingSets[0];
-    assertNotVoid(switchingSet, "No SwitchingSet in Presentation");
-
-    const track = switchingSet.tracks[0];
-    assertNotVoid(track, "No Track in Presentation");
-
-    mediaState.presentation = presentation;
-    mediaState.track = track;
-    mediaState.lastSegment = null;
-
-    return true;
+    this.player_.emit(Events.BUFFER_APPENDING, {
+      type: mediaState.type,
+      initSegment: mediaState.track.initSegment,
+      segment,
+      data,
+    });
   }
 
   /**
@@ -292,6 +262,39 @@ export class StreamController {
       }
     }
     return null;
+  }
+
+  /**
+   * Walk the manifest chain from presentation to
+   * track for the given media type.
+   */
+  private getTrackForType_(presentation: Presentation, type: MediaType): Track {
+    const selectionSet = presentation.selectionSets.find(
+      (s) => s.type === type,
+    );
+    assertNotVoid(selectionSet, `No SelectionSet for ${type}`);
+
+    const switchingSet = selectionSet.switchingSets[0];
+    assertNotVoid(switchingSet, "No SwitchingSet");
+
+    const track = switchingSet.tracks[0];
+    assertNotVoid(track, "No Track");
+
+    return track;
+  }
+
+  /**
+   * Get the end of the buffered range containing
+   * the given time for a specific media type.
+   */
+  private getBufferEnd_(type: MediaType, time: number): number | null {
+    const sb = this.sourceBuffers_.get(type);
+    if (!sb) {
+      return null;
+    }
+    const { maxBufferHole } = this.player_.getConfig();
+    const info = getBufferInfo(sb.buffered, time, maxBufferHole);
+    return info ? info.end : null;
   }
 
   /**
@@ -330,9 +333,7 @@ export class StreamController {
   }
 
   private checkEndOfStream_() {
-    const allDone = [...this.mediaStates_.values()].every(
-      (ms) => ms.state === State.ENDED,
-    );
+    const allDone = [...this.mediaStates_.values()].every((ms) => ms.ended);
     if (allDone) {
       this.player_.emit(Events.BUFFER_EOS);
     }
@@ -347,115 +348,10 @@ export class StreamController {
 
   private onSeeking_ = () => {
     for (const mediaState of this.mediaStates_.values()) {
-      if (
-        mediaState.state === State.STOPPED ||
-        mediaState.state === State.ENDED
-      ) {
-        continue;
-      }
-      mediaState.request?.cancel();
-      mediaState.request = null;
+      mediaState.ended = false;
+      mediaState.fetch.cancel();
       mediaState.lastSegment = null;
-      mediaState.state = State.IDLE;
+      this.update_(mediaState);
     }
   };
-
-  private async loadInitSegment_(mediaState: MediaState) {
-    const { initSegment } = mediaState.track;
-
-    if (mediaState.lastInitSegment === initSegment) {
-      return;
-    }
-
-    const type = mediaState.type;
-    const request = new Request(initSegment.url, "arraybuffer");
-    mediaState.request = request;
-
-    try {
-      const data = await request.response;
-
-      if (mediaState.request !== request) {
-        return;
-      }
-
-      mediaState.lastInitSegment = initSegment;
-
-      this.player_.emit(Events.BUFFER_APPENDING, {
-        type,
-        initSegment,
-        data,
-        segment: null,
-      });
-    } catch (error) {
-      if (mediaState.request !== request) {
-        return;
-      }
-      mediaState.request = null;
-
-      if (error instanceof DOMException && error.name === "AbortError") {
-        this.player_.emit(Events.ERROR, {
-          error: {
-            code: ErrorCode.SEGMENT_CANCELLED,
-            fatal: false,
-            data: { url: initSegment.url, mediaType: type },
-          },
-        });
-        return;
-      }
-
-      this.player_.emit(Events.ERROR, {
-        error: {
-          code: ErrorCode.SEGMENT_LOAD_FAILED,
-          fatal: true,
-          data: { url: initSegment.url, mediaType: type, status: null },
-        },
-      });
-    }
-  }
-
-  private async loadSegment_(mediaState: MediaState, segment: Segment) {
-    const type = mediaState.type;
-    const request = new Request(segment.url, "arraybuffer");
-    mediaState.request = request;
-    mediaState.lastSegment = segment;
-
-    try {
-      const data = await request.response;
-
-      if (mediaState.request !== request) {
-        return;
-      }
-
-      this.player_.emit(Events.BUFFER_APPENDING, {
-        type,
-        initSegment: mediaState.track.initSegment,
-        segment,
-        data,
-      });
-    } catch (error) {
-      if (mediaState.request !== request) {
-        return;
-      }
-      mediaState.request = null;
-
-      if (error instanceof DOMException && error.name === "AbortError") {
-        this.player_.emit(Events.ERROR, {
-          error: {
-            code: ErrorCode.SEGMENT_CANCELLED,
-            fatal: false,
-            data: { url: segment.url, mediaType: type },
-          },
-        });
-        return;
-      }
-
-      this.player_.emit(Events.ERROR, {
-        error: {
-          code: ErrorCode.SEGMENT_LOAD_FAILED,
-          fatal: true,
-          data: { url: segment.url, mediaType: type, status: null },
-        },
-      });
-    }
-  }
 }
