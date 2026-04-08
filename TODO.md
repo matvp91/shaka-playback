@@ -8,3 +8,5 @@ Preference API for track selection — expose a preference-based API (e.g., pref
 
 Seek to end restarts playback — when seeking to the end, the player immediately restarts instead of staying at the end. Seeking is broken after this occurs.
 
+- Seek to 640.895917 at start, you'll enter a stall.
+- Seek to 372.948534
