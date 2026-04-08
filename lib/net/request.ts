@@ -2,7 +2,7 @@ import type { Response } from "./response";
 
 export type HttpMethod = "GET" | "POST";
 
-export const promiseResolversSymbol = Symbol("promiseResolvers");
+export const resolversSymbol = Symbol("promiseResolvers");
 
 /**
  * Network request with built-in cancellation
@@ -11,28 +11,25 @@ export const promiseResolversSymbol = Symbol("promiseResolvers");
  * before the fetch fires.
  */
 export class Request {
-  url: string;
-  method: HttpMethod;
-  headers: Headers;
+  method: HttpMethod = "GET";
+  headers = new Headers();
   cancelled = false;
-  readonly signal: AbortSignal;
 
   private controller_ = new AbortController();
-  private promiseResolvers_ = Promise.withResolvers<Response | null>();
+  private resolvers_ = Promise.withResolvers<Response | null>();
 
-  get [promiseResolversSymbol]() {
-    return this.promiseResolvers_;
+  constructor(public url: string) {}
+
+  get [resolversSymbol]() {
+    return this.resolvers_;
   }
 
   get promise() {
-    return this.promiseResolvers_.promise;
+    return this.resolvers_.promise;
   }
 
-  constructor(url: string) {
-    this.url = url;
-    this.method = "GET";
-    this.headers = new Headers();
-    this.signal = this.controller_.signal;
+  get signal() {
+    return this.controller_.signal;
   }
 
   /** Cancel the in-flight request. */
