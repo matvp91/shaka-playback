@@ -1,23 +1,43 @@
+import type { Response } from "./response";
+
 export type HttpMethod = "GET" | "POST";
 
+export const promiseResolversSymbol = Symbol("promiseResolvers");
+
 /**
- * Mutable request descriptor. Event listeners
- * can modify properties before the fetch fires.
+ * Network request with built-in cancellation
+ * and promise resolution. Mutable properties
+ * allow event listeners to modify the request
+ * before the fetch fires.
  */
-export type Request = {
+export class Request {
   url: string;
   method: HttpMethod;
   headers: Headers;
-};
+  cancelled = false;
+  readonly signal: AbortSignal;
 
-/**
- * Create a request with sensible defaults.
- * Method defaults to GET, headers to empty.
- */
-export function makeRequest(url: string): Request {
-  return {
-    url,
-    method: "GET",
-    headers: new Headers(),
-  };
+  private controller_ = new AbortController();
+  private promiseResolvers_ = Promise.withResolvers<Response | null>();
+
+  get [promiseResolversSymbol]() {
+    return this.promiseResolvers_;
+  }
+
+  get promise() {
+    return this.promiseResolvers_.promise;
+  }
+
+  constructor(url: string) {
+    this.url = url;
+    this.method = "GET";
+    this.headers = new Headers();
+    this.signal = this.controller_.signal;
+  }
+
+  /** Cancel the in-flight request. */
+  cancel() {
+    this.cancelled = true;
+    this.controller_.abort();
+  }
 }

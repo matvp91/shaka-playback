@@ -1,6 +1,6 @@
 import { Events } from "../events";
 import type { Player } from "../player";
-import { PendingRequest } from "./pending_request";
+import { promiseResolversSymbol } from "./request";
 import type { Request } from "./request";
 import { Response } from "./response";
 
@@ -24,50 +24,43 @@ export class NetworkService {
   /**
    * Start a network request. Emits NETWORK_REQUEST
    * synchronously before the fetch fires, allowing
-   * listeners to mutate the request. Returns a
-   * PendingRequest handle for cancellation.
+   * listeners to mutate the request. Returns the
+   * request handle for cancellation and awaiting.
    */
-  request(type: RequestType, request: Request): PendingRequest {
+  request(type: RequestType, request: Request): Request {
     this.player_.emit(Events.NETWORK_REQUEST, {
       type,
       request,
     });
 
-    const controller = new AbortController();
-
-    const promise = this.fetch_(request, controller).then(
+    this.fetch_(request).then(
       (response) => {
         this.player_.emit(Events.NETWORK_RESPONSE, {
           type,
           request,
           response,
         });
-        return response;
+        request[promiseResolversSymbol].resolve(response);
       },
-      (error): Response | null => {
-        if (
-          error instanceof DOMException &&
-          error.name === "AbortError"
-        ) {
-          return null;
+      (error) => {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          request[promiseResolversSymbol].resolve(null);
+          return;
         }
-        throw error;
+        request[promiseResolversSymbol].reject(error);
       },
     );
 
-    return new PendingRequest(request, promise, controller);
+    return request;
   }
 
-  private async fetch_(
-    request: Request,
-    controller: AbortController,
-  ): Promise<Response> {
+  private async fetch_(request: Request): Promise<Response> {
     const start = performance.now();
 
     const fetchResponse = await fetch(request.url, {
       method: request.method,
       headers: request.headers,
-      signal: controller.signal,
+      signal: request.signal,
     });
 
     const data = await fetchResponse.arrayBuffer();
