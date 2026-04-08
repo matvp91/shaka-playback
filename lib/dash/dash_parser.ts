@@ -8,10 +8,11 @@ import type {
   Track,
 } from "../types";
 import { MediaType } from "../types";
-import { assertNotVoid, assertNumber } from "../utils/assert";
+import { assertNotVoid } from "../utils/assert";
 import { filterMap, findMap } from "../utils/functional";
 import { resolveUrls } from "../utils/url";
 import { parseSegmentData } from "./dash_presentation";
+import { asNumber } from "./parse";
 import type { AdaptationSet, MPD, Period, Representation } from "./types";
 
 const DASH_ARRAY_NODES = [
@@ -170,8 +171,8 @@ function parseTrack(
   );
   const baseUrl = resolveUrls([sourceUrl, ...baseUrls]);
 
-  const bandwidth = Number(representation["@_bandwidth"]);
-  assertNumber(bandwidth, "bandwidth is mandatory");
+  const bandwidth = asNumber(representation["@_bandwidth"]);
+  assertNotVoid(bandwidth, "bandwidth is mandatory");
 
   const segmentData = parseSegmentData(
     mpd,
@@ -182,11 +183,13 @@ function parseTrack(
   );
 
   if (type === MediaType.VIDEO) {
-    const width = Number(findMap([representation, adaptationSet], "@_width"));
-    assertNumber(width, "width is mandatory");
+    const width = asNumber(findMap([representation, adaptationSet], "@_width"));
+    assertNotVoid(width, "width is mandatory");
 
-    const height = Number(findMap([representation, adaptationSet], "@_height"));
-    assertNumber(height, "height is mandatory");
+    const height = asNumber(
+      findMap([representation, adaptationSet], "@_height"),
+    );
+    assertNotVoid(height, "height is mandatory");
 
     return {
       type: MediaType.VIDEO,

@@ -1,9 +1,10 @@
 import { processUriTemplate } from "@svta/cml-dash";
 import { decodeIso8601Duration } from "@svta/cml-iso-8601";
 import type { InitSegment, Segment } from "../types";
-import { assertNotVoid, assertNumber } from "../utils/assert";
+import { assertNotVoid } from "../utils/assert";
 import { findMap } from "../utils/functional";
 import { resolveUrl } from "../utils/url";
+import { asNumber } from "./parse";
 import type {
   AdaptationSet,
   MPD,
@@ -35,16 +36,17 @@ export function parseSegmentData(
   const media = st["@_media"];
   assertNotVoid(media, "media is mandatory");
 
-  const timescale = Number(st["@_timescale"]);
-  assertNumber(timescale, "timescale is mandatory");
+  const timescale = asNumber(st["@_timescale"]);
+  assertNotVoid(timescale, "timescale is mandatory");
 
-  const pto = Number(st["@_presentationTimeOffset"] ?? 0);
+  const bandwidth = asNumber(representation["@_bandwidth"]);
+  assertNotVoid(bandwidth, "bandwidth is mandatory");
+
+  const pto = asNumber(st["@_presentationTimeOffset"]) ?? 0;
+
   const periodStart = period["@_start"]
     ? decodeIso8601Duration(period["@_start"])
     : 0;
-
-  const bandwidth = Number(representation["@_bandwidth"]);
-  assertNumber(bandwidth, "bandwidth is mandatory");
 
   const initSegmentUrl = resolveUrl(
     processUriTemplate(
@@ -69,7 +71,10 @@ export function parseSegmentData(
     periodStart,
   );
 
-  const initSegment: InitSegment = { url: initSegmentUrl };
+  const initSegment: InitSegment = {
+    url: initSegmentUrl,
+  };
+
   return { initSegment, segments };
 }
 
@@ -83,18 +88,20 @@ function mapTemplateTimeline(
   pto: number,
   periodStart: number,
 ): Segment[] {
-  const timescale = Number(st["@_timescale"] ?? 1);
-  const startNumber = Number(st["@_startNumber"] ?? 1);
+  const timescale = asNumber(st["@_timescale"]) ?? 1;
+  const startNumber = asNumber(st["@_startNumber"]) ?? 1;
   const segments: Segment[] = [];
   let time = 0;
   let number = startNumber;
 
   for (const s of timeline.S) {
-    const d = Number(s["@_d"]);
-    const r = Number(s["@_r"] ?? 0);
+    const d = asNumber(s["@_d"]);
+    assertNotVoid(d, "segment duration is mandatory");
+    const r = asNumber(s["@_r"]) ?? 0;
 
-    if (s["@_t"] != null) {
-      time = Number(s["@_t"]);
+    const t = asNumber(s["@_t"]);
+    if (t != null) {
+      time = t;
     }
 
     for (let i = 0; i <= r; i++) {

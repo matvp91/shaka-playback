@@ -10,10 +10,3 @@ export function assertNotVoid<T>(
 ): asserts value is NonNullable<T> {
   assert(value != null, message);
 }
-
-export function assertNumber(
-  value: number,
-  message: string,
-): asserts value is number {
-  assert(!Number.isNaN(value), message);
-}
