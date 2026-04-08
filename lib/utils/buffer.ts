@@ -37,3 +37,21 @@ export function getBufferInfo(
 }
 
 export type { BufferInfo };
+
+/**
+ * Find the start of the first buffered range after
+ * the given position. Returns null if no range exists
+ * ahead of pos.
+ */
+export function getNextBufferedStart(
+  buffered: TimeRanges,
+  pos: number,
+): number | null {
+  for (let i = 0; i < buffered.length; i++) {
+    const start = buffered.start(i);
+    if (start > pos) {
+      return start;
+    }
+  }
+  return null;
+}
