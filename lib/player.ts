@@ -57,7 +57,7 @@ export class Player extends EventEmitter<EventMap> {
     this.emit(Events.MEDIA_DETACHED);
   }
 
-  getSeekRange() {
+  getSeekRange(): SeekRange {
     return this.streamController_.getSeekRange() ?? { start: 0, end: 0 };
   }
 
