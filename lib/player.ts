@@ -2,6 +2,7 @@ import { EventEmitter } from "@matvp91/eventemitter3";
 import type { PlayerConfig } from "./config";
 import { defaultConfig } from "./config";
 import { BufferController } from "./controllers/buffer_controller";
+import { GapController } from "./controllers/gap_controller";
 import { ManifestController } from "./controllers/manifest_controller";
 import { StreamController } from "./controllers/stream_controller";
 import type { EventMap } from "./events";
@@ -12,12 +13,14 @@ export class Player extends EventEmitter<EventMap> {
   private media_: HTMLMediaElement | null = null;
   private manifestController_: ManifestController;
   private bufferController_: BufferController;
+  private gapController_: GapController;
   private streamController_: StreamController;
 
   constructor() {
     super();
     this.manifestController_ = new ManifestController(this);
     this.bufferController_ = new BufferController(this);
+    this.gapController_ = new GapController(this);
     this.streamController_ = new StreamController(this);
   }
 
@@ -50,6 +53,7 @@ export class Player extends EventEmitter<EventMap> {
   destroy() {
     this.manifestController_.destroy();
     this.bufferController_.destroy();
+    this.gapController_.destroy();
     this.streamController_.destroy();
     this.removeAllListeners();
   }
