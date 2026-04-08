@@ -1,8 +1,10 @@
+import { processUriTemplate } from "@svta/cml-dash";
 import { decodeIso8601Duration } from "@svta/cml-iso-8601";
 import type { InitSegment, Segment } from "../types";
-import { assertNotVoid, assertNumber } from "../utils/assert";
+import { assertNotVoid } from "../utils/assert";
 import { findMap } from "../utils/functional";
 import { resolveUrl } from "../utils/url";
+import { asNumber } from "./parse";
 import type {
   AdaptationSet,
   MPD,
@@ -34,19 +36,27 @@ export function parseSegmentData(
   const media = st["@_media"];
   assertNotVoid(media, "media is mandatory");
 
-  const timescale = Number(st["@_timescale"]);
-  assertNumber(timescale, "timescale is mandatory");
+  const timescale = asNumber(st["@_timescale"]);
+  assertNotVoid(timescale, "timescale is mandatory");
 
-  const pto = Number(st["@_presentationTimeOffset"] ?? 0);
+  const bandwidth = asNumber(representation["@_bandwidth"]);
+  assertNotVoid(bandwidth, "bandwidth is mandatory");
+
+  const pto = asNumber(st["@_presentationTimeOffset"]) ?? 0;
+
   const periodStart = period["@_start"]
     ? decodeIso8601Duration(period["@_start"])
     : 0;
 
   const initSegmentUrl = resolveUrl(
-    applyUrlTemplate(initialization, {
-      RepresentationID: representation["@_id"],
-      Bandwidth: representation["@_bandwidth"],
-    }),
+    processUriTemplate(
+      initialization,
+      representation["@_id"],
+      null,
+      null,
+      bandwidth,
+      null,
+    ),
     baseUrl,
   );
 
@@ -56,11 +66,15 @@ export function parseSegmentData(
     st,
     representation,
     baseUrl,
+    bandwidth,
     pto,
     periodStart,
   );
 
-  const initSegment: InitSegment = { url: initSegmentUrl };
+  const initSegment: InitSegment = {
+    url: initSegmentUrl,
+  };
+
   return { initSegment, segments };
 }
 
@@ -70,30 +84,35 @@ function mapTemplateTimeline(
   st: SegmentTemplate,
   representation: Representation,
   baseUrl: string,
+  bandwidth: number,
   pto: number,
   periodStart: number,
 ): Segment[] {
-  const timescale = Number(st["@_timescale"] ?? 1);
-  const startNumber = Number(st["@_startNumber"] ?? 1);
+  const timescale = asNumber(st["@_timescale"]) ?? 1;
+  const startNumber = asNumber(st["@_startNumber"]) ?? 1;
   const segments: Segment[] = [];
   let time = 0;
   let number = startNumber;
 
   for (const s of timeline.S) {
-    const d = Number(s["@_d"]);
-    const r = Number(s["@_r"] ?? 0);
+    const d = asNumber(s["@_d"]);
+    assertNotVoid(d, "segment duration is mandatory");
+    const r = asNumber(s["@_r"]) ?? 0;
 
-    if (s["@_t"] != null) {
-      time = Number(s["@_t"]);
+    const t = asNumber(s["@_t"]);
+    if (t != null) {
+      time = t;
     }
 
     for (let i = 0; i <= r; i++) {
-      const relativeUrl = applyUrlTemplate(media, {
-        RepresentationID: representation["@_id"],
-        Bandwidth: representation["@_bandwidth"],
-        Number: number,
-        Time: time,
-      });
+      const relativeUrl = processUriTemplate(
+        media,
+        representation["@_id"],
+        number,
+        null,
+        bandwidth,
+        time,
+      );
       const url = resolveUrl(relativeUrl, baseUrl);
       segments.push({
         url,
@@ -106,20 +125,6 @@ function mapTemplateTimeline(
   }
 
   return segments;
-}
-
-function applyUrlTemplate(
-  template: string,
-  vars: Record<string, string | number | undefined>,
-): string {
-  return template.replace(/\$(\w+)(?:%0(\d+)d)?\$/g, (match, key, width) => {
-    const value = vars[key];
-    if (value == null) {
-      return match;
-    }
-    const str = String(value);
-    return width ? str.padStart(Number(width), "0") : str;
-  });
 }
 
 function resolveSegmentTemplate(

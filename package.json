@@ -28,8 +28,10 @@
   },
   "dependencies": {
     "@matvp91/eventemitter3": "^5.0.1",
+    "@svta/cml-dash": "^1.0.5",
     "@svta/cml-iso-8601": "^1.0.1",
     "@svta/cml-iso-bmff": "^1.0.1",
+    "@svta/cml-utils": "^1.4.0",
     "fast-xml-parser": "^5.4.1"
   }
 }
