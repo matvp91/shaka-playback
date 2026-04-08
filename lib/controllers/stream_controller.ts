@@ -370,7 +370,8 @@ export class StreamController {
   private onSeeking_ = () => {
     for (const mediaState of this.mediaStates_.values()) {
       mediaState.ended = false;
-      mediaState.fetch.cancel();
+      mediaState.request?.cancel();
+      mediaState.request = null;
       mediaState.lastSegment = null;
       this.update_(mediaState);
     }

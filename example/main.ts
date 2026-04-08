@@ -21,6 +21,10 @@ player.on(Events.BUFFER_APPENDED, ({ type }) => {
   console.log(`Buffer appended: ${type}`);
 });
 
+player.on(Events.NETWORK_REQUEST, (event) => {
+  console.log(event);
+});
+
 player.attachMedia(video);
 
 player.load(
