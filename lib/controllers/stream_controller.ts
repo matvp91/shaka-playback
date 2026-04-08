@@ -155,10 +155,6 @@ export class StreamController {
       return;
     }
 
-    if (bufferEnd === null) {
-      mediaState.lastSegment = null;
-    }
-
     const lookupTime = bufferEnd ?? currentTime;
 
     const segment = mediaState.lastSegment
@@ -166,35 +162,7 @@ export class StreamController {
       : this.getSegmentForTime_(mediaState.track, lookupTime);
 
     if (!segment) {
-      // Resolve time: sequential path uses the
-      // presentation boundary, time-based path uses
-      // the lookup time (seek or buffer-lost).
-      const time = mediaState.lastSegment
-        ? mediaState.presentation.end
-        : lookupTime;
-
-      const presentation = this.getPresentationForTime_(time);
-      if (!presentation) {
-        mediaState.ended = true;
-        this.checkEndOfStream_();
-        return;
-      }
-
-      if (presentation !== mediaState.presentation) {
-        mediaState.presentation = presentation;
-        mediaState.track = this.getTrackForType_(presentation, mediaState.type);
-        mediaState.lastSegment = null;
-        return;
-      }
-
-      // Same presentation, no segment — check EOS.
-      // Float precision means bufferEnd may never
-      // exactly reach the duration (Shaka v2).
-      const duration = this.computeDuration_();
-      if (lookupTime >= duration - 1e-6) {
-        mediaState.ended = true;
-        this.checkEndOfStream_();
-      }
+      this.advanceOrEnd_(mediaState, lookupTime);
       return;
     }
 
@@ -205,6 +173,43 @@ export class StreamController {
 
     mediaState.lastSegment = segment;
     this.loadSegment_(mediaState, segment);
+  }
+
+  /**
+   * No segment found — either the current track is
+   * exhausted (advance to next presentation) or all
+   * content has been buffered (end of stream).
+   */
+  private advanceOrEnd_(mediaState: MediaState, lookupTime: number) {
+    // Sequential path resolves at the presentation
+    // boundary. Time-based path (seek or buffer-lost)
+    // resolves at the lookup time.
+    const time = mediaState.lastSegment
+      ? mediaState.presentation.end
+      : lookupTime;
+
+    const presentation = this.getPresentationForTime_(time);
+    if (!presentation) {
+      mediaState.ended = true;
+      this.checkEndOfStream_();
+      return;
+    }
+
+    if (presentation !== mediaState.presentation) {
+      mediaState.presentation = presentation;
+      mediaState.track = this.getTrackForType_(presentation, mediaState.type);
+      mediaState.lastSegment = null;
+      return;
+    }
+
+    // Same presentation, no segment — check EOS.
+    // Float precision means bufferEnd may never
+    // exactly reach the duration (Shaka v2).
+    const duration = this.computeDuration_();
+    if (lookupTime >= duration - 1e-6) {
+      mediaState.ended = true;
+      this.checkEndOfStream_();
+    }
   }
 
   /**
