@@ -1,6 +1,6 @@
 import { Events } from "../events";
 import type { Player } from "../player";
-import { PendingRequest, REQUEST_CANCELLED } from "./pending_request";
+import { PendingRequest } from "./pending_request";
 import type { Request } from "./request";
 import { Response } from "./response";
 
@@ -44,12 +44,12 @@ export class NetworkService {
         });
         return response;
       },
-      (error): Response | typeof REQUEST_CANCELLED => {
+      (error): Response | null => {
         if (
           error instanceof DOMException &&
           error.name === "AbortError"
         ) {
-          return REQUEST_CANCELLED;
+          return null;
         }
         throw error;
       },

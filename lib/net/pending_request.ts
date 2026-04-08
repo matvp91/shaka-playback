@@ -1,8 +1,6 @@
 import type { Request } from "./request";
 import type { Response } from "./response";
 
-export const REQUEST_CANCELLED = Symbol.for("REQUEST_CANCELLED");
-
 /**
  * In-flight network operation handle. Created
  * only by NetworkService.request(). Wraps the
@@ -10,13 +8,15 @@ export const REQUEST_CANCELLED = Symbol.for("REQUEST_CANCELLED");
  */
 export class PendingRequest {
   readonly request: Request;
-  readonly promise: Promise<Response | typeof REQUEST_CANCELLED>;
+  readonly promise: Promise<Response | null>;
+
+  cancelled = false;
 
   private controller_: AbortController;
 
   constructor(
     request: Request,
-    promise: Promise<Response | typeof REQUEST_CANCELLED>,
+    promise: Promise<Response | null>,
     controller: AbortController,
   ) {
     this.request = request;
@@ -26,6 +26,7 @@ export class PendingRequest {
 
   /** Abort the in-flight request. */
   cancel() {
+    this.cancelled = true;
     this.controller_.abort();
   }
 }
