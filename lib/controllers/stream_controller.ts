@@ -4,6 +4,9 @@ import type {
   MediaAttachedEvent,
 } from "../events";
 import { Events } from "../events";
+import type { NetworkService } from "../net/network_service";
+import { RequestType } from "../net/network_service";
+import { Request } from "../net/request";
 import type { Player } from "../player";
 import type {
   InitSegment,
@@ -19,7 +22,6 @@ import { assertNotVoid } from "../utils/assert";
 import { getBufferInfo } from "../utils/buffer";
 import { getMimeType } from "../utils/codec";
 import { Timer } from "../utils/timer";
-import { SegmentFetch } from "./segment_fetch";
 
 const TICK_INTERVAL = 0.1;
 
@@ -30,7 +32,7 @@ type MediaState = {
   track: Track;
   lastSegment: Segment | null;
   lastInitSegment: InitSegment | null;
-  fetch: SegmentFetch;
+  request: Request | null;
   timer: Timer;
 };
 
@@ -40,7 +42,10 @@ export class StreamController {
   private mediaStates_ = new Map<MediaType, MediaState>();
   private sourceBuffers_ = new Map<MediaType, SourceBuffer>();
 
-  constructor(private player_: Player) {
+  constructor(
+    private player_: Player,
+    private networkService_: NetworkService,
+  ) {
     this.player_.on(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.on(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.on(Events.MEDIA_DETACHED, this.onMediaDetached_);
@@ -49,7 +54,7 @@ export class StreamController {
 
   destroy() {
     for (const mediaState of this.mediaStates_.values()) {
-      mediaState.fetch.cancel();
+      mediaState.request?.cancel();
       mediaState.timer.destroy();
     }
     this.player_.off(Events.MANIFEST_PARSED, this.onManifestParsed_);
@@ -78,7 +83,8 @@ export class StreamController {
 
   private onMediaDetached_ = () => {
     for (const mediaState of this.mediaStates_.values()) {
-      mediaState.fetch.cancel();
+      mediaState.request?.cancel();
+      mediaState.request = null;
       mediaState.timer.stop();
     }
     this.media_?.removeEventListener("seeking", this.onSeeking_);
@@ -111,7 +117,7 @@ export class StreamController {
         track,
         lastSegment: null,
         lastInitSegment: null,
-        fetch: new SegmentFetch(),
+        request: null,
         timer: new Timer(() => this.update_(mediaState)),
       };
 
@@ -138,7 +144,7 @@ export class StreamController {
    * — kicks off async fetch but does not await.
    */
   private update_(mediaState: MediaState) {
-    if (mediaState.ended || mediaState.fetch.isLoading()) {
+    if (mediaState.ended || mediaState.request !== null) {
       return;
     }
     if (!this.media_) {
@@ -216,9 +222,15 @@ export class StreamController {
   private async loadInitSegment_(mediaState: MediaState) {
     const { initSegment } = mediaState.track;
 
-    // Returns null when the request was aborted.
-    const data = await mediaState.fetch.fetch(initSegment);
-    if (!data) {
+    mediaState.request = this.networkService_.request(
+      RequestType.SEGMENT,
+      new Request(initSegment.url),
+    );
+
+    const response = await mediaState.request.promise;
+    mediaState.request = null;
+
+    if (!response) {
       return;
     }
 
@@ -226,7 +238,7 @@ export class StreamController {
     this.player_.emit(Events.BUFFER_APPENDING, {
       type: mediaState.type,
       initSegment,
-      data,
+      data: response.data,
       segment: null,
     });
   }
@@ -235,9 +247,15 @@ export class StreamController {
    * Fetch media segment and emit BUFFER_APPENDING.
    */
   private async loadSegment_(mediaState: MediaState, segment: Segment) {
-    // Returns null when the request was aborted.
-    const data = await mediaState.fetch.fetch(segment);
-    if (!data) {
+    mediaState.request = this.networkService_.request(
+      RequestType.SEGMENT,
+      new Request(segment.url),
+    );
+
+    const response = await mediaState.request.promise;
+    mediaState.request = null;
+
+    if (!response) {
       return;
     }
 
@@ -245,7 +263,7 @@ export class StreamController {
       type: mediaState.type,
       initSegment: mediaState.track.initSegment,
       segment,
-      data,
+      data: response.data,
     });
   }
 
@@ -352,7 +370,8 @@ export class StreamController {
   private onSeeking_ = () => {
     for (const mediaState of this.mediaStates_.values()) {
       mediaState.ended = false;
-      mediaState.fetch.cancel();
+      mediaState.request?.cancel();
+      mediaState.request = null;
       mediaState.lastSegment = null;
       this.update_(mediaState);
     }

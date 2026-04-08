@@ -1,4 +1,6 @@
-import type { PlayerError } from "./errors";
+import type { RequestType } from "./net/network_service";
+import type { Request } from "./net/request";
+import type { Response } from "./net/response";
 import type {
   InitSegment,
   Manifest,
@@ -18,8 +20,9 @@ export const Events = {
   BUFFER_APPENDING: "bufferAppending",
   BUFFER_APPENDED: "bufferAppended",
   BUFFER_EOS: "bufferEos",
-  ERROR: "error",
-};
+  NETWORK_REQUEST: "networkRequest",
+  NETWORK_RESPONSE: "networkResponse",
+} as const;
 
 export type ManifestLoadingEvent = {
   url: string;
@@ -56,10 +59,20 @@ export type BufferAppendingEvent = {
 
 export type BufferAppendedEvent = {
   type: MediaType;
+  initSegment: InitSegment;
+  data: ArrayBuffer;
+  segment: Segment | null;
 };
 
-export type ErrorEvent = {
-  error: PlayerError;
+export type NetworkRequestEvent = {
+  type: RequestType;
+  request: Request;
+};
+
+export type NetworkResponseEvent = {
+  type: RequestType;
+  request: Request;
+  response: Response;
 };
 
 export interface EventMap {
@@ -73,5 +86,6 @@ export interface EventMap {
   [Events.BUFFER_APPENDING]: (event: BufferAppendingEvent) => void;
   [Events.BUFFER_APPENDED]: (event: BufferAppendedEvent) => void;
   [Events.BUFFER_EOS]: undefined;
-  [Events.ERROR]: (event: ErrorEvent) => void;
+  [Events.NETWORK_REQUEST]: (event: NetworkRequestEvent) => void;
+  [Events.NETWORK_RESPONSE]: (event: NetworkResponseEvent) => void;
 }

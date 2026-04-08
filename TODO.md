@@ -10,3 +10,9 @@ Seek to end restarts playback — when seeking to the end, the player immediatel
 
 - Seek to 640.895917 at start, you'll enter a stall.
 - Seek to 372.948534
+
+Error system — design how network errors surface to consumers (error types, fatality, error events). Replaces the removed errors.ts.
+
+Retry logic — exponential backoff with jitter, per-RequestType configuration, managed by NetworkService.
+
+Caching — segment prefetch cache, lives outside NetworkService in a higher-level component.

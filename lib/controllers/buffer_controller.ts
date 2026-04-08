@@ -47,6 +47,7 @@ export class BufferController {
     this.mediaSource_.addEventListener(
       "sourceopen",
       () => {
+        assertNotVoid(this.mediaSource_, "No MediaSource");
         this.player_.emit(Events.MEDIA_ATTACHED, {
           media: event.media,
           mediaSource: this.mediaSource_,
@@ -108,7 +109,7 @@ export class BufferController {
         sb.appendBuffer(data);
       },
       onComplete: () => {
-        this.player_.emit(Events.BUFFER_APPENDED, { type });
+        this.player_.emit(Events.BUFFER_APPENDED, event);
       },
     });
   };
