@@ -11,6 +11,9 @@ dependencies:
   '@svta/cml-iso-8601':
     specifier: ^1.0.1
     version: 1.0.1
+  '@svta/cml-iso-bmff':
+    specifier: ^1.0.1
+    version: 1.0.1(@svta/cml-utils@1.4.0)
   fast-xml-parser:
     specifier: ^5.4.1
     version: 5.5.10
@@ -460,6 +463,20 @@ packages:
 
   /@svta/cml-iso-8601@1.0.1:
     resolution: {integrity: sha512-Dq6L2MXaGiQMBCvKhkUQC/p3csYm4u/bCbIXlI+gIgPVuqi5Kd6t3X0Yl9bnjMNHDOxWRj7ki9RR8hFCWs2oKw==}
+    engines: {node: '>=20'}
+    dev: false
+
+  /@svta/cml-iso-bmff@1.0.1(@svta/cml-utils@1.4.0):
+    resolution: {integrity: sha512-MOhATJYQ6cVrIcoY3nj8p/vGYDpG3wjQIIhBPHNt9yjFijdwFdBNqdZbCXv3aFhRjdx5Saca5TkgNJusKhnI/w==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@svta/cml-utils': 1.4.0
+    dependencies:
+      '@svta/cml-utils': 1.4.0
+    dev: false
+
+  /@svta/cml-utils@1.4.0:
+    resolution: {integrity: sha512-vNtHtv/z+9I9ysxFwNrgwxic1oceVPr8TpcpV/NA1l8Gy4phynwtOppkCIBB+PmoyKDcqE4lO85g+lfsuSTBBA==}
     engines: {node: '>=20'}
     dev: false
 
