@@ -50,7 +50,11 @@ export class NetworkService {
       request,
     });
 
-    request.promise = this.doFetch_(type, request, controller.signal);
+    request.promise = this.doFetch_(
+      type,
+      request,
+      controller.signal,
+    ) as Request<T>["promise"];
 
     return request;
   }
@@ -73,11 +77,11 @@ export class NetworkService {
    * emits NETWORK_RESPONSE on success, and cleans
    * up state in all cases.
    */
-  private async doFetch_<T extends ResponseType>(
+  private async doFetch_(
     type: RequestType,
-    request: Request<T>,
+    request: Request,
     signal: AbortSignal,
-  ): Promise<Response<T> | typeof ABORTED> {
+  ): Promise<Response | typeof ABORTED> {
     try {
       const response = await this.fetch_(request, signal);
 
@@ -100,10 +104,10 @@ export class NetworkService {
   }
 
   /** Pure HTTP fetch. Request in, Response out. */
-  private async fetch_<T extends ResponseType>(
-    request: Request<T>,
+  private async fetch_(
+    request: Request,
     signal: AbortSignal,
-  ): Promise<Response<T>> {
+  ): Promise<Response> {
     const start = performance.now();
 
     const res = await fetch(request.url, {
@@ -126,7 +130,7 @@ export class NetworkService {
       request,
       status: res.status,
       headers: res.headers,
-      data: data as Response<T>["data"],
+      data: data as Response["data"],
       timeElapsed,
     };
   }
