@@ -6,6 +6,9 @@ import type {
   MediaType,
   Segment,
 } from "./types";
+import type { Request } from "./net/request";
+import type { RequestType } from "./net/network_service";
+import type { Response } from "./net/response";
 
 export const Events = {
   MANIFEST_LOADING: "manifestLoading",
@@ -18,6 +21,8 @@ export const Events = {
   BUFFER_APPENDING: "bufferAppending",
   BUFFER_APPENDED: "bufferAppended",
   BUFFER_EOS: "bufferEos",
+  NETWORK_REQUEST: "networkRequest",
+  NETWORK_RESPONSE: "networkResponse",
   ERROR: "error",
 };
 
@@ -58,6 +63,17 @@ export type BufferAppendedEvent = {
   type: MediaType;
 };
 
+export type NetworkRequestEvent = {
+  type: RequestType;
+  request: Request;
+};
+
+export type NetworkResponseEvent = {
+  type: RequestType;
+  request: Request;
+  response: Response;
+};
+
 export type ErrorEvent = {
   error: PlayerError;
 };
@@ -73,5 +89,7 @@ export interface EventMap {
   [Events.BUFFER_APPENDING]: (event: BufferAppendingEvent) => void;
   [Events.BUFFER_APPENDED]: (event: BufferAppendedEvent) => void;
   [Events.BUFFER_EOS]: undefined;
+  [Events.NETWORK_REQUEST]: (event: NetworkRequestEvent) => void;
+  [Events.NETWORK_RESPONSE]: (event: NetworkResponseEvent) => void;
   [Events.ERROR]: (event: ErrorEvent) => void;
 }
