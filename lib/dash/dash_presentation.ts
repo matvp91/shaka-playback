@@ -1,3 +1,4 @@
+import { processUriTemplate } from "@svta/cml-dash";
 import { decodeIso8601Duration } from "@svta/cml-iso-8601";
 import type { InitSegment, Segment } from "../types";
 import { assertNotVoid, assertNumber } from "../utils/assert";
@@ -42,11 +43,18 @@ export function parseSegmentData(
     ? decodeIso8601Duration(period["@_start"])
     : 0;
 
+  const bandwidth = Number(representation["@_bandwidth"]);
+  assertNumber(bandwidth, "bandwidth is mandatory");
+
   const initSegmentUrl = resolveUrl(
-    applyUrlTemplate(initialization, {
-      RepresentationID: representation["@_id"],
-      Bandwidth: representation["@_bandwidth"],
-    }),
+    processUriTemplate(
+      initialization,
+      representation["@_id"],
+      null,
+      null,
+      bandwidth,
+      null,
+    ),
     baseUrl,
   );
 
@@ -56,6 +64,7 @@ export function parseSegmentData(
     st,
     representation,
     baseUrl,
+    bandwidth,
     pto,
     periodStart,
   );
@@ -70,6 +79,7 @@ function mapTemplateTimeline(
   st: SegmentTemplate,
   representation: Representation,
   baseUrl: string,
+  bandwidth: number,
   pto: number,
   periodStart: number,
 ): Segment[] {
@@ -88,12 +98,14 @@ function mapTemplateTimeline(
     }
 
     for (let i = 0; i <= r; i++) {
-      const relativeUrl = applyUrlTemplate(media, {
-        RepresentationID: representation["@_id"],
-        Bandwidth: representation["@_bandwidth"],
-        Number: number,
-        Time: time,
-      });
+      const relativeUrl = processUriTemplate(
+        media,
+        representation["@_id"],
+        number,
+        null,
+        bandwidth,
+        time,
+      );
       const url = resolveUrl(relativeUrl, baseUrl);
       segments.push({
         url,
@@ -106,20 +118,6 @@ function mapTemplateTimeline(
   }
 
   return segments;
-}
-
-function applyUrlTemplate(
-  template: string,
-  vars: Record<string, string | number | undefined>,
-): string {
-  return template.replace(/\$(\w+)(?:%0(\d+)d)?\$/g, (match, key, width) => {
-    const value = vars[key];
-    if (value == null) {
-      return match;
-    }
-    const str = String(value);
-    return width ? str.padStart(Number(width), "0") : str;
-  });
 }
 
 function resolveSegmentTemplate(
