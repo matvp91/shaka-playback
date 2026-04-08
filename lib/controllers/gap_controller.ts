@@ -58,7 +58,7 @@ export class GapController {
       return;
     }
 
-    if (media.seeking || media.paused || media.ended) {
+    if (media.paused || media.ended) {
       return;
     }
 
