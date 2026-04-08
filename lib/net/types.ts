@@ -9,7 +9,7 @@ type ResponseData = {
   text: string;
 };
 
-export type Request<T extends ResponseType> = {
+export type Request<T extends ResponseType = ResponseType> = {
   url: string;
   method: HttpMethod;
   headers: Headers;
@@ -19,7 +19,7 @@ export type Request<T extends ResponseType> = {
   promise: Promise<Response<T> | typeof ABORTED>;
 };
 
-export type Response<T extends ResponseType> = {
+export type Response<T extends ResponseType = ResponseType> = {
   request: Request<T>;
   status: number;
   headers: Headers;

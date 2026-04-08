@@ -14,7 +14,7 @@ export enum RequestType {
 
 type RequestEntry = {
   controller: AbortController;
-  resolve: (value: Response<ResponseType> | typeof ABORTED) => void;
+  resolve: (value: Response | typeof ABORTED) => void;
   reject: (reason: unknown) => void;
 };
 
@@ -25,10 +25,7 @@ type RequestEntry = {
  * state management, and cancellation.
  */
 export class NetworkService {
-  private entries_ = new Map<
-    Request<ResponseType>,
-    RequestEntry
-  >();
+  private entries_ = new Map<Request, RequestEntry>();
 
   constructor(private player_: Player) {}
 
@@ -98,7 +95,7 @@ export class NetworkService {
   }
 
   /** Cancel an in-flight request. */
-  cancel(request: Request<ResponseType>) {
+  cancel(request: Request) {
     const entry = this.entries_.get(request);
     if (!entry) {
       return;
