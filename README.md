@@ -1,4 +1,4 @@
-# Playback
+# Barely a Player
 
 What would a media player look like if we started from scratch in 2026?
 
