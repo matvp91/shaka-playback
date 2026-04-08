@@ -109,7 +109,7 @@ export class BufferController {
         sb.appendBuffer(data);
       },
       onComplete: () => {
-        this.player_.emit(Events.BUFFER_APPENDED, { type });
+        this.player_.emit(Events.BUFFER_APPENDED, event);
       },
     });
   };

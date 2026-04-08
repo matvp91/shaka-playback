@@ -59,6 +59,9 @@ export type BufferAppendingEvent = {
 
 export type BufferAppendedEvent = {
   type: MediaType;
+  initSegment: InitSegment;
+  data: ArrayBuffer;
+  segment: Segment | null;
 };
 
 export type NetworkRequestEvent = {
