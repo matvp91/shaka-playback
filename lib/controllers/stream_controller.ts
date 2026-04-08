@@ -219,7 +219,7 @@ export class StreamController {
 
   /**
    * Resolve the presentation chain for the given
-   * time. Updates the full MediaState chain when
+   * time. Updates presentation and track when
    * the presentation changes.
    */
   private resolvePresentation_(mediaState: MediaState, time: number): boolean {
@@ -238,11 +238,10 @@ export class StreamController {
       return true;
     }
 
-    const type = mediaState.type;
     const selectionSet = presentation.selectionSets.find(
-      (s) => s.type === type,
+      (s) => s.type === mediaState.type,
     );
-    assertNotVoid(selectionSet, `No SelectionSet for ${type} in Presentation`);
+    assertNotVoid(selectionSet, `No SelectionSet for ${mediaState.type} in Presentation`);
 
     const switchingSet = selectionSet.switchingSets[0];
     assertNotVoid(switchingSet, "No SwitchingSet in Presentation");
