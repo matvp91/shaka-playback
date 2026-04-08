@@ -13,8 +13,6 @@ import type {
   MediaType,
   Presentation,
   Segment,
-  SelectionSet,
-  SwitchingSet,
   Track,
 } from "../types/manifest";
 import { binarySearch } from "../utils/array";
@@ -33,10 +31,9 @@ enum State {
 
 type MediaState = {
   state: State;
+  type: MediaType;
   request: Request<"arraybuffer"> | null;
   presentation: Presentation;
-  selectionSet: SelectionSet;
-  switchingSet: SwitchingSet;
   track: Track;
   lastSegment: Segment | null;
   lastInitSegment: InitSegment | null;
@@ -123,21 +120,22 @@ export class StreamController {
       const track = switchingSet.tracks[0];
       assertNotVoid(track, "No Track available");
 
+      const type = selectionSet.type;
+
       const mediaState: MediaState = {
         state: State.IDLE,
+        type,
         request: null,
         presentation,
-        selectionSet,
-        switchingSet,
         track,
         lastSegment: null,
         lastInitSegment: null,
         timer: new Timer(() => this.onUpdate_(mediaState)),
       };
 
-      this.mediaStates_.set(selectionSet.type, mediaState);
+      this.mediaStates_.set(type, mediaState);
 
-      codecTracks.set(selectionSet.type, {
+      codecTracks.set(type, {
         mimeType: switchingSet.mimeType,
         codec: switchingSet.codec,
       });
@@ -165,7 +163,7 @@ export class StreamController {
       return;
     }
 
-    const type = mediaState.selectionSet.type;
+    const type = mediaState.type;
     const currentTime = this.media_.currentTime;
     const bufferGoal = this.player_.getConfig().bufferGoal;
     const bufferEnd = this.getBufferEnd_(type, currentTime);
@@ -240,7 +238,7 @@ export class StreamController {
       return true;
     }
 
-    const type = mediaState.selectionSet.type;
+    const type = mediaState.type;
     const selectionSet = presentation.selectionSets.find(
       (s) => s.type === type,
     );
@@ -253,8 +251,6 @@ export class StreamController {
     assertNotVoid(track, "No Track in Presentation");
 
     mediaState.presentation = presentation;
-    mediaState.selectionSet = selectionSet;
-    mediaState.switchingSet = switchingSet;
     mediaState.track = track;
     mediaState.lastSegment = null;
 
@@ -350,7 +346,7 @@ export class StreamController {
       return;
     }
 
-    const type = mediaState.selectionSet.type;
+    const type = mediaState.type;
     const request = new Request(initSegment.url, "arraybuffer");
     mediaState.request = request;
 
@@ -397,7 +393,7 @@ export class StreamController {
   }
 
   private async loadSegment_(mediaState: MediaState, segment: Segment) {
-    const type = mediaState.selectionSet.type;
+    const type = mediaState.type;
     const request = new Request(segment.url, "arraybuffer");
     mediaState.request = request;
     mediaState.lastSegment = segment;
