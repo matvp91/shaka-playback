@@ -1,18 +1,8 @@
 import { cn } from "../utils";
 
-type Column = {
-  label: string;
-  className?: string;
-};
-
-type Row = {
-  label: string;
-  values: string[];
-};
-
 type TableProps = {
-  columns: Column[];
-  rows: Row[];
+  columns: { label: string; className?: string }[];
+  rows: { label: string; values: string[] }[];
 };
 
 export function Table({ columns, rows }: TableProps) {
