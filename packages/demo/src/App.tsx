@@ -145,7 +145,7 @@ function Bar({
 
   return (
     <div className="flex items-center gap-2">
-      <span className="w-14 text-right" style={{ color: labelColor }}>
+      <span className="w-20 text-right" style={{ color: labelColor }}>
         {label}
       </span>
       <div
@@ -202,7 +202,7 @@ function BufferGraph({ data }: { data: BufferData }) {
       </div>
 
       {/* Seekable labels */}
-      <div className="relative mb-0.5 ml-16 flex">
+      <div className="relative mb-0.5 ml-22 flex">
         <span>{data.seekable?.start.toFixed(3) ?? "-"}</span>
         <span
           className="absolute"
