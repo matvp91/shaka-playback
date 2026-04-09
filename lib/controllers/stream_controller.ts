@@ -83,6 +83,7 @@ export class StreamController {
     this.manifest_ = null;
     this.mediaStates_.clear();
     this.sourceBuffers_.clear();
+    this.preferences_.clear();
   }
 
   private onManifestParsed_ = (event: ManifestParsedEvent) => {
@@ -115,12 +116,13 @@ export class StreamController {
       this.networkService_.cancel(mediaState.lastRequest);
     }
 
-    mediaState.track = selectTrack(
-      this.manifest_,
+    const { track } = selectTrack(
+      this.getStreams(),
       mediaState.presentation,
       mediaState.type,
       preference,
     );
+    mediaState.track = track;
     mediaState.lastSegment = null;
     mediaState.lastInitSegment = null;
   };
@@ -151,9 +153,12 @@ export class StreamController {
 
     for (const type of types) {
       const preference = this.preferences_.get(type);
-      const track = selectTrack(this.manifest_, presentation, type, preference);
-      const stream = streams.find((s) => s.type === type);
-      assertNotVoid(stream, `No stream for ${type}`);
+      const { track, stream } = selectTrack(
+        streams,
+        presentation,
+        type,
+        preference,
+      );
 
       const mediaState: MediaState = {
         type,
@@ -242,14 +247,14 @@ export class StreamController {
     }
 
     if (presentation !== mediaState.presentation) {
-      assertNotVoid(this.manifest_, "No Manifest");
       mediaState.presentation = presentation;
-      mediaState.track = selectTrack(
-        this.manifest_,
+      const { track } = selectTrack(
+        this.getStreams(),
         presentation,
         mediaState.type,
         this.preferences_.get(mediaState.type),
       );
+      mediaState.track = track;
       mediaState.lastSegment = null;
       return;
     }

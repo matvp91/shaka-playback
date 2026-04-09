@@ -8,12 +8,18 @@ import type {
 import { MediaType } from "../types";
 import { assert, assertNotVoid } from "./assert";
 
+export type TrackSelection = {
+  track: Track;
+  stream: Stream;
+};
+
 /**
  * Derive the set of streams available across all
  * presentations. Only streams present in every
  * presentation are included (intersection).
  */
 export function getStreams(manifest: Manifest): Stream[] {
+  assert(manifest.presentations.length > 0, "No presentations");
   const sets = manifest.presentations.map(collectStreams);
   const result = sets.reduce(intersect);
   assert(result.length > 0, "No consistent streams across presentations");
@@ -27,21 +33,21 @@ export function getStreams(manifest: Manifest): Stream[] {
  * the first track.
  */
 export function selectTrack(
-  manifest: Manifest,
+  streams: Stream[],
   presentation: Presentation,
   type: MediaType,
   preference?: StreamPreference,
-): Track {
+): TrackSelection {
   if (!preference) {
-    return getFirstTrack(presentation, type);
+    return getFirstTrack(streams, presentation, type);
   }
 
-  const streams = getStreams(manifest);
   const filtered = streams.filter(
     (s): s is Stream & { type: typeof type } => s.type === type,
   );
   const stream = matchPreference(filtered, preference);
-  return resolveTrack(presentation, type, stream);
+  const track = resolveTrack(presentation, type, stream);
+  return { track, stream };
 }
 
 function collectStreams(presentation: Presentation): Stream[] {
@@ -187,7 +193,11 @@ function isTrackMatch(track: Track, stream: Stream): boolean {
   return true;
 }
 
-function getFirstTrack(presentation: Presentation, type: MediaType): Track {
+function getFirstTrack(
+  streams: Stream[],
+  presentation: Presentation,
+  type: MediaType,
+): TrackSelection {
   const selectionSet = presentation.selectionSets.find((s) => s.type === type);
   assertNotVoid(selectionSet, `No SelectionSet for ${type}`);
 
@@ -197,5 +207,10 @@ function getFirstTrack(presentation: Presentation, type: MediaType): Track {
   const track = switchingSet.tracks[0];
   assertNotVoid(track, "No Track");
 
-  return track;
+  const stream = streams.find(
+    (s) => s.type === type && s.codec === switchingSet.codec,
+  );
+  assertNotVoid(stream, `No stream for ${type}`);
+
+  return { track, stream };
 }
