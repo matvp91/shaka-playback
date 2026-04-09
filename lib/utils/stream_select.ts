@@ -8,11 +8,11 @@ import type {
 import { MediaType } from "../types";
 import { assert, assertNotVoid } from "./assert";
 
-export type StreamAction = "none" | "switch" | "changeType";
+export type StreamAction = "switch" | "changeType";
 
 export type StreamSelection = {
   stream: Stream;
-  action: StreamAction;
+  action: StreamAction | null;
 };
 
 /**
@@ -57,7 +57,7 @@ export function getStreams(manifest: Manifest): Stream[] {
 /**
  * Select the best stream for a media type. Compares to
  * the current stream (if any) to determine the action
- * needed (none, switch, or changeType).
+ * needed (switch or changeType, null if unchanged).
  */
 export function selectStream(
   streams: Stream[],
@@ -85,11 +85,8 @@ export function selectStream(
     );
   }
 
-  if (!current) {
-    return { stream, action: "none" };
-  }
-  if (isSameStream(current, stream)) {
-    return { stream, action: "none" };
+  if (!current || isSameStream(current, stream)) {
+    return { stream, action: null };
   }
   if (current.codec !== stream.codec) {
     return { stream, action: "changeType" };

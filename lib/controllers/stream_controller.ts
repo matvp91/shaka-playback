@@ -119,7 +119,7 @@ export class StreamController {
       preference,
     );
 
-    if (action === "none") {
+    if (!action) {
       return;
     }
 
