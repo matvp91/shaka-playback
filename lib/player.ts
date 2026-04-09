@@ -8,10 +8,13 @@ import { StreamController } from "./controllers/stream_controller";
 import type { EventMap } from "./events";
 import { Events } from "./events";
 import { NetworkService } from "./net/network_service";
+import type { Manifest, StreamPreference } from "./types";
+import { getStreams } from "./utils/stream_select";
 
 export class Player extends EventEmitter<EventMap> {
   private config_ = defaultConfig;
   private media_: HTMLMediaElement | null = null;
+  private manifest_: Manifest | null = null;
   private networkService_: NetworkService;
   private manifestController_: ManifestController;
   private bufferController_: BufferController;
@@ -28,6 +31,9 @@ export class Player extends EventEmitter<EventMap> {
     this.bufferController_ = new BufferController(this);
     this.gapController_ = new GapController(this);
     this.streamController_ = new StreamController(this, this.networkService_);
+    this.on(Events.MANIFEST_PARSED, (event) => {
+      this.manifest_ = event.manifest;
+    });
   }
 
   load(url: string) {
@@ -44,6 +50,17 @@ export class Player extends EventEmitter<EventMap> {
 
   getConfig() {
     return this.config_;
+  }
+
+  getStreams() {
+    return this.manifest_ ? getStreams(this.manifest_) : [];
+  }
+
+  setPreference(preference: StreamPreference, flushBuffer?: boolean) {
+    this.emit(Events.STREAM_PREFERENCE_CHANGED, { preference });
+    if (flushBuffer) {
+      this.bufferController_.flush(preference.type);
+    }
   }
 
   attachMedia(media: HTMLMediaElement) {
