@@ -1,9 +1,5 @@
 import type { MediaType } from "../types";
 
-export function getMimeType(mimeType: string, codec: string) {
-  return `${mimeType};codecs="${codec}"`;
-}
-
 /**
  * Get MSE content type from MediaType and codec.
  * Assumes CMAF-compliant fMP4 container.

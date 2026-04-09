@@ -140,9 +140,6 @@ function parseSwitchingSet(
   const firstRep = adaptationSet.Representation[0];
   assertNotVoid(firstRep, "No Representation found");
 
-  const mimeType = findMap([firstRep, adaptationSet], "@_mimeType");
-  assertNotVoid(mimeType, "mimeType is mandatory");
-
   const codec = findMap([firstRep, adaptationSet], "@_codecs");
   assertNotVoid(codec, "codecs is mandatory");
 
@@ -150,7 +147,7 @@ function parseSwitchingSet(
     parseTrack(sourceUrl, mpd, period, adaptationSet, rep, type),
   );
 
-  return { mimeType, codec, tracks };
+  return { codec, tracks };
 }
 
 function parseTrack(

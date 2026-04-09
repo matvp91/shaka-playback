@@ -26,7 +26,6 @@ export type SelectionSet = {
  * switched between (same codec).
  */
 export type SwitchingSet = {
-  mimeType: string;
   codec: string;
   tracks: Track[];
 };
