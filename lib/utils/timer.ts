@@ -45,7 +45,6 @@ export class Timer {
     return this;
   }
 
-  /** Cancel any pending scheduled tick. */
   stop(): this {
     if (this.id_ !== null) {
       clearTimeout(this.id_);
@@ -54,7 +53,9 @@ export class Timer {
     return this;
   }
 
-  /** Stop the timer and release the callback. */
+  /**
+   * Stop the timer and release the callback.
+   */
   destroy() {
     this.stop();
     this.callback_ = null;

@@ -59,7 +59,6 @@ export class NetworkService {
     return request;
   }
 
-  /** Cancel an in-flight request. */
   cancel(request: Request) {
     const controller = this.controllers_.get(request);
     if (!controller) {
@@ -103,7 +102,6 @@ export class NetworkService {
     }
   }
 
-  /** Pure HTTP fetch. Request in, Response out. */
   private async fetch_(
     request: Request,
     signal: AbortSignal,

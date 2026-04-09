@@ -52,14 +52,10 @@ export type Track = {
     }
 );
 
-/** Initialization segment for a track. */
 export type InitSegment = {
   url: string;
 };
 
-/**
- * Addressable media chunk with precise timing.
- */
 export type Segment = {
   url: string;
   start: number;

@@ -293,10 +293,6 @@ export class StreamController {
     return track;
   }
 
-  /**
-   * Get the end of the buffered range containing
-   * the given time for a specific media type.
-   */
   private getBufferEnd_(type: MediaType, time: number): number | null {
     const sb = this.sourceBuffers_.get(type);
     if (!sb) {
@@ -307,10 +303,6 @@ export class StreamController {
     return info ? info.end : null;
   }
 
-  /**
-   * Find the next segment after lastSegment
-   * in the current track.
-   */
   private getNextSegment_(mediaState: MediaState): Segment | null {
     const { segments } = mediaState.track;
     assertNotVoid(mediaState.lastSegment, "No last segment");
@@ -349,7 +341,6 @@ export class StreamController {
     }
   }
 
-  /** Get total presentation duration. */
   private computeDuration_(): number {
     const end = this.manifest_?.presentations.at(-1)?.end;
     assertNotVoid(end, "Cannot compute duration");
