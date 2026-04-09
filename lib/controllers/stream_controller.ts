@@ -18,6 +18,7 @@ import type {
 } from "../types";
 import type { Request } from "../types/net";
 import { ABORTED, RequestType } from "../types/net";
+import type { ByType } from "../types/utils";
 import { binarySearch } from "../utils/array";
 import { assertNotVoid } from "../utils/assert";
 import { getBufferedEnd } from "../utils/buffer";
@@ -27,12 +28,12 @@ import { Timer } from "../utils/timer";
 
 const TICK_INTERVAL = 0.1;
 
-type MediaState = {
-  type: MediaType;
-  stream: Stream;
+type MediaState<T extends MediaType = MediaType> = {
+  type: T;
+  stream: ByType<Stream, T>;
   ended: boolean;
   presentation: Presentation;
-  track: Track;
+  track: ByType<Track, T>;
   lastSegment: Segment | null;
   lastInitSegment: InitSegment | null;
   lastRequest: Request<"arrayBuffer"> | null;
@@ -108,7 +109,7 @@ export class StreamController {
       this.networkService_.cancel(mediaState.lastRequest);
     }
 
-    const { stream, action } = selectStream(
+    const [stream, action] = selectStream(
       this.getStreams(),
       mediaState.type,
       mediaState.stream,
@@ -157,7 +158,7 @@ export class StreamController {
 
     for (const type of types) {
       const preference = this.preferences_.get(type);
-      const { stream } = selectStream(streams, type, undefined, preference);
+      const [stream] = selectStream(streams, type, undefined, preference);
       const track = resolveTrack(presentation, stream);
 
       const mediaState: MediaState = {

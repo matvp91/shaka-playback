@@ -8,12 +8,7 @@ import type {
 import { MediaType } from "../types";
 import { assert, assertNotVoid } from "./assert";
 
-export type StreamAction = "switch" | "changeType";
-
-export type StreamSelection = {
-  stream: Stream;
-  action: StreamAction | null;
-};
+type StreamAction = "switch" | "changeType" | null;
 
 /**
  * Derive the set of streams available across all
@@ -53,7 +48,7 @@ export function selectStream(
   type: MediaType,
   current?: Stream,
   preference?: StreamPreference,
-): StreamSelection {
+): [Stream, StreamAction] {
   const filtered = streams.filter(
     (s): s is Stream & { type: typeof type } => s.type === type,
   );
@@ -75,12 +70,12 @@ export function selectStream(
   }
 
   if (!current || isSameStream(current, stream)) {
-    return { stream, action: null };
+    return [stream, null];
   }
   if (current.codec !== stream.codec) {
-    return { stream, action: "changeType" };
+    return [stream, "changeType"];
   }
-  return { stream, action: "switch" };
+  return [stream, "switch"];
 }
 
 /**
