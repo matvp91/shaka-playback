@@ -47,10 +47,7 @@ export function getStreams(manifest: Manifest): Stream[] {
   const result = sets.reduce((a, b) =>
     a.filter((s) => b.some((t) => isSameStream(s, t))),
   );
-  assert(
-    result.length > 0,
-    "No consistent streams across presentations",
-  );
+  assert(result.length > 0, "No consistent streams across presentations");
   return result;
 }
 
@@ -122,10 +119,7 @@ function isSameStream(a: Stream, b: Stream): boolean {
   if (a.type !== b.type || a.codec !== b.codec) {
     return false;
   }
-  if (
-    a.type === MediaType.VIDEO &&
-    b.type === MediaType.VIDEO
-  ) {
+  if (a.type === MediaType.VIDEO && b.type === MediaType.VIDEO) {
     return a.width === b.width && a.height === b.height;
   }
   return true;
@@ -152,10 +146,7 @@ function matchVideoPreference(
     height?: number;
   },
 ): Stream {
-  assertNotVoid(
-    streams[0],
-    "No video streams to match against",
-  );
+  assertNotVoid(streams[0], "No video streams to match against");
   let best = streams[0];
   let bestDist = Number.POSITIVE_INFINITY;
 
@@ -167,10 +158,7 @@ function matchVideoPreference(
     if (preference.width !== undefined) {
       dist += Math.abs(stream.width - preference.width);
     }
-    if (
-      preference.codec !== undefined &&
-      stream.codec !== preference.codec
-    ) {
+    if (preference.codec !== undefined && stream.codec !== preference.codec) {
       dist += 1_000_000;
     }
     if (dist < bestDist) {
@@ -187,16 +175,11 @@ function matchAudioPreference(
   preference: { type: MediaType.AUDIO; codec?: string },
 ): Stream {
   if (preference.codec) {
-    const match = streams.find(
-      (s) => s.codec === preference.codec,
-    );
+    const match = streams.find((s) => s.codec === preference.codec);
     if (match) {
       return match;
     }
   }
-  assertNotVoid(
-    streams[0],
-    "No audio streams to match against",
-  );
+  assertNotVoid(streams[0], "No audio streams to match against");
   return streams[0];
 }

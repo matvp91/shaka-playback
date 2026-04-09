@@ -1,18 +1,8 @@
 import { decodeIso8601Duration } from "@svta/cml-iso-8601";
 import { XMLParser } from "fast-xml-parser";
-import type {
-  Manifest,
-  Presentation,
-  SwitchingSet,
-  Track,
-} from "../types";
+import type { Manifest, Presentation, SwitchingSet, Track } from "../types";
 import { MediaType } from "../types";
-import type {
-  AdaptationSet,
-  MPD,
-  Period,
-  Representation,
-} from "../types/dash";
+import type { AdaptationSet, MPD, Period, Representation } from "../types/dash";
 import { assertNotVoid } from "../utils/assert";
 import { filterMap, findMap } from "../utils/functional";
 import { asNumber } from "../utils/parse";
@@ -35,10 +25,7 @@ const DASH_ARRAY_NODES = [
   "Event",
 ];
 
-export async function parseManifest(
-  text: string,
-  sourceUrl: string,
-) {
+export async function parseManifest(text: string, sourceUrl: string) {
   const parser = new XMLParser({
     ignoreAttributes: false,
     alwaysCreateTextNode: true,
@@ -112,12 +99,8 @@ function resolvePresentationEnd(
     return decodeIso8601Duration(mpdDuration);
   }
 
-  const lastSegmentEnd =
-    switchingSets[0]?.tracks[0]?.segments.at(-1)?.end;
-  assertNotVoid(
-    lastSegmentEnd,
-    "Cannot resolve presentation end",
-  );
+  const lastSegmentEnd = switchingSets[0]?.tracks[0]?.segments.at(-1)?.end;
+  assertNotVoid(lastSegmentEnd, "Cannot resolve presentation end");
   return lastSegmentEnd;
 }
 
@@ -131,21 +114,13 @@ function parseSwitchingSet(
   const firstRep = adaptationSet.Representation[0];
   assertNotVoid(firstRep, "No Representation found");
 
-  const codec = findMap(
-    [firstRep, adaptationSet],
-    (node) => node["@_codecs"]?.toLowerCase(),
+  const codec = findMap([firstRep, adaptationSet], (node) =>
+    node["@_codecs"]?.toLowerCase(),
   );
   assertNotVoid(codec, "codecs is mandatory");
 
   const tracks = adaptationSet.Representation.map((rep) =>
-    parseTrack(
-      sourceUrl,
-      mpd,
-      period,
-      adaptationSet,
-      rep,
-      type,
-    ),
+    parseTrack(sourceUrl, mpd, period, adaptationSet, rep, type),
   );
 
   return { type, codec, tracks };
@@ -177,9 +152,7 @@ function parseTrack(
   );
 
   if (type === MediaType.VIDEO) {
-    const width = asNumber(
-      findMap([representation, adaptationSet], "@_width"),
-    );
+    const width = asNumber(findMap([representation, adaptationSet], "@_width"));
     assertNotVoid(width, "width is mandatory");
 
     const height = asNumber(
@@ -207,9 +180,7 @@ function parseTrack(
   throw new Error("TODO: Map TEXT type");
 }
 
-function inferMediaType(
-  adaptationSet: AdaptationSet,
-): MediaType | null {
+function inferMediaType(adaptationSet: AdaptationSet): MediaType | null {
   const contentType = adaptationSet["@_contentType"];
   if (contentType === "video") {
     return MediaType.VIDEO;
@@ -229,10 +200,7 @@ function inferMediaType(
   if (mimeType?.startsWith("audio/")) {
     return MediaType.AUDIO;
   }
-  if (
-    mimeType?.startsWith("text/") ||
-    mimeType?.startsWith("application/")
-  ) {
+  if (mimeType?.startsWith("text/") || mimeType?.startsWith("application/")) {
     return MediaType.TEXT;
   }
   return null;
