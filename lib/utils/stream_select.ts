@@ -8,9 +8,11 @@ import type {
 import { MediaType } from "../types";
 import { assert, assertNotVoid } from "./assert";
 
-export type TrackSelection = {
-  track: Track;
+export type StreamAction = "none" | "switch" | "changeType";
+
+export type StreamSelection = {
   stream: Stream;
+  action: StreamAction;
 };
 
 /**
@@ -20,52 +22,119 @@ export type TrackSelection = {
  */
 export function getStreams(manifest: Manifest): Stream[] {
   assert(manifest.presentations.length > 0, "No presentations");
-  const sets = manifest.presentations.map(collectStreams);
-  const result = sets.reduce(intersect);
-  assert(result.length > 0, "No consistent streams across presentations");
-  return result;
-}
 
-/**
- * Select the best track for a media type in a
- * presentation. With a preference, matches the closest
- * stream then resolves to a track. Without, returns
- * the first track.
- */
-export function selectTrack(
-  streams: Stream[],
-  presentation: Presentation,
-  type: MediaType,
-  preference?: StreamPreference,
-): TrackSelection {
-  if (!preference) {
-    return getFirstTrack(streams, presentation, type);
-  }
-
-  const filtered = streams.filter(
-    (s): s is Stream & { type: typeof type } => s.type === type,
-  );
-  const stream = matchPreference(filtered, preference);
-  const track = resolveTrack(presentation, type, stream);
-  return { track, stream };
-}
-
-function collectStreams(presentation: Presentation): Stream[] {
-  const streams: Stream[] = [];
-  for (const selectionSet of presentation.selectionSets) {
-    for (const switchingSet of selectionSet.switchingSets) {
+  const sets = manifest.presentations.map((presentation) => {
+    const streams: Stream[] = [];
+    for (const switchingSet of presentation.switchingSets) {
       for (const track of switchingSet.tracks) {
-        const stream = toStream(track, switchingSet.codec);
+        const stream: Stream =
+          track.type === MediaType.VIDEO
+            ? {
+                type: track.type,
+                codec: switchingSet.codec,
+                width: track.width,
+                height: track.height,
+              }
+            : { type: track.type, codec: switchingSet.codec };
         if (!streams.some((s) => isSameStream(s, stream))) {
           streams.push(stream);
         }
       }
     }
-  }
-  return streams;
+    return streams;
+  });
+
+  const result = sets.reduce((a, b) =>
+    a.filter((s) => b.some((t) => isSameStream(s, t))),
+  );
+  assert(
+    result.length > 0,
+    "No consistent streams across presentations",
+  );
+  return result;
 }
 
-function toStream(track: Track, codec: string): Stream {
+/**
+ * Select the best stream for a media type. Compares to
+ * the current stream (if any) to determine the action
+ * needed (none, switch, or changeType).
+ */
+export function selectStream(
+  streams: Stream[],
+  type: MediaType,
+  current?: Stream,
+  preference?: StreamPreference,
+): StreamSelection {
+  const filtered = streams.filter(
+    (s): s is Stream & { type: typeof type } => s.type === type,
+  );
+  assertNotVoid(filtered[0], `No streams for ${type}`);
+
+  let stream: Stream;
+  if (!preference) {
+    stream = filtered[0];
+  } else if (preference.type === MediaType.VIDEO) {
+    stream = matchVideoPreference(
+      filtered as (Stream & { type: MediaType.VIDEO })[],
+      preference,
+    );
+  } else {
+    stream = matchAudioPreference(
+      filtered as (Stream & { type: MediaType.AUDIO })[],
+      preference,
+    );
+  }
+
+  if (!current) {
+    return { stream, action: "none" };
+  }
+  if (isSameStream(current, stream)) {
+    return { stream, action: "none" };
+  }
+  if (current.codec !== stream.codec) {
+    return { stream, action: "changeType" };
+  }
+  return { stream, action: "switch" };
+}
+
+/**
+ * Resolve a stream to a concrete track in a presentation.
+ */
+export function resolveTrack(
+  presentation: Presentation,
+  stream: Stream,
+): Track {
+  for (const switchingSet of presentation.switchingSets) {
+    if (
+      switchingSet.type !== stream.type ||
+      switchingSet.codec !== stream.codec
+    ) {
+      continue;
+    }
+    for (const track of switchingSet.tracks) {
+      if (isSameStream(stream, trackToStream(track, switchingSet.codec))) {
+        return track;
+      }
+    }
+  }
+
+  throw new Error("No track found for stream in presentation");
+}
+
+function isSameStream(a: Stream, b: Stream): boolean {
+  if (a.type !== b.type || a.codec !== b.codec) {
+    return false;
+  }
+  if (
+    a.type === MediaType.VIDEO &&
+    b.type === MediaType.VIDEO
+  ) {
+    return a.width === b.width && a.height === b.height;
+  }
+  return true;
+}
+
+function trackToStream(track: Track, codec: string): Stream {
   if (track.type === MediaType.VIDEO) {
     return {
       type: track.type,
@@ -77,43 +146,8 @@ function toStream(track: Track, codec: string): Stream {
   return { type: track.type, codec };
 }
 
-function isSameStream(a: Stream, b: Stream): boolean {
-  if (a.type !== b.type || a.codec !== b.codec) {
-    return false;
-  }
-  if (a.type === MediaType.VIDEO && b.type === MediaType.VIDEO) {
-    return a.width === b.width && a.height === b.height;
-  }
-  return true;
-}
-
-function intersect(a: Stream[], b: Stream[]): Stream[] {
-  return a.filter((s) => b.some((t) => isSameStream(s, t)));
-}
-
-type VideoStream = Stream & { type: MediaType.VIDEO };
-type AudioStream = Stream & { type: MediaType.AUDIO };
-
-/**
- * Match a preference to the closest stream. For video,
- * closest by height, then width. For audio, first match
- * by codec or first available.
- */
-function matchPreference(
-  streams: Stream[],
-  preference: StreamPreference,
-): Stream {
-  assertNotVoid(streams[0], "No streams to match against");
-
-  if (preference.type === MediaType.VIDEO) {
-    return matchVideoPreference(streams as VideoStream[], preference);
-  }
-
-  return matchAudioPreference(streams as AudioStream[], preference);
-}
-
 function matchVideoPreference(
-  streams: VideoStream[],
+  streams: (Stream & { type: MediaType.VIDEO })[],
   preference: {
     type: MediaType.VIDEO;
     codec?: string;
@@ -121,8 +155,11 @@ function matchVideoPreference(
     height?: number;
   },
 ): Stream {
-  assertNotVoid(streams[0], "No video streams to match against");
-  let best: VideoStream = streams[0];
+  assertNotVoid(
+    streams[0],
+    "No video streams to match against",
+  );
+  let best = streams[0];
   let bestDist = Number.POSITIVE_INFINITY;
 
   for (const stream of streams) {
@@ -133,7 +170,10 @@ function matchVideoPreference(
     if (preference.width !== undefined) {
       dist += Math.abs(stream.width - preference.width);
     }
-    if (preference.codec !== undefined && stream.codec !== preference.codec) {
+    if (
+      preference.codec !== undefined &&
+      stream.codec !== preference.codec
+    ) {
       dist += 1_000_000;
     }
     if (dist < bestDist) {
@@ -146,71 +186,20 @@ function matchVideoPreference(
 }
 
 function matchAudioPreference(
-  streams: AudioStream[],
+  streams: (Stream & { type: MediaType.AUDIO })[],
   preference: { type: MediaType.AUDIO; codec?: string },
 ): Stream {
   if (preference.codec) {
-    const match = streams.find((s) => s.codec === preference.codec);
+    const match = streams.find(
+      (s) => s.codec === preference.codec,
+    );
     if (match) {
       return match;
     }
   }
-  assertNotVoid(streams[0], "No audio streams to match against");
-  return streams[0];
-}
-
-function resolveTrack(
-  presentation: Presentation,
-  type: MediaType,
-  stream: Stream,
-): Track {
-  for (const selectionSet of presentation.selectionSets) {
-    if (selectionSet.type !== type) {
-      continue;
-    }
-    for (const switchingSet of selectionSet.switchingSets) {
-      if (switchingSet.codec !== stream.codec) {
-        continue;
-      }
-      for (const track of switchingSet.tracks) {
-        if (isTrackMatch(track, stream)) {
-          return track;
-        }
-      }
-    }
-  }
-
-  throw new Error(`No track found for stream in presentation`);
-}
-
-function isTrackMatch(track: Track, stream: Stream): boolean {
-  if (track.type !== stream.type) {
-    return false;
-  }
-  if (track.type === MediaType.VIDEO && stream.type === MediaType.VIDEO) {
-    return track.width === stream.width && track.height === stream.height;
-  }
-  return true;
-}
-
-function getFirstTrack(
-  streams: Stream[],
-  presentation: Presentation,
-  type: MediaType,
-): TrackSelection {
-  const selectionSet = presentation.selectionSets.find((s) => s.type === type);
-  assertNotVoid(selectionSet, `No SelectionSet for ${type}`);
-
-  const switchingSet = selectionSet.switchingSets[0];
-  assertNotVoid(switchingSet, "No SwitchingSet");
-
-  const track = switchingSet.tracks[0];
-  assertNotVoid(track, "No Track");
-
-  const stream = streams.find(
-    (s) => s.type === type && s.codec === switchingSet.codec,
+  assertNotVoid(
+    streams[0],
+    "No audio streams to match against",
   );
-  assertNotVoid(stream, `No stream for ${type}`);
-
-  return { track, stream };
+  return streams[0];
 }
