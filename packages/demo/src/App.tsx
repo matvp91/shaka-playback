@@ -145,27 +145,25 @@ function Bar({
 
   return (
     <div className="flex items-center gap-2">
-      <span
-        className="w-14 text-right text-[10px]"
-        style={labelColor ? { color: labelColor } : undefined}
-      >
+      <span className="w-14 text-right" style={{ color: labelColor }}>
         {label}
       </span>
-      <div className={`relative flex-1 bg-neutral-900 ${thin ? "h-1" : "h-4"}`}>
+      <div
+        className="relative flex-1 bg-neutral-800"
+        style={{ height: thin ? 4 : 16 }}
+      >
         {ranges.map((range) => {
           const style = toBarStyle(range, seekable);
           return (
             <div
               key={`${range.start}-${range.end}`}
-              className={`absolute top-0 ${thin ? "h-1" : "h-4"} ${labelColor ? "" : "bg-neutral-700"}`}
+              className="absolute top-0 h-full"
               style={{
                 left: style.left,
                 width: style.width,
-                ...(labelColor
-                  ? {
-                      backgroundColor: `color-mix(in srgb, ${labelColor} 30%, transparent)`,
-                    }
-                  : {}),
+                backgroundColor: labelColor
+                  ? `color-mix(in srgb, ${labelColor} 30%, transparent)`
+                  : "#525252",
               }}
             />
           );
@@ -197,17 +195,17 @@ function BufferGraph({ data }: { data: BufferData }) {
   const audioStat = getBufferStat(data.audio, data.currentTime);
 
   return (
-    <div className="bg-neutral-950 p-4 font-mono text-xs text-neutral-500">
+    <div className="bg-neutral-950 p-4 font-mono text-neutral-500">
       {/* Metrics */}
       <div className="mb-3">
         goal {data.bufferGoal} · {data.paused ? "paused" : "playing"}
       </div>
 
       {/* Seekable labels */}
-      <div className="relative mb-0.5 ml-16 flex text-[10px]">
+      <div className="relative mb-0.5 ml-16 flex">
         <span>{data.seekable?.start.toFixed(3) ?? "-"}</span>
         <span
-          className="absolute text-white"
+          className="absolute"
           style={{ left: toPosition(data.currentTime, data.seekable) }}
         >
           {data.currentTime.toFixed(3)}
@@ -236,7 +234,7 @@ function BufferGraph({ data }: { data: BufferData }) {
         />
       </div>
 
-      <hr className="mb-3 border-neutral-900" />
+      <hr className="mb-3" />
 
       {/* Per-type bars */}
       <Bar
@@ -258,14 +256,14 @@ function BufferGraph({ data }: { data: BufferData }) {
         />
       </div>
 
-      <hr className="mb-3 border-neutral-900" />
+      <hr className="mb-3" />
 
       {/* Stats table */}
-      <table className="text-[11px]">
+      <table>
         <thead>
-          <tr className="text-neutral-600">
+          <tr>
             <td className="pr-3" />
-            <td className="px-3 text-right text-neutral-400">total</td>
+            <td className="px-3 text-right">total</td>
             <td className="px-3 text-right" style={{ color: "#6366f1" }}>
               video
             </td>
@@ -277,25 +275,25 @@ function BufferGraph({ data }: { data: BufferData }) {
         <tbody>
           <tr>
             <td className="pr-3">ahead</td>
-            <td className="px-3 text-right text-white">
+            <td className="px-3 text-right">
               {totalStat?.ahead.toFixed(3) ?? "-"}
             </td>
-            <td className="px-3 text-right text-white">
+            <td className="px-3 text-right">
               {videoStat?.ahead.toFixed(3) ?? "-"}
             </td>
-            <td className="px-3 text-right text-white">
+            <td className="px-3 text-right">
               {audioStat?.ahead.toFixed(3) ?? "-"}
             </td>
           </tr>
           <tr>
             <td className="pr-3">behind</td>
-            <td className="px-3 text-right text-white">
+            <td className="px-3 text-right">
               {totalStat?.behind.toFixed(3) ?? "-"}
             </td>
-            <td className="px-3 text-right text-white">
+            <td className="px-3 text-right">
               {videoStat?.behind.toFixed(3) ?? "-"}
             </td>
-            <td className="px-3 text-right text-white">
+            <td className="px-3 text-right">
               {audioStat?.behind.toFixed(3) ?? "-"}
             </td>
           </tr>
