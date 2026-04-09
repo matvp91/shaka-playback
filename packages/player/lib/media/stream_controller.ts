@@ -4,7 +4,6 @@ import type {
   StreamPreferenceChangedEvent,
 } from "../events";
 import { Events } from "../events";
-import type { NetworkService } from "../net/network_service";
 import type { Player } from "../player";
 import type {
   InitSegment,
@@ -52,10 +51,7 @@ export class StreamController {
   private mediaStates_ = new Map<MediaType, MediaState>();
   private preferences_ = new Map<MediaType, StreamPreference>();
 
-  constructor(
-    private player_: Player,
-    private networkService_: NetworkService,
-  ) {
+  constructor(private player_: Player) {
     this.player_.on(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.on(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.on(Events.MEDIA_DETACHED, this.onMediaDetached_);
@@ -71,9 +67,10 @@ export class StreamController {
   }
 
   destroy() {
+    const networkService = this.player_.getNetworkService();
     for (const mediaState of this.mediaStates_.values()) {
       if (mediaState.lastRequest) {
-        this.networkService_.cancel(mediaState.lastRequest);
+        networkService.cancel(mediaState.lastRequest);
       }
       mediaState.timer.destroy();
     }
@@ -105,6 +102,7 @@ export class StreamController {
   private onStreamPreferenceChanged_ = (
     event: StreamPreferenceChangedEvent,
   ) => {
+    const networkService = this.player_.getNetworkService();
     const { preference } = event;
     this.preferences_.set(preference.type, preference);
 
@@ -114,7 +112,7 @@ export class StreamController {
     }
 
     if (mediaState.lastRequest) {
-      this.networkService_.cancel(mediaState.lastRequest);
+      networkService.cancel(mediaState.lastRequest);
     }
 
     const stream = selectStream(this.getStreams(), preference);
@@ -139,9 +137,10 @@ export class StreamController {
   };
 
   private onMediaDetached_ = () => {
+    const networkService = this.player_.getNetworkService();
     for (const mediaState of this.mediaStates_.values()) {
       if (mediaState.lastRequest) {
-        this.networkService_.cancel(mediaState.lastRequest);
+        networkService.cancel(mediaState.lastRequest);
       }
       mediaState.timer.stop();
     }
@@ -276,9 +275,10 @@ export class StreamController {
     initSegment: InitSegment,
     segment: Segment | null,
   ) {
+    const networkService = this.player_.getNetworkService();
     const url = segment?.url ?? initSegment.url;
 
-    mediaState.lastRequest = this.networkService_.request(
+    mediaState.lastRequest = networkService.request(
       RequestType.SEGMENT,
       url,
       "arrayBuffer",
@@ -372,7 +372,8 @@ export class StreamController {
     for (const mediaState of this.mediaStates_.values()) {
       mediaState.ended = false;
       if (mediaState.lastRequest) {
-        this.networkService_.cancel(mediaState.lastRequest);
+        const networkService = this.player_.getNetworkService();
+        networkService.cancel(mediaState.lastRequest);
       }
       mediaState.lastSegment = null;
       this.update_(mediaState);

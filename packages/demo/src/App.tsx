@@ -50,7 +50,14 @@ type AppProps = {
 };
 
 export function App({ player }: AppProps) {
-  const data = getData(player);
+  let data: BufferData | null;
+  try {
+    data = getData(player);
+  } catch {
+    // TODO(matvp): getData reads getBuffered but that throws an error.
+    // We shall find a way to signal loadStatus.
+    return null;
+  }
   if (!data) {
     return null;
   }
