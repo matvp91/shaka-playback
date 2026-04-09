@@ -41,6 +41,18 @@ export class BufferController {
     this.mediaSource_ = null;
   }
 
+  flush(type: MediaType) {
+    const sb = this.sourceBuffers_.get(type);
+    if (!sb || sb.buffered.length === 0) {
+      return;
+    }
+    this.opQueue_.enqueue(type, {
+      execute: () => {
+        sb.remove(0, Infinity);
+      },
+    });
+  }
+
   private onMediaAttaching_ = (event: MediaAttachingEvent) => {
     this.mediaSource_ = new MediaSource();
 

@@ -8,6 +8,7 @@ import { StreamController } from "./controllers/stream_controller";
 import type { EventMap } from "./events";
 import { Events } from "./events";
 import { NetworkService } from "./net/network_service";
+import type { StreamPreference } from "./types";
 
 export class Player extends EventEmitter<EventMap> {
   private config_ = defaultConfig;
@@ -44,6 +45,17 @@ export class Player extends EventEmitter<EventMap> {
 
   getConfig() {
     return this.config_;
+  }
+
+  getStreams() {
+    return this.streamController_.getStreams();
+  }
+
+  setPreference(preference: StreamPreference, flushBuffer?: boolean) {
+    this.emit(Events.STREAM_PREFERENCE_CHANGED, { preference });
+    if (flushBuffer) {
+      this.bufferController_.flush(preference.type);
+    }
   }
 
   attachMedia(media: HTMLMediaElement) {

@@ -4,6 +4,7 @@ import type {
   MediaTrack,
   MediaType,
   Segment,
+  StreamPreference,
 } from "./types";
 import type { Request, RequestType, Response } from "./types/net";
 
@@ -20,6 +21,7 @@ export const Events = {
   BUFFER_EOS: "bufferEos",
   NETWORK_REQUEST: "networkRequest",
   NETWORK_RESPONSE: "networkResponse",
+  STREAM_PREFERENCE_CHANGED: "streamPreferenceChanged",
 } as const;
 
 export type ManifestLoadingEvent = {
@@ -73,6 +75,10 @@ export type NetworkResponseEvent = {
   response: Response;
 };
 
+export type StreamPreferenceChangedEvent = {
+  preference: StreamPreference;
+};
+
 export interface EventMap {
   [Events.MANIFEST_LOADING]: (event: ManifestLoadingEvent) => void;
   [Events.MANIFEST_PARSED]: (event: ManifestParsedEvent) => void;
@@ -86,4 +92,7 @@ export interface EventMap {
   [Events.BUFFER_EOS]: undefined;
   [Events.NETWORK_REQUEST]: (event: NetworkRequestEvent) => void;
   [Events.NETWORK_RESPONSE]: (event: NetworkResponseEvent) => void;
+  [Events.STREAM_PREFERENCE_CHANGED]: (
+    event: StreamPreferenceChangedEvent,
+  ) => void;
 }
