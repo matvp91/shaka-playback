@@ -8,7 +8,7 @@ import { StreamController } from "./controllers/stream_controller";
 import type { EventMap } from "./events";
 import { Events } from "./events";
 import { NetworkService } from "./net/network_service";
-import type { StreamPreference } from "./types";
+import type { MediaType, StreamPreference } from "./types";
 
 export class Player extends EventEmitter<EventMap> {
   private config_ = defaultConfig;
@@ -45,6 +45,10 @@ export class Player extends EventEmitter<EventMap> {
 
   getConfig() {
     return this.config_;
+  }
+
+  getBuffered(type: MediaType) {
+    return this.bufferController_.getBuffered(type);
   }
 
   getStreams() {

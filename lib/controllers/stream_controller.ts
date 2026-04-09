@@ -1,5 +1,4 @@
 import type {
-  BufferCreatedEvent,
   ManifestParsedEvent,
   MediaAttachedEvent,
   StreamPreferenceChangedEvent,
@@ -21,7 +20,7 @@ import type { Request } from "../types/net";
 import { ABORTED, RequestType } from "../types/net";
 import { binarySearch } from "../utils/array";
 import { assertNotVoid } from "../utils/assert";
-import { getBufferInfo } from "../utils/buffer";
+import { getBufferedEnd } from "../utils/buffer";
 import { getContentType } from "../utils/codec";
 import { getStreams, selectTrack } from "../utils/stream_select";
 import { Timer } from "../utils/timer";
@@ -43,7 +42,6 @@ export class StreamController {
   private manifest_: Manifest | null = null;
   private media_: HTMLMediaElement | null = null;
   private mediaStates_ = new Map<MediaType, MediaState>();
-  private sourceBuffers_ = new Map<MediaType, SourceBuffer>();
   private preferences_ = new Map<MediaType, StreamPreference>();
 
   constructor(
@@ -53,7 +51,6 @@ export class StreamController {
     this.player_.on(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.on(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.on(Events.MEDIA_DETACHED, this.onMediaDetached_);
-    this.player_.on(Events.BUFFER_CREATED, this.onBufferCreated_);
     this.player_.on(
       Events.STREAM_PREFERENCE_CHANGED,
       this.onStreamPreferenceChanged_,
@@ -75,14 +72,12 @@ export class StreamController {
     this.player_.off(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.off(Events.MEDIA_DETACHED, this.onMediaDetached_);
-    this.player_.off(Events.BUFFER_CREATED, this.onBufferCreated_);
     this.player_.off(
       Events.STREAM_PREFERENCE_CHANGED,
       this.onStreamPreferenceChanged_,
     );
     this.manifest_ = null;
     this.mediaStates_.clear();
-    this.sourceBuffers_.clear();
     this.preferences_.clear();
   }
 
@@ -95,10 +90,6 @@ export class StreamController {
     this.media_ = event.media;
     this.media_.addEventListener("seeking", this.onSeeking_);
     this.tryStart_();
-  };
-
-  private onBufferCreated_ = (event: BufferCreatedEvent) => {
-    this.sourceBuffers_ = event.sourceBuffers;
   };
 
   private onStreamPreferenceChanged_ = (
@@ -322,13 +313,8 @@ export class StreamController {
   }
 
   private getBufferEnd_(type: MediaType, time: number): number | null {
-    const sb = this.sourceBuffers_.get(type);
-    if (!sb) {
-      return null;
-    }
     const { maxBufferHole } = this.player_.getConfig();
-    const info = getBufferInfo(sb.buffered, time, maxBufferHole);
-    return info ? info.end : null;
+    return getBufferedEnd(this.player_.getBuffered(type), time, maxBufferHole);
   }
 
   private getNextSegment_(mediaState: MediaState): Segment | null {

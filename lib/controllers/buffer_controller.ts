@@ -41,6 +41,12 @@ export class BufferController {
     this.mediaSource_ = null;
   }
 
+  getBuffered(type: MediaType): TimeRanges {
+    const sb = this.sourceBuffers_.get(type);
+    assertNotVoid(sb, `No SourceBuffer for ${type}`);
+    return sb.buffered;
+  }
+
   flush(type: MediaType) {
     const sb = this.sourceBuffers_.get(type);
     if (!sb || sb.buffered.length === 0) {

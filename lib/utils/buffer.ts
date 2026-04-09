@@ -1,35 +1,34 @@
-export type BufferInfo = {
-  start: number;
-  end: number;
-};
-
 /**
- * Find the buffered range containing the given position.
- * Merges adjacent ranges with gaps smaller than maxHole and
- * tolerates the position being slightly before a range start.
+ * Find the end of the buffered range containing the given
+ * position. Merges adjacent ranges with gaps smaller than
+ * maxHole and tolerates the position being slightly before
+ * a range start.
  */
-export function getBufferInfo(
+export function getBufferedEnd(
   buffered: TimeRanges,
   pos: number,
   maxHole: number,
-): BufferInfo | null {
-  const ranges: BufferInfo[] = [];
+): number | null {
+  let rangeStart = 0;
+  let rangeEnd = 0;
 
   for (let i = 0; i < buffered.length; i++) {
     const start = buffered.start(i);
     const end = buffered.end(i);
-    const last = ranges[ranges.length - 1];
-    if (last && start - last.end < maxHole) {
-      last.end = Math.max(last.end, end);
+
+    if (i > 0 && start - rangeEnd < maxHole) {
+      rangeEnd = Math.max(rangeEnd, end);
     } else {
-      ranges.push({ start, end });
+      if (pos + maxHole >= rangeStart && pos < rangeEnd) {
+        return rangeEnd;
+      }
+      rangeStart = start;
+      rangeEnd = end;
     }
   }
 
-  for (const range of ranges) {
-    if (pos + maxHole >= range.start && pos < range.end) {
-      return range;
-    }
+  if (pos + maxHole >= rangeStart && pos < rangeEnd) {
+    return rangeEnd;
   }
 
   return null;
