@@ -60,6 +60,10 @@ export class StreamController {
     );
   }
 
+  getStreams() {
+    return this.manifest_ ? getStreams(this.manifest_) : [];
+  }
+
   destroy() {
     for (const mediaState of this.mediaStates_.values()) {
       if (mediaState.lastRequest) {
