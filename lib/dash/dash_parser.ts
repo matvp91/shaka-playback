@@ -81,12 +81,8 @@ function parsePeriod(
 }
 
 /**
- * Resolve presentation end time using the
- * DASH spec fallback chain:
- * 1. Period@duration
- * 2. Next Period@start
- * 3. MPD@mediaPresentationDuration
- * 4. Last segment end (robustness fallback)
+ * Resolve presentation end using the DASH fallback chain:
+ * duration → next start → MPD duration → last segment end.
  */
 function resolvePresentationEnd(
   mpd: MPD,
@@ -212,9 +208,8 @@ function parseTrack(
 }
 
 /**
- * Group AdaptationSets by @group or inferred
- * content type. Each group becomes a SelectionSet,
- * each AdaptationSet within becomes a SwitchingSet.
+ * Group AdaptationSets by @group or inferred content type.
+ * Each group → SelectionSet, each AS within → SwitchingSet.
  */
 function groupAdaptationSets(adaptationSets: AdaptationSet[]) {
   const groups = new Map<string, AdaptationSet[]>();

@@ -11,8 +11,7 @@ export class OperationQueue {
   private sourceBuffers_ = new Map<MediaType, SourceBuffer>();
 
   /**
-   * Register a SourceBuffer for a track type.
-   * Stores the reference for updating-state checks.
+   * Register a SourceBuffer for updating-state checks.
    */
   add(type: MediaType, sourceBuffer: SourceBuffer) {
     this.queues_.set(type, []);
@@ -20,8 +19,8 @@ export class OperationQueue {
   }
 
   /**
-   * Push an operation onto the queue. Executes
-   * immediately if the queue was empty.
+   * Push an operation onto the queue. Executes immediately
+   * if the queue was empty.
    */
   enqueue(type: MediaType, operation: Operation) {
     const queue = this.queues_.get(type);
@@ -35,9 +34,8 @@ export class OperationQueue {
   }
 
   /**
-   * Append a blocker to the queue. Returns a
-   * promise that resolves when all prior operations
-   * complete and the blocker reaches the front.
+   * Append a blocker that resolves when all prior
+   * operations complete.
    * TODO: Add prepend support for codec switching.
    */
   block(type: MediaType): Promise<void> {
@@ -64,9 +62,8 @@ export class OperationQueue {
   }
 
   /**
-   * Complete the current operation and execute
-   * the next one. Called by the controller when
-   * the SourceBuffer fires updateend.
+   * Complete the current operation and execute the next.
+   * Called on SourceBuffer updateend.
    */
   shiftAndExecuteNext(type: MediaType) {
     const queue = this.queues_.get(type);

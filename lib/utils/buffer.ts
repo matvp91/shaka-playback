@@ -4,10 +4,9 @@ export type BufferInfo = {
 };
 
 /**
- * Find the buffered range containing the given
- * position. Merges adjacent ranges with gaps
- * smaller than maxHole, and tolerates the position
- * being slightly before a range start.
+ * Find the buffered range containing the given position.
+ * Merges adjacent ranges with gaps smaller than maxHole and
+ * tolerates the position being slightly before a range start.
  */
 export function getBufferInfo(
   buffered: TimeRanges,
@@ -37,9 +36,8 @@ export function getBufferInfo(
 }
 
 /**
- * Find the start of the first buffered range after
- * the given position. Returns null if no range exists
- * ahead of pos.
+ * Find the start of the first buffered range after the
+ * given position.
  */
 export function getNextBufferedStart(
   buffered: TimeRanges,

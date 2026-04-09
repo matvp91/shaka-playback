@@ -5,8 +5,7 @@ export type Manifest = {
 };
 
 /**
- * Time-bounded content period,
- * maps to a DASH Period.
+ * Time-bounded content period, maps to a DASH Period.
  */
 export type Presentation = {
   start: number;
@@ -15,8 +14,7 @@ export type Presentation = {
 };
 
 /**
- * Groups content by media type,
- * maps 1:1 to an MSE SourceBuffer.
+ * Groups content by media type, maps 1:1 to a SourceBuffer.
  */
 export type SelectionSet = {
   type: MediaType;
@@ -24,8 +22,8 @@ export type SelectionSet = {
 };
 
 /**
- * CMAF switching set — tracks that can be
- * seamlessly switched between (same codec).
+ * CMAF switching set — tracks that can be seamlessly
+ * switched between (same codec).
  */
 export type SwitchingSet = {
   mimeType: string;
@@ -34,8 +32,8 @@ export type SwitchingSet = {
 };
 
 /**
- * Single quality level as a sequence of
- * segments, discriminated by media type.
+ * Single quality level as a sequence of segments,
+ * discriminated by media type.
  */
 export type Track = {
   bandwidth: number;

@@ -8,8 +8,7 @@ import {
 import { assertNotVoid } from "./assert";
 
 /**
- * Parse timescale from an init segment's
- * moov/trak/mdia/mdhd box.
+ * Parse timescale from an init segment's moov/trak/mdia/mdhd.
  */
 export function parseTimescale(data: ArrayBuffer): number {
   const boxes = readIsoBoxes(data, {
@@ -21,8 +20,7 @@ export function parseTimescale(data: ArrayBuffer): number {
 }
 
 /**
- * Parse baseMediaDecodeTime from a media
- * segment's moof/traf/tfdt box.
+ * Parse baseMediaDecodeTime from a segment's moof/traf/tfdt.
  */
 export function parseBaseMediaDecodeTime(data: ArrayBuffer): number {
   const boxes = readIsoBoxes(data, {

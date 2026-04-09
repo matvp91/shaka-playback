@@ -115,9 +115,8 @@ export class BufferController {
   };
 
   /**
-   * Derive timestampOffset from mp4 container data.
-   * Uses cached timescale from the init segment and
-   * baseMediaDecodeTime from the media segment.
+   * Derive timestampOffset from init segment timescale
+   * and media segment baseMediaDecodeTime.
    */
   private computeTimestampOffset_(
     initSegment: InitSegment,
@@ -157,9 +156,8 @@ export class BufferController {
   };
 
   /**
-   * Set mediaSource.duration through the operation
-   * queue to avoid InvalidStateError when a
-   * SourceBuffer is updating.
+   * Set mediaSource.duration through the operation queue
+   * to avoid InvalidStateError when a SourceBuffer is updating.
    */
   private updateDuration_() {
     if (!this.mediaSource_ || this.mediaSource_.readyState !== "open") {

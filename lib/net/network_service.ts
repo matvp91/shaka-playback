@@ -9,10 +9,8 @@ export enum RequestType {
 }
 
 /**
- * Central service for all network requests.
- * Created by Player, passed to controllers.
- * Owns request construction, fetch execution,
- * state management, and cancellation.
+ * Central service for all network requests. Owns request
+ * construction, fetch execution, and cancellation.
  */
 export class NetworkService {
   private controllers_ = new Map<Request, AbortController>();
@@ -20,12 +18,8 @@ export class NetworkService {
   constructor(private player_: Player) {}
 
   /**
-   * Start a network request. Constructs the request
-   * object, emits NETWORK_REQUEST synchronously
-   * (allowing listeners to mutate url, headers,
-   * method), then kicks off the fetch. Returns the
-   * request handle for state inspection and
-   * cancellation.
+   * Construct and start a request. Emits NETWORK_REQUEST
+   * synchronously before fetch, allowing listener mutation.
    */
   request<T extends ResponseType>(
     type: RequestType,
@@ -72,15 +66,14 @@ export class NetworkService {
   }
 
   /**
-   * Fetch lifecycle orchestrator. Calls fetch_,
-   * emits NETWORK_RESPONSE on success, and cleans
-   * up state in all cases.
+   * Execute fetch, emit NETWORK_RESPONSE on success,
+   * and clean up state in all cases.
    */
   private async doFetch_(
     type: RequestType,
     request: Request,
     signal: AbortSignal,
-  ): RequestPromise {
+  ): Promise<Response | typeof ABORTED> {
     try {
       const response = await this.fetch_(request, signal);
 

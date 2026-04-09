@@ -143,9 +143,8 @@ export class StreamController {
   }
 
   /**
-   * Core streaming decision for a single track.
-   * Runs every tick on a 100ms interval. Synchronous
-   * — kicks off async fetch but does not await.
+   * Core streaming decision for a single track. Runs every
+   * 100ms tick — kicks off async fetch but does not await.
    */
   private update_(mediaState: MediaState) {
     if (mediaState.ended || mediaState.lastRequest?.inFlight) {
@@ -183,9 +182,8 @@ export class StreamController {
   }
 
   /**
-   * No segment found — either the current track is
-   * exhausted (advance to next presentation) or all
-   * content has been buffered (end of stream).
+   * No segment found — advance to next presentation
+   * or signal end of stream.
    */
   private advanceOrEnd_(mediaState: MediaState, lookupTime: number) {
     // Sequential path resolves at the presentation
@@ -220,9 +218,8 @@ export class StreamController {
   }
 
   /**
-   * Fetch an init or media segment and emit
-   * BUFFER_APPENDING. State is updated only after
-   * the fetch resolves, never before.
+   * Fetch an init or media segment and emit BUFFER_APPENDING.
+   * State is updated only after the fetch resolves.
    */
   private async loadSegment_(
     mediaState: MediaState,
@@ -257,10 +254,8 @@ export class StreamController {
   }
 
   /**
-   * Find the presentation for the given time.
-   * Returns the first presentation whose end is
-   * past the time, which handles gaps between
-   * presentations and float-precision at boundaries.
+   * Returns the first presentation whose end is past the
+   * given time, handling gaps and float-precision at boundaries.
    */
   private getPresentationForTime_(time: number): Presentation | null {
     if (!this.manifest_) {
@@ -275,8 +270,8 @@ export class StreamController {
   }
 
   /**
-   * Walk the manifest chain from presentation to
-   * track for the given media type.
+   * Walk the manifest hierarchy from presentation to track
+   * for the given media type.
    */
   private getTrackForType_(presentation: Presentation, type: MediaType): Track {
     const selectionSet = presentation.selectionSets.find(
@@ -311,8 +306,7 @@ export class StreamController {
   }
 
   /**
-   * Binary search for the segment containing the
-   * given time. Returns null if no segment matches.
+   * Binary search for the segment containing the given time.
    */
   private getSegmentForTime_(track: Track, time: number): Segment | null {
     const { maxSegmentLookupTolerance } = this.player_.getConfig();

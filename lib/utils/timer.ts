@@ -1,9 +1,8 @@
 import { assertNotVoid } from "./assert";
 
 /**
- * Timer that schedules a callback as a
- * single-shot or repeating interval.
- * Each tick cancels any pending scheduled call.
+ * Schedules a callback as single-shot or repeating interval.
+ * Each new tick cancels any pending scheduled call.
  */
 export class Timer {
   private id_: ReturnType<typeof setTimeout> | null = null;
@@ -14,8 +13,8 @@ export class Timer {
   }
 
   /**
-   * Schedule the callback after a delay in seconds.
-   * Cancels any previously scheduled tick.
+   * Schedule callback after a delay in seconds. Cancels
+   * any previously scheduled tick.
    */
   tickAfter(seconds: number): this {
     this.stop();
@@ -28,7 +27,7 @@ export class Timer {
   }
 
   /**
-   * Schedule the callback on the next event loop tick.
+   * Schedule callback on the next event loop tick.
    * Cancels any previously scheduled tick.
    */
   tickNow(): this {
@@ -36,8 +35,8 @@ export class Timer {
   }
 
   /**
-   * Schedule the callback to repeat at a fixed
-   * interval in seconds. Cancels any pending tick.
+   * Repeat callback at a fixed interval in seconds.
+   * Cancels any pending tick.
    */
   tickEvery(seconds: number): this {
     this.stop();
@@ -62,9 +61,8 @@ export class Timer {
   }
 
   /**
-   * Reschedule first, then call the callback.
-   * If the callback calls stop(), the pending
-   * timeout gets cleared.
+   * Reschedule first, then call the callback. If the
+   * callback calls stop(), the pending timeout clears.
    */
   private scheduleRepeating_(seconds: number) {
     this.id_ = setTimeout(() => {
