@@ -1,4 +1,4 @@
-import { Events, Player } from "../lib/index.ts";
+import { Events, Player } from "@bap/player";
 
 const player = new Player();
 Object.assign(window, { player });
