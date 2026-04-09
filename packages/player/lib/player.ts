@@ -8,12 +8,15 @@ import { BufferController } from "./media/buffer_controller";
 import { GapController } from "./media/gap_controller";
 import { StreamController } from "./media/stream_controller";
 import { NetworkService } from "./net/network_service";
-import type { MediaType, StreamPreference } from "./types";
+import type { RegistryType } from "./registry";
+import { Registry } from "./registry";
+import type { MediaType, StreamPreference } from "./types/media";
 
 export class Player extends EventEmitter<EventMap> {
   private config_ = defaultConfig;
   private media_: HTMLMediaElement | null = null;
 
+  private registry_: Registry;
   private networkService_: NetworkService;
 
   private manifestController_: ManifestController;
@@ -23,6 +26,8 @@ export class Player extends EventEmitter<EventMap> {
 
   constructor() {
     super();
+
+    this.registry_ = new Registry(this);
     this.networkService_ = new NetworkService(this);
 
     this.manifestController_ = new ManifestController(this);
@@ -33,6 +38,10 @@ export class Player extends EventEmitter<EventMap> {
 
   load(url: string) {
     this.emit(Events.MANIFEST_LOADING, { url });
+  }
+
+  getRegistry(type: RegistryType) {
+    return this.registry_.get(type);
   }
 
   getMedia() {

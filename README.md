@@ -16,6 +16,25 @@ So that's what this is. One manifest model any protocol maps onto. One pipeline 
 
 It's early. DASH VOD works. Buffering, seeking, gap recovery. ABR, live, HLS, DRM? Not yet. But the code stays small, the architecture stays clean, and adding stuff hasn't meant fighting what's already there. That's the whole point.
 
+## Usage
+
+```ts
+import { Events, Player, Registry, RegistryType } from "@bap/player";
+import { DashParser } from "@bap/player/dash";
+
+Registry.add(RegistryType.MANIFEST_PARSER, DashParser);
+
+const player = new Player();
+const video = document.getElementById("video");
+
+player.on(Events.MANIFEST_PARSED, (event) => {
+  console.log("Manifest parsed:", event.manifest);
+});
+
+player.attachMedia(video);
+player.load("https://example.com/manifest.mpd");
+```
+
 Built on the shoulders of [Shaka Player](https://github.com/shaka-project/shaka-player), [hls.js](https://github.com/video-dev/hls.js), and [Common Media Library](https://github.com/streaming-video-technology-alliance/common-media-library).
 
 <img width="643" height="592" alt="image" src="https://github.com/user-attachments/assets/70585709-7f47-4422-a213-b07161d29278" />

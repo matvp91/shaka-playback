@@ -1,35 +1,19 @@
-export enum RequestType {
+import type { NetworkResponse } from "../net/network_response";
+
+export enum NetworkRequestType {
   MANIFEST = "manifest",
   SEGMENT = "segment",
 }
 
-export type HttpMethod = "GET" | "POST";
-
-export type ResponseType = "arrayBuffer" | "text";
-
 export const ABORTED: unique symbol = Symbol("ABORTED");
 
-export type RequestPromise<T extends ResponseType = ResponseType> = Promise<
-  Response<T> | typeof ABORTED
->;
+export type NetworkResponsePromise = Promise<NetworkResponse | typeof ABORTED>;
 
-export type Request<T extends ResponseType = ResponseType> = {
+export type NetworkRequest = {
   url: string;
-  method: HttpMethod;
+  method: "GET" | "POST";
   headers: Headers;
-  responseType: T;
   inFlight: boolean;
   cancelled: boolean;
-  promise: RequestPromise<T>;
-};
-
-export type Response<T extends ResponseType = ResponseType> = {
-  request: Request<T>;
-  status: number;
-  headers: Headers;
-  data: {
-    arrayBuffer: ArrayBuffer;
-    text: string;
-  }[T];
-  timeElapsed: number;
+  promise: NetworkResponsePromise;
 };

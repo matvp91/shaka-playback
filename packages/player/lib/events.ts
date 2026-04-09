@@ -2,10 +2,12 @@ import type {
   InitSegment,
   Manifest,
   MediaType,
+  NetworkRequest,
+  NetworkRequestType,
+  NetworkResponse,
   Segment,
   StreamPreference,
-} from "./types";
-import type { Request, RequestType, Response } from "./types/net";
+} from ".";
 
 export const Events = {
   MANIFEST_LOADING: "manifestLoading",
@@ -60,14 +62,13 @@ export type BufferAppendedEvent = {
 };
 
 export type NetworkRequestEvent = {
-  type: RequestType;
-  request: Request;
+  type: NetworkRequestType;
+  request: NetworkRequest;
 };
 
 export type NetworkResponseEvent = {
-  type: RequestType;
-  request: Request;
-  response: Response;
+  type: NetworkRequestType;
+  response: NetworkResponse;
 };
 
 export type StreamPreferenceChangedEvent = {

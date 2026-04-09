@@ -8,16 +8,18 @@ import type { Player } from "../player";
 import type {
   InitSegment,
   Manifest,
-  MediaType,
   Presentation,
   Segment,
+  Track,
+} from "../types/manifest";
+import type {
+  ByType,
+  MediaType,
   Stream,
   StreamPreference,
-  Track,
-} from "../types";
-import type { Request } from "../types/net";
-import { ABORTED, RequestType } from "../types/net";
-import type { ByType } from "../types/utils";
+} from "../types/media";
+import type { NetworkRequest } from "../types/net";
+import { ABORTED, NetworkRequestType } from "../types/net";
 import { binarySearch } from "../utils/array";
 import { assertNotVoid } from "../utils/assert";
 import { getBufferedEnd } from "../utils/buffer";
@@ -40,7 +42,7 @@ type MediaState<T extends MediaType = MediaType> = {
   track: ByType<Track, T>;
   lastSegment: Segment | null;
   lastInitSegment: InitSegment | null;
-  lastRequest: Request<"arrayBuffer"> | null;
+  lastRequest: NetworkRequest | null;
   timer: Timer;
 };
 
@@ -279,13 +281,12 @@ export class StreamController {
     const url = segment?.url ?? initSegment.url;
 
     mediaState.lastRequest = networkService.request(
-      RequestType.SEGMENT,
+      NetworkRequestType.SEGMENT,
       url,
-      "arrayBuffer",
     );
 
-    const result = await mediaState.lastRequest.promise;
-    if (result === ABORTED) {
+    const response = await mediaState.lastRequest.promise;
+    if (response === ABORTED) {
       return;
     }
 
@@ -299,7 +300,7 @@ export class StreamController {
       type: mediaState.type,
       initSegment,
       segment,
-      data: result.data,
+      data: response.arrayBuffer,
     });
   }
 

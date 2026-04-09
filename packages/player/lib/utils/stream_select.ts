@@ -1,12 +1,6 @@
-import type {
-  Manifest,
-  Presentation,
-  Stream,
-  StreamPreference,
-  Track,
-} from "../types";
-import { MediaType } from "../types";
-import type { ByType } from "../types/utils";
+import type { Manifest, Presentation, Track } from "../types/manifest";
+import type { ByType, Stream, StreamPreference } from "../types/media";
+import { MediaType } from "../types/media";
 import { assert, assertNotVoid } from "./assert";
 
 /**
