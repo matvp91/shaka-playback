@@ -1,12 +1,13 @@
 import { Events } from "../events";
 import type { Player } from "../player";
-import type { Request, RequestPromise, Response, ResponseType } from "./types";
-import { ABORTED } from "./types";
-
-export enum RequestType {
-  MANIFEST = "manifest",
-  SEGMENT = "segment",
-}
+import type {
+  Request,
+  RequestPromise,
+  RequestType,
+  Response,
+  ResponseType,
+} from "../types/net";
+import { ABORTED } from "../types/net";
 
 /**
  * Central service for all network requests. Owns request

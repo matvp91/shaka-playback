@@ -2,10 +2,9 @@ import { parseManifest } from "../dash/dash_parser";
 import type { ManifestLoadingEvent } from "../events";
 import { Events } from "../events";
 import type { NetworkService } from "../net/network_service";
-import { RequestType } from "../net/network_service";
-import type { Request } from "../net/types";
-import { ABORTED } from "../net/types";
 import type { Player } from "../player";
+import type { Request } from "../types/net";
+import { ABORTED, RequestType } from "../types/net";
 
 export class ManifestController {
   private request_: Request<"text"> | null = null;

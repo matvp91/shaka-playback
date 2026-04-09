@@ -8,12 +8,12 @@ import type {
   Track,
 } from "../types";
 import { MediaType } from "../types";
+import type { AdaptationSet, MPD, Period, Representation } from "../types/dash";
 import { assertNotVoid } from "../utils/assert";
 import { filterMap, findMap } from "../utils/functional";
+import { asNumber } from "../utils/parse";
 import { resolveUrls } from "../utils/url";
 import { parseSegmentData } from "./dash_presentation";
-import { asNumber } from "./parse";
-import type { AdaptationSet, MPD, Period, Representation } from "./types";
 
 const DASH_ARRAY_NODES = [
   "Period",

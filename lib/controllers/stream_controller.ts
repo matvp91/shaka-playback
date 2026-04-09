@@ -5,9 +5,6 @@ import type {
 } from "../events";
 import { Events } from "../events";
 import type { NetworkService } from "../net/network_service";
-import { RequestType } from "../net/network_service";
-import type { Request } from "../net/types";
-import { ABORTED } from "../net/types";
 import type { Player } from "../player";
 import type {
   InitSegment,
@@ -18,6 +15,8 @@ import type {
   Segment,
   Track,
 } from "../types";
+import type { Request } from "../types/net";
+import { ABORTED, RequestType } from "../types/net";
 import { binarySearch } from "../utils/array";
 import { assertNotVoid } from "../utils/assert";
 import { getBufferInfo } from "../utils/buffer";

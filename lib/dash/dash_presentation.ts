@@ -1,10 +1,6 @@
 import { processUriTemplate } from "@svta/cml-dash";
 import { decodeIso8601Duration } from "@svta/cml-iso-8601";
 import type { InitSegment, Segment } from "../types";
-import { assertNotVoid } from "../utils/assert";
-import { findMap } from "../utils/functional";
-import { resolveUrl } from "../utils/url";
-import { asNumber } from "./parse";
 import type {
   AdaptationSet,
   MPD,
@@ -12,7 +8,11 @@ import type {
   Representation,
   SegmentTemplate,
   SegmentTimeline,
-} from "./types";
+} from "../types/dash";
+import { assertNotVoid } from "../utils/assert";
+import { findMap } from "../utils/functional";
+import { asNumber } from "../utils/parse";
+import { resolveUrl } from "../utils/url";
 
 export function parseSegmentData(
   _mpd: MPD,

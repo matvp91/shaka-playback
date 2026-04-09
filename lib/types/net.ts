@@ -1,3 +1,8 @@
+export enum RequestType {
+  MANIFEST = "manifest",
+  SEGMENT = "segment",
+}
+
 export type HttpMethod = "GET" | "POST";
 
 export type ResponseType = "arrayBuffer" | "text";

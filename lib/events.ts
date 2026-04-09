@@ -1,5 +1,3 @@
-import type { RequestType } from "./net/network_service";
-import type { Request, Response } from "./net/types";
 import type {
   InitSegment,
   Manifest,
@@ -7,6 +5,7 @@ import type {
   MediaType,
   Segment,
 } from "./types";
+import type { Request, RequestType, Response } from "./types/net";
 
 export const Events = {
   MANIFEST_LOADING: "manifestLoading",
