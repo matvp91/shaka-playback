@@ -23,7 +23,12 @@ import { binarySearch } from "../utils/array";
 import { assertNotVoid } from "../utils/assert";
 import { getBufferedEnd } from "../utils/buffer";
 import { getContentType } from "../utils/codec";
-import { getStreams, resolveTrack, selectStream } from "../utils/stream_select";
+import {
+  getStreamAction,
+  getStreams,
+  resolveTrack,
+  selectStream,
+} from "../utils/stream_select";
 import { Timer } from "../utils/timer";
 
 const TICK_INTERVAL = 0.1;
@@ -109,12 +114,8 @@ export class StreamController {
       this.networkService_.cancel(mediaState.lastRequest);
     }
 
-    const [stream, action] = selectStream(
-      this.getStreams(),
-      mediaState.type,
-      mediaState.stream,
-      preference,
-    );
+    const stream = selectStream(this.getStreams(), preference);
+    const action = getStreamAction(mediaState.stream, stream);
 
     if (!action) {
       return;
@@ -157,8 +158,9 @@ export class StreamController {
     const types = new Set(streams.map((s) => s.type));
 
     for (const type of types) {
-      const preference = this.preferences_.get(type);
-      const [stream] = selectStream(streams, type, undefined, preference);
+      const preference = this.preferences_.get(type) ?? { type };
+      this.preferences_.set(type, preference);
+      const stream = selectStream(streams, preference);
       const track = resolveTrack(presentation, stream);
 
       const mediaState: MediaState = {

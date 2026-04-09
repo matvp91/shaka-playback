@@ -8,8 +8,6 @@ import type {
 import { MediaType } from "../types";
 import { assert, assertNotVoid } from "./assert";
 
-type StreamAction = "switch" | "changeType" | null;
-
 /**
  * Derive the set of streams available across all
  * presentations. Only streams present in every
@@ -39,43 +37,28 @@ export function getStreams(manifest: Manifest): Stream[] {
 }
 
 /**
- * Select the best stream for a media type. Compares to
- * the current stream (if any) to determine the action
- * needed (switch or changeType, null if unchanged).
+ * Select the best stream for a media type.
  */
 export function selectStream(
   streams: Stream[],
-  type: MediaType,
-  current?: Stream,
-  preference?: StreamPreference,
-): [Stream, StreamAction] {
+  preference: StreamPreference,
+): Stream {
   const filtered = streams.filter(
-    (s): s is Stream & { type: typeof type } => s.type === type,
+    (s): s is Stream & { type: typeof preference.type } =>
+      s.type === preference.type,
   );
-  assertNotVoid(filtered[0], `No streams for ${type}`);
+  assertNotVoid(filtered[0], `No streams for ${preference.type}`);
 
-  let stream: Stream;
-  if (!preference) {
-    stream = filtered[0];
-  } else if (preference.type === MediaType.VIDEO) {
-    stream = matchVideoPreference(
+  if (preference.type === MediaType.VIDEO) {
+    return matchVideoPreference(
       filtered as (Stream & { type: MediaType.VIDEO })[],
       preference,
     );
-  } else {
-    stream = matchAudioPreference(
-      filtered as (Stream & { type: MediaType.AUDIO })[],
-      preference,
-    );
   }
-
-  if (!current || isSameStream(current, stream)) {
-    return [stream, null];
-  }
-  if (current.codec !== stream.codec) {
-    return [stream, "changeType"];
-  }
-  return [stream, "switch"];
+  return matchAudioPreference(
+    filtered as (Stream & { type: MediaType.AUDIO })[],
+    preference,
+  );
 }
 
 /**
@@ -100,6 +83,27 @@ export function resolveTrack(
   }
 
   throw new Error("No track found for stream in presentation");
+}
+
+type StreamAction = "switch" | "changeType" | null;
+
+/**
+ * Determine the action needed when changing from one
+ * stream to another. Returns null if the streams are
+ * identical, "changeType" if the codec differs, or
+ * "switch" for a same-codec quality change.
+ */
+export function getStreamAction(
+  oldStream: Stream,
+  newStream: Stream,
+): StreamAction {
+  if (isSameStream(oldStream, newStream)) {
+    return null;
+  }
+  if (oldStream.codec !== newStream.codec) {
+    return "changeType";
+  }
+  return "switch";
 }
 
 function isSameStream(a: Stream, b: Stream): boolean {
