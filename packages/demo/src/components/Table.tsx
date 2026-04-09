@@ -1,4 +1,4 @@
-import { twMerge } from "tailwind-merge";
+import { cn } from "../utils";
 
 type Column = {
   label: string;
@@ -24,7 +24,7 @@ export function Table({ columns, rows }: TableProps) {
           {columns.map((col) => (
             <td
               key={col.label}
-              className={twMerge("px-3 text-right", col.className)}
+              className={cn("px-3 text-right", col.className)}
             >
               {col.label}
             </td>

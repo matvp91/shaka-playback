@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { twMerge } from "tailwind-merge";
+import { cn } from "../utils";
 
 type BarProps = {
   label: string;
@@ -10,9 +10,7 @@ type BarProps = {
 export function Bar({ label, labelClassName, children }: BarProps) {
   return (
     <div className="flex items-center gap-2">
-      <span className={twMerge("w-20 text-right", labelClassName)}>
-        {label}
-      </span>
+      <span className={cn("w-20 text-right", labelClassName)}>{label}</span>
       {children}
     </div>
   );
