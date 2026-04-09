@@ -1,0 +1,35 @@
+{
+  "name": "@bap/player",
+  "type": "module",
+  "main": "./dist/main.js",
+  "module": "./dist/main.js",
+  "types": "./dist/main.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/main.js",
+      "types": "./dist/main.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "format": "biome check --write --unsafe .",
+    "tsc": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.2",
+    "vite": "^8.0.3",
+    "vite-plugin-dts": "^4.5.4"
+  },
+  "dependencies": {
+    "@matvp91/eventemitter3": "^5.0.1",
+    "@svta/cml-dash": "^1.0.5",
+    "@svta/cml-iso-8601": "^1.0.1",
+    "@svta/cml-iso-bmff": "^1.0.1",
+    "@svta/cml-utils": "^1.4.0",
+    "fast-xml-parser": "^5.4.1"
+  }
+}

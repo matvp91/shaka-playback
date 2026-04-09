@@ -1,0 +1,17 @@
+{
+  "name": "@bap/demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "format": "biome check --write --unsafe .",
+    "tsc": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "vite": "^8.0.3"
+  },
+  "dependencies": {
+    "@bap/player": "workspace:*"
+  }
+}

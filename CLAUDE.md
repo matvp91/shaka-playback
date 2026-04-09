@@ -1,36 +1,28 @@
-# Playback
+# BAP
 
-CMAF-compliant media player library extending the HTML `<video>` element with adaptive streaming. Currently supports DASH manifest parsing with an event-driven controller architecture.
+pnpm monorepo for BAP (Barely A Player).
 
-## Docs
+## Packages
 
-- [Architecture & Technical Design](docs/DESIGN.md)
-- [Manifest Model](docs/MANIFEST.md)
-- `docs/superpowers/specs/` — planning history (brainstorm specs, not current state)
+- `packages/player` (`@bap/player`) — CMAF-compliant media player library. See [player docs](packages/player/docs/DESIGN.md).
+- `packages/demo` (`@bap/demo`) — demo app consuming `@bap/player`
+- `packages/docs` — documentation (out of scope)
 
 ## Tech Stack
 
-- TypeScript, Vite, pnpm
+- TypeScript, Vite, pnpm workspaces
 - Biome for formatting and linting
 
 ## Scripts
 
-- `pnpm dev` — dev server with example app
-- `pnpm build` — production build
-- `pnpm format` — format and lint with Biome
-- `pnpm tsc` — type check
+- `pnpm dev` — run dev in all packages
+- `pnpm build` — build all packages
+- `pnpm format` — format and lint all packages
+- `pnpm tsc` — type check all packages
 
-## Project Structure
+## Superpowers
 
-- `lib/` — source code
-  - `player.ts` — central Player class
-  - `controllers/` — event-driven controllers
-  - `dash/` — DASH MPD parser
-  - `net/` — network layer
-  - `types/` — manifest model types
-  - `utils/` — shared helpers
-- `example/` — example app (Vite dev server)
-- `docs/` — design documentation
+- `.agents/superpowers/` — planning specs and history
 
 ## Working Guidelines
 

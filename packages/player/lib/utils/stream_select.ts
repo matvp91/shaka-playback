@@ -23,7 +23,12 @@ export function getStreams(manifest: Manifest): Stream[] {
       for (const track of ss.tracks) {
         const stream: Stream =
           track.type === MediaType.VIDEO
-            ? { type: track.type, codec: ss.codec, width: track.width, height: track.height }
+            ? {
+                type: track.type,
+                codec: ss.codec,
+                width: track.width,
+                height: track.height,
+              }
             : { type: track.type, codec: ss.codec };
         if (!streams.some((s) => isSameStream(s, stream))) {
           streams.push(stream);
