@@ -19,9 +19,12 @@ export function getStreams(manifest: Manifest): Stream[] {
 
   const sets = manifest.presentations.map((presentation) => {
     const streams: Stream[] = [];
-    for (const switchingSet of presentation.switchingSets) {
-      for (const track of switchingSet.tracks) {
-        const stream = trackToStream(track, switchingSet.codec);
+    for (const ss of presentation.switchingSets) {
+      for (const track of ss.tracks) {
+        const stream: Stream =
+          track.type === MediaType.VIDEO
+            ? { type: track.type, codec: ss.codec, width: track.width, height: track.height }
+            : { type: track.type, codec: ss.codec };
         if (!streams.some((s) => isSameStream(s, stream))) {
           streams.push(stream);
         }
@@ -78,7 +81,11 @@ export function resolveTrack(
       continue;
     }
     for (const track of switchingSet.tracks) {
-      if (isSameStream(stream, trackToStream(track, switchingSet.codec))) {
+      if (
+        stream.type !== MediaType.VIDEO ||
+        track.type !== MediaType.VIDEO ||
+        (stream.width === track.width && stream.height === track.height)
+      ) {
         return track;
       }
     }
@@ -116,18 +123,6 @@ function isSameStream(a: Stream, b: Stream): boolean {
     return a.width === b.width && a.height === b.height;
   }
   return true;
-}
-
-function trackToStream(track: Track, codec: string): Stream {
-  if (track.type === MediaType.VIDEO) {
-    return {
-      type: track.type,
-      codec,
-      width: track.width,
-      height: track.height,
-    };
-  }
-  return { type: track.type, codec };
 }
 
 function matchVideoPreference(

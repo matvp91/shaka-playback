@@ -47,6 +47,7 @@ type MediaState<T extends MediaType = MediaType> = {
 
 export class StreamController {
   private manifest_: Manifest | null = null;
+  private streams_: Stream[] | null = null;
   private media_: HTMLMediaElement | null = null;
   private mediaStates_ = new Map<MediaType, MediaState>();
   private preferences_ = new Map<MediaType, StreamPreference>();
@@ -65,8 +66,8 @@ export class StreamController {
   }
 
   getStreams() {
-    assertNotVoid(this.manifest_, "No Manifest");
-    return getStreams(this.manifest_);
+    assertNotVoid(this.streams_, "No Streams");
+    return this.streams_;
   }
 
   destroy() {
@@ -84,12 +85,14 @@ export class StreamController {
       this.onStreamPreferenceChanged_,
     );
     this.manifest_ = null;
+    this.streams_ = null;
     this.mediaStates_.clear();
     this.preferences_.clear();
   }
 
   private onManifestParsed_ = (event: ManifestParsedEvent) => {
     this.manifest_ = event.manifest;
+    this.streams_ = getStreams(this.manifest_);
     this.tryStart_();
   };
 
