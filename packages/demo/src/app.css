@@ -3,3 +3,8 @@
 html {
   font-size: 12px;
 }
+
+video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
