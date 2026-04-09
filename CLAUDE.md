@@ -5,6 +5,8 @@ CMAF-compliant media player library extending the HTML `<video>` element with ad
 ## Docs
 
 - [Architecture & Technical Design](docs/DESIGN.md)
+- [Manifest Model](docs/MANIFEST.md)
+- `docs/superpowers/specs/` — planning history (brainstorm specs, not current state)
 
 ## Tech Stack
 
@@ -21,13 +23,12 @@ CMAF-compliant media player library extending the HTML `<video>` element with ad
 ## Project Structure
 
 - `lib/` — source code
-  - `player.ts` — central Player class (event bus, controller registry, public API)
-  - `events.ts` — event definitions
-  - `config.ts` — player configuration
-  - `controllers/` — single-responsibility controllers (event-driven)
+  - `player.ts` — central Player class
+  - `controllers/` — event-driven controllers
   - `dash/` — DASH MPD parser
-  - `types/` — format-agnostic manifest model
-  - `utils/` — assertion, time, URL, functional helpers
+  - `net/` — network layer
+  - `types/` — manifest model types
+  - `utils/` — shared helpers
 - `example/` — example app (Vite dev server)
 - `docs/` — design documentation
 
