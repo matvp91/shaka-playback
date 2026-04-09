@@ -22,11 +22,7 @@ import { binarySearch } from "../utils/array";
 import { assertNotVoid } from "../utils/assert";
 import { getBufferedEnd } from "../utils/buffer";
 import { getContentType } from "../utils/codec";
-import {
-  getStreams,
-  resolveTrack,
-  selectStream,
-} from "../utils/stream_select";
+import { getStreams, resolveTrack, selectStream } from "../utils/stream_select";
 import { Timer } from "../utils/timer";
 
 const TICK_INTERVAL = 0.1;
@@ -127,14 +123,12 @@ export class StreamController {
       this.player_.emit(Events.BUFFER_CODECS, {
         type: mediaState.type,
         mimeType: getContentType(mediaState.type, stream.codec),
+        duration: this.computeDuration_(),
       });
     }
 
     mediaState.stream = stream;
-    mediaState.track = resolveTrack(
-      mediaState.presentation,
-      stream,
-    );
+    mediaState.track = resolveTrack(mediaState.presentation, stream);
     mediaState.lastSegment = null;
     mediaState.lastInitSegment = null;
   };
@@ -163,12 +157,7 @@ export class StreamController {
 
     for (const type of types) {
       const preference = this.preferences_.get(type);
-      const { stream } = selectStream(
-        streams,
-        type,
-        undefined,
-        preference,
-      );
+      const { stream } = selectStream(streams, type, undefined, preference);
       const track = resolveTrack(presentation, stream);
 
       const mediaState: MediaState = {
@@ -188,6 +177,7 @@ export class StreamController {
       this.player_.emit(Events.BUFFER_CODECS, {
         type,
         mimeType: getContentType(type, stream.codec),
+        duration: this.computeDuration_(),
       });
     }
 
@@ -256,10 +246,7 @@ export class StreamController {
 
     if (presentation !== mediaState.presentation) {
       mediaState.presentation = presentation;
-      mediaState.track = resolveTrack(
-        presentation,
-        mediaState.stream,
-      );
+      mediaState.track = resolveTrack(presentation, mediaState.stream);
       mediaState.lastSegment = null;
       return;
     }
