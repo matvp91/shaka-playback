@@ -6,6 +6,7 @@ import type {
   Track,
 } from "../types";
 import { MediaType } from "../types";
+import type { ByType } from "../types/utils";
 import { assert, assertNotVoid } from "./assert";
 
 /**
@@ -43,22 +44,23 @@ export function selectStream(
   streams: Stream[],
   preference: StreamPreference,
 ): Stream {
-  const filtered = streams.filter(
-    (s): s is Stream & { type: typeof preference.type } =>
-      s.type === preference.type,
-  );
+  const filtered = streams.filter((s) => s.type === preference.type);
   assertNotVoid(filtered[0], `No streams for ${preference.type}`);
 
   if (preference.type === MediaType.VIDEO) {
     return matchVideoPreference(
-      filtered as (Stream & { type: MediaType.VIDEO })[],
+      filtered as ByType<Stream, MediaType.VIDEO>[],
       preference,
     );
   }
-  return matchAudioPreference(
-    filtered as (Stream & { type: MediaType.AUDIO })[],
-    preference,
-  );
+  if (preference.type === MediaType.AUDIO) {
+    return matchAudioPreference(
+      filtered as ByType<Stream, MediaType.AUDIO>[],
+      preference,
+    );
+  }
+
+  throw new Error("Could not lookup preference type");
 }
 
 /**
@@ -129,13 +131,8 @@ function trackToStream(track: Track, codec: string): Stream {
 }
 
 function matchVideoPreference(
-  streams: (Stream & { type: MediaType.VIDEO })[],
-  preference: {
-    type: MediaType.VIDEO;
-    codec?: string;
-    width?: number;
-    height?: number;
-  },
+  streams: ByType<Stream, MediaType.VIDEO>[],
+  preference: ByType<StreamPreference, MediaType.VIDEO>,
 ): Stream {
   assertNotVoid(streams[0], "No video streams to match against");
   let best = streams[0];
@@ -162,8 +159,8 @@ function matchVideoPreference(
 }
 
 function matchAudioPreference(
-  streams: (Stream & { type: MediaType.AUDIO })[],
-  preference: { type: MediaType.AUDIO; codec?: string },
+  streams: ByType<Stream, MediaType.AUDIO>[],
+  preference: ByType<StreamPreference, MediaType.AUDIO>,
 ): Stream {
   if (preference.codec) {
     const match = streams.find((s) => s.codec === preference.codec);
