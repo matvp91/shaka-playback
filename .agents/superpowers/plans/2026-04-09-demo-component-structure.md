@@ -255,27 +255,26 @@ import type { TimeRange } from "../../types.ts";
 import { toBarStyle, toPosition } from "./utils.ts";
 
 type TrackProps = {
+  className?: string;
+  rangeClassName?: string;
   ranges: TimeRange[];
   seekable: TimeRange | null;
   currentTime: number;
   bufferGoal: number;
-  rangeClassName?: string;
-  thin?: boolean;
+  showMarkers?: boolean;
 };
 
 export function Track({
+  className,
+  rangeClassName,
   ranges,
   seekable,
   currentTime,
   bufferGoal,
-  rangeClassName,
-  thin,
+  showMarkers = true,
 }: TrackProps) {
   return (
-    <div
-      className="relative flex-1 bg-neutral-800"
-      style={{ height: thin ? 4 : 16 }}
-    >
+    <div className={twMerge("relative flex-1 bg-neutral-800 h-4", className)}>
       {ranges.map((range) => {
         const style = toBarStyle(range, seekable);
         return (
@@ -286,7 +285,7 @@ export function Track({
           />
         );
       })}
-      {!thin && (
+      {showMarkers && (
         <>
           <div
             className="absolute top-0 h-full w-0.5 bg-white"
@@ -331,23 +330,25 @@ import { Track } from "./Track.tsx";
 type BarProps = {
   label: string;
   labelClassName?: string;
+  trackClassName?: string;
   rangeClassName?: string;
   ranges: TimeRange[];
   seekable: TimeRange | null;
   currentTime: number;
   bufferGoal: number;
-  thin?: boolean;
+  showMarkers?: boolean;
 };
 
 export function Bar({
   label,
   labelClassName,
+  trackClassName,
   rangeClassName,
   ranges,
   seekable,
   currentTime,
   bufferGoal,
-  thin,
+  showMarkers,
 }: BarProps) {
   return (
     <div className="flex items-center gap-2">
@@ -355,12 +356,13 @@ export function Bar({
         {label}
       </span>
       <Track
+        className={trackClassName}
+        rangeClassName={rangeClassName}
         ranges={ranges}
         seekable={seekable}
         currentTime={currentTime}
         bufferGoal={bufferGoal}
-        rangeClassName={rangeClassName}
-        thin={thin}
+        showMarkers={showMarkers}
       />
     </div>
   );
@@ -568,11 +570,12 @@ export function BufferGraph({ data }: BufferGraphProps) {
       <div className="mb-3">
         <Bar
           label="played"
+          trackClassName="h-1"
           ranges={data.played}
           seekable={data.seekable}
           currentTime={data.currentTime}
           bufferGoal={data.bufferGoal}
-          thin
+          showMarkers={false}
         />
       </div>
 
