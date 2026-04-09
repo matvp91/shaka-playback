@@ -140,7 +140,9 @@ function parseSwitchingSet(
   const firstRep = adaptationSet.Representation[0];
   assertNotVoid(firstRep, "No Representation found");
 
-  const codec = findMap([firstRep, adaptationSet], "@_codecs");
+  const codec = findMap([firstRep, adaptationSet], (node) =>
+    node["@_codecs"]?.toLowerCase(),
+  );
   assertNotVoid(codec, "codecs is mandatory");
 
   const tracks = adaptationSet.Representation.map((rep) =>
