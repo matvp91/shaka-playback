@@ -27,11 +27,12 @@ export class Registry {
   };
 
   constructor(player: Player) {
-    for (const type of Object.values(RegistryType)) {
-      this.instances_[type] = Registry.components_[type].map(
-        (Ctor) => new Ctor(player),
-      );
-    }
+    this.construct_(RegistryType.MANIFEST_PARSER, player);
+  }
+
+  private construct_<T extends RegistryType>(type: T, player: Player) {
+    (this.instances_[type] as RegistryTypeMap[T][]) =
+      Registry.components_[type].map((Ctor) => new Ctor(player));
   }
 
   get<T extends RegistryType>(type: T): InstanceMap[T] {
