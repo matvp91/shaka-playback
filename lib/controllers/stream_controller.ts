@@ -314,7 +314,8 @@ export class StreamController {
 
   private getBufferEnd_(type: MediaType, time: number): number | null {
     const { maxBufferHole } = this.player_.getConfig();
-    return getBufferedEnd(this.player_.getBuffered(type), time, maxBufferHole);
+    const buffered = this.player_.getBuffered(type);
+    return getBufferedEnd(buffered, time, maxBufferHole);
   }
 
   private getNextSegment_(mediaState: MediaState): Segment | null {
