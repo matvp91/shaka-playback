@@ -2,12 +2,12 @@ import type { Player } from "@bap/player";
 import { MediaType } from "@bap/player";
 
 type TimeRange = {
-  start: string;
-  end: string;
+  start: number;
+  end: number;
 };
 
 type BufferData = {
-  currentTime: string;
+  currentTime: number;
   paused: boolean;
   seekable: TimeRange | null;
   buffered: TimeRange[];
@@ -26,8 +26,8 @@ function toTimeRanges(ranges: TimeRanges): TimeRange[] {
   const result: TimeRange[] = [];
   for (let i = 0; i < ranges.length; i++) {
     result.push({
-      start: ranges.start(i).toFixed(3),
-      end: ranges.end(i).toFixed(3),
+      start: ranges.start(i),
+      end: ranges.end(i),
     });
   }
   return result;
@@ -48,7 +48,7 @@ function getData(player: Player): BufferData | null {
   const seekableRanges = toTimeRanges(media.seekable);
 
   return {
-    currentTime: media.currentTime.toFixed(3),
+    currentTime: media.currentTime,
     paused: media.paused,
     seekable: seekableRanges[0] ?? null,
     buffered: toTimeRanges(media.buffered),
@@ -65,17 +65,15 @@ function getData(player: Player): BufferData | null {
  * within the seekable range. Returns "0%" if seekable
  * is null.
  */
-function toPosition(time: string, seekable: TimeRange | null): string {
+function toPosition(time: number, seekable: TimeRange | null): string {
   if (!seekable) {
     return "0%";
   }
-  const start = Number(seekable.start);
-  const end = Number(seekable.end);
-  const duration = end - start;
+  const duration = seekable.end - seekable.start;
   if (duration <= 0) {
     return "0%";
   }
-  const pct = ((Number(time) - start) / duration) * 100;
+  const pct = ((time - seekable.start) / duration) * 100;
   return `${Math.max(0, Math.min(100, pct))}%`;
 }
 
@@ -90,14 +88,12 @@ function toBarStyle(
   if (!seekable) {
     return { left: "0%", width: "0%" };
   }
-  const start = Number(seekable.start);
-  const end = Number(seekable.end);
-  const duration = end - start;
+  const duration = seekable.end - seekable.start;
   if (duration <= 0) {
     return { left: "0%", width: "0%" };
   }
-  const left = ((Number(range.start) - start) / duration) * 100;
-  const width = ((Number(range.end) - Number(range.start)) / duration) * 100;
+  const left = ((range.start - seekable.start) / duration) * 100;
+  const width = ((range.end - range.start) / duration) * 100;
   return {
     left: `${Math.max(0, left)}%`,
     width: `${Math.min(100 - Math.max(0, left), width)}%`,
@@ -111,16 +107,13 @@ function toBarStyle(
  */
 function getBufferStat(
   ranges: TimeRange[],
-  currentTime: string,
-): { ahead: string; behind: string } | null {
-  const ct = Number(currentTime);
+  currentTime: number,
+): { ahead: number; behind: number } | null {
   for (const range of ranges) {
-    const start = Number(range.start);
-    const end = Number(range.end);
-    if (ct >= start && ct <= end) {
+    if (currentTime >= range.start && currentTime <= range.end) {
       return {
-        ahead: (end - ct).toFixed(3),
-        behind: (ct - start).toFixed(3),
+        ahead: range.end - currentTime,
+        behind: currentTime - range.start,
       };
     }
   }
@@ -144,11 +137,11 @@ function Bar({
   labelColor?: string;
   ranges: TimeRange[];
   seekable: TimeRange | null;
-  currentTime: string;
+  currentTime: number;
   bufferGoal: number;
   thin?: boolean;
 }) {
-  const goalTime = (Number(currentTime) + bufferGoal).toFixed(3);
+  const goalTime = currentTime + bufferGoal;
 
   return (
     <div className="flex items-center gap-2">
@@ -212,14 +205,16 @@ function BufferGraph({ data }: { data: BufferData }) {
 
       {/* Seekable labels */}
       <div className="relative mb-0.5 ml-16 flex text-[10px]">
-        <span>{data.seekable?.start ?? "-"}</span>
+        <span>{data.seekable?.start.toFixed(3) ?? "-"}</span>
         <span
           className="absolute text-white"
           style={{ left: toPosition(data.currentTime, data.seekable) }}
         >
-          {data.currentTime}
+          {data.currentTime.toFixed(3)}
         </span>
-        <span className="absolute right-0">{data.seekable?.end ?? "-"}</span>
+        <span className="absolute right-0">
+          {data.seekable?.end.toFixed(3) ?? "-"}
+        </span>
       </div>
 
       {/* Buffered + Played */}
@@ -283,25 +278,25 @@ function BufferGraph({ data }: { data: BufferData }) {
           <tr>
             <td className="pr-3">ahead</td>
             <td className="px-3 text-right text-white">
-              {totalStat?.ahead ?? "-"}
+              {totalStat?.ahead.toFixed(3) ?? "-"}
             </td>
             <td className="px-3 text-right text-white">
-              {videoStat?.ahead ?? "-"}
+              {videoStat?.ahead.toFixed(3) ?? "-"}
             </td>
             <td className="px-3 text-right text-white">
-              {audioStat?.ahead ?? "-"}
+              {audioStat?.ahead.toFixed(3) ?? "-"}
             </td>
           </tr>
           <tr>
             <td className="pr-3">behind</td>
             <td className="px-3 text-right text-white">
-              {totalStat?.behind ?? "-"}
+              {totalStat?.behind.toFixed(3) ?? "-"}
             </td>
             <td className="px-3 text-right text-white">
-              {videoStat?.behind ?? "-"}
+              {videoStat?.behind.toFixed(3) ?? "-"}
             </td>
             <td className="px-3 text-right text-white">
-              {audioStat?.behind ?? "-"}
+              {audioStat?.behind.toFixed(3) ?? "-"}
             </td>
           </tr>
         </tbody>
