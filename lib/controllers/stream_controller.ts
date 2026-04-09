@@ -61,7 +61,8 @@ export class StreamController {
   }
 
   getStreams() {
-    return this.manifest_ ? getStreams(this.manifest_) : [];
+    assertNotVoid(this.manifest_, "No Manifest");
+    return getStreams(this.manifest_);
   }
 
   destroy() {
@@ -145,7 +146,7 @@ export class StreamController {
 
     const mediaTracks = new Map<MediaType, MediaTrack>();
 
-    const streams = getStreams(this.manifest_);
+    const streams = this.getStreams();
     const types = new Set(streams.map((s) => s.type));
 
     for (const type of types) {
