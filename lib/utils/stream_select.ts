@@ -27,15 +27,7 @@ export function getStreams(manifest: Manifest): Stream[] {
     const streams: Stream[] = [];
     for (const switchingSet of presentation.switchingSets) {
       for (const track of switchingSet.tracks) {
-        const stream: Stream =
-          track.type === MediaType.VIDEO
-            ? {
-                type: track.type,
-                codec: switchingSet.codec,
-                width: track.width,
-                height: track.height,
-              }
-            : { type: track.type, codec: switchingSet.codec };
+        const stream = trackToStream(track, switchingSet.codec);
         if (!streams.some((s) => isSameStream(s, stream))) {
           streams.push(stream);
         }

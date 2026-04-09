@@ -14,7 +14,6 @@ export const Events = {
   MEDIA_ATTACHED: "mediaAttached",
   MEDIA_DETACHED: "mediaDetached",
   BUFFER_CODECS: "bufferCodecs",
-  BUFFER_DURATION: "bufferDuration",
   BUFFER_APPENDING: "bufferAppending",
   BUFFER_APPENDED: "bufferAppended",
   BUFFER_EOS: "bufferEos",
@@ -43,10 +42,6 @@ export type MediaAttachedEvent = {
 export type BufferCodecsEvent = {
   type: MediaType;
   mimeType: string;
-  duration: number;
-};
-
-export type BufferDurationEvent = {
   duration: number;
 };
 
@@ -86,7 +81,6 @@ export interface EventMap {
   [Events.MEDIA_ATTACHED]: (event: MediaAttachedEvent) => void;
   [Events.MEDIA_DETACHED]: undefined;
   [Events.BUFFER_CODECS]: (event: BufferCodecsEvent) => void;
-  [Events.BUFFER_DURATION]: (event: BufferDurationEvent) => void;
   [Events.BUFFER_APPENDING]: (event: BufferAppendingEvent) => void;
   [Events.BUFFER_APPENDED]: (event: BufferAppendedEvent) => void;
   [Events.BUFFER_EOS]: undefined;
