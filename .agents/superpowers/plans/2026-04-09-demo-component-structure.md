@@ -4,7 +4,7 @@
 
 **Goal:** Refactor the demo's monolithic `App.tsx` into a proper component structure with single-responsibility files, shared types, and `tailwind-merge` for class composition.
 
-**Architecture:** Extract types to `types.ts`, utility functions to `buffer-graph/utils.ts`, and split the UI into small components: `Table` (generic), `Track`, `Bar`, `Header`, `SeekableLabels`, `Stats`, and `BufferGraph` (composer). Move inline CSS from `index.html` to `app.css`.
+**Architecture:** Extract types to `types.ts`, utility functions to `buffer-graph/utils.ts`, and split the UI into composable components. Generic components (`Bar`, `Table`) live at `components/` level. Buffer-specific components (`Track`, `Header`, `SeekableLabels`, `Stats`) live in `buffer-graph/`. `BufferGraph` is the block that composes everything. `Bar` uses children for composition — it doesn't know about `Track`. Move inline CSS from `index.html` to `app.css`.
 
 **Tech Stack:** React 19, TypeScript, Tailwind CSS v4, tailwind-merge
 
@@ -13,10 +13,10 @@
 ## File Structure
 
 - **Create:** `packages/demo/src/types.ts` — shared types
+- **Create:** `packages/demo/src/components/Bar.tsx` — generic: label + children in a row
 - **Create:** `packages/demo/src/components/Table.tsx` — generic table
 - **Create:** `packages/demo/src/components/buffer-graph/utils.ts` — position/stat helpers
-- **Create:** `packages/demo/src/components/buffer-graph/Track.tsx` — range fills + markers
-- **Create:** `packages/demo/src/components/buffer-graph/Bar.tsx` — label + Track
+- **Create:** `packages/demo/src/components/buffer-graph/Track.tsx` — primitive: range fills + markers
 - **Create:** `packages/demo/src/components/buffer-graph/Header.tsx` — metrics row
 - **Create:** `packages/demo/src/components/buffer-graph/SeekableLabels.tsx` — positioned labels
 - **Create:** `packages/demo/src/components/buffer-graph/Stats.tsx` — stats table
@@ -316,54 +316,29 @@ git commit -m "feat(demo): add Track component"
 ### Task 6: Create Bar component
 
 **Files:**
-- Create: `packages/demo/src/components/buffer-graph/Bar.tsx`
+- Create: `packages/demo/src/components/Bar.tsx`
 
 - [ ] **Step 1: Create Bar.tsx**
 
-Create `packages/demo/src/components/buffer-graph/Bar.tsx`:
+Create `packages/demo/src/components/Bar.tsx`:
 
 ```tsx
+import type { ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
-import type { TimeRange } from "../../types.ts";
-import { Track } from "./Track.tsx";
 
 type BarProps = {
   label: string;
   labelClassName?: string;
-  trackClassName?: string;
-  rangeClassName?: string;
-  ranges: TimeRange[];
-  seekable: TimeRange | null;
-  currentTime: number;
-  bufferGoal: number;
-  showMarkers?: boolean;
+  children: ReactNode;
 };
 
-export function Bar({
-  label,
-  labelClassName,
-  trackClassName,
-  rangeClassName,
-  ranges,
-  seekable,
-  currentTime,
-  bufferGoal,
-  showMarkers,
-}: BarProps) {
+export function Bar({ label, labelClassName, children }: BarProps) {
   return (
     <div className="flex items-center gap-2">
       <span className={twMerge("w-20 text-right", labelClassName)}>
         {label}
       </span>
-      <Track
-        className={trackClassName}
-        rangeClassName={rangeClassName}
-        ranges={ranges}
-        seekable={seekable}
-        currentTime={currentTime}
-        bufferGoal={bufferGoal}
-        showMarkers={showMarkers}
-      />
+      {children}
     </div>
   );
 }
@@ -372,8 +347,8 @@ export function Bar({
 - [ ] **Step 2: Commit**
 
 ```bash
-git add packages/demo/src/components/buffer-graph/Bar.tsx
-git commit -m "feat(demo): add Bar component"
+git add packages/demo/src/components/Bar.tsx
+git commit -m "feat(demo): add generic Bar component"
 ```
 
 ---
@@ -542,10 +517,11 @@ Create `packages/demo/src/components/buffer-graph/BufferGraph.tsx`:
 
 ```tsx
 import type { BufferData } from "../../types.ts";
-import { Bar } from "./Bar.tsx";
+import { Bar } from "../Bar.tsx";
 import { Header } from "./Header.tsx";
 import { SeekableLabels } from "./SeekableLabels.tsx";
 import { Stats } from "./Stats.tsx";
+import { Track } from "./Track.tsx";
 
 type BufferGraphProps = {
   data: BufferData;
@@ -560,46 +536,48 @@ export function BufferGraph({ data }: BufferGraphProps) {
         currentTime={data.currentTime}
       />
 
-      <Bar
-        label="buffered"
-        ranges={data.buffered}
-        seekable={data.seekable}
-        currentTime={data.currentTime}
-        bufferGoal={data.bufferGoal}
-      />
-      <div className="mb-3">
-        <Bar
-          label="played"
-          trackClassName="h-1"
-          ranges={data.played}
+      <Bar label="buffered">
+        <Track
+          ranges={data.buffered}
           seekable={data.seekable}
           currentTime={data.currentTime}
           bufferGoal={data.bufferGoal}
-          showMarkers={false}
         />
+      </Bar>
+      <div className="mb-3">
+        <Bar label="played">
+          <Track
+            className="h-1"
+            ranges={data.played}
+            seekable={data.seekable}
+            currentTime={data.currentTime}
+            bufferGoal={data.bufferGoal}
+            showMarkers={false}
+          />
+        </Bar>
       </div>
 
       <hr className="mb-3" />
 
-      <Bar
-        label="video"
-        labelClassName="text-indigo-500"
-        rangeClassName="bg-indigo-500/30"
-        ranges={data.video}
-        seekable={data.seekable}
-        currentTime={data.currentTime}
-        bufferGoal={data.bufferGoal}
-      />
-      <div className="mb-3">
-        <Bar
-          label="audio"
-          labelClassName="text-emerald-400"
-          rangeClassName="bg-emerald-400/30"
-          ranges={data.audio}
+      <Bar label="video" labelClassName="text-indigo-500">
+        <Track
+          rangeClassName="bg-indigo-500/30"
+          ranges={data.video}
           seekable={data.seekable}
           currentTime={data.currentTime}
           bufferGoal={data.bufferGoal}
         />
+      </Bar>
+      <div className="mb-3">
+        <Bar label="audio" labelClassName="text-emerald-400">
+          <Track
+            rangeClassName="bg-emerald-400/30"
+            ranges={data.audio}
+            seekable={data.seekable}
+            currentTime={data.currentTime}
+            bufferGoal={data.bufferGoal}
+          />
+        </Bar>
       </div>
 
       <hr className="mb-3" />
