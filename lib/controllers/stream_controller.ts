@@ -2,6 +2,7 @@ import type {
   BufferCreatedEvent,
   ManifestParsedEvent,
   MediaAttachedEvent,
+  StreamPreferenceChangedEvent,
 } from "../events";
 import { Events } from "../events";
 import type { NetworkService } from "../net/network_service";
@@ -13,6 +14,7 @@ import type {
   MediaType,
   Presentation,
   Segment,
+  StreamPreference,
   Track,
 } from "../types";
 import type { Request } from "../types/net";
@@ -20,7 +22,8 @@ import { ABORTED, RequestType } from "../types/net";
 import { binarySearch } from "../utils/array";
 import { assertNotVoid } from "../utils/assert";
 import { getBufferInfo } from "../utils/buffer";
-import { getMimeType } from "../utils/codec";
+import { getContentType } from "../utils/codec";
+import { getStreams, selectTrack } from "../utils/stream_select";
 import { Timer } from "../utils/timer";
 
 const TICK_INTERVAL = 0.1;
@@ -41,6 +44,7 @@ export class StreamController {
   private media_: HTMLMediaElement | null = null;
   private mediaStates_ = new Map<MediaType, MediaState>();
   private sourceBuffers_ = new Map<MediaType, SourceBuffer>();
+  private preferences_ = new Map<MediaType, StreamPreference>();
 
   constructor(
     private player_: Player,
@@ -50,6 +54,10 @@ export class StreamController {
     this.player_.on(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.on(Events.MEDIA_DETACHED, this.onMediaDetached_);
     this.player_.on(Events.BUFFER_CREATED, this.onBufferCreated_);
+    this.player_.on(
+      Events.STREAM_PREFERENCE_CHANGED,
+      this.onStreamPreferenceChanged_,
+    );
   }
 
   destroy() {
@@ -63,6 +71,10 @@ export class StreamController {
     this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.off(Events.MEDIA_DETACHED, this.onMediaDetached_);
     this.player_.off(Events.BUFFER_CREATED, this.onBufferCreated_);
+    this.player_.off(
+      Events.STREAM_PREFERENCE_CHANGED,
+      this.onStreamPreferenceChanged_,
+    );
     this.manifest_ = null;
     this.mediaStates_.clear();
     this.sourceBuffers_.clear();
@@ -81,6 +93,31 @@ export class StreamController {
 
   private onBufferCreated_ = (event: BufferCreatedEvent) => {
     this.sourceBuffers_ = event.sourceBuffers;
+  };
+
+  private onStreamPreferenceChanged_ = (
+    event: StreamPreferenceChangedEvent,
+  ) => {
+    const { preference } = event;
+    this.preferences_.set(preference.type, preference);
+
+    const mediaState = this.mediaStates_.get(preference.type);
+    if (!mediaState || !this.manifest_) {
+      return;
+    }
+
+    if (mediaState.lastRequest) {
+      this.networkService_.cancel(mediaState.lastRequest);
+    }
+
+    mediaState.track = selectTrack(
+      this.manifest_,
+      mediaState.presentation,
+      mediaState.type,
+      preference,
+    );
+    mediaState.lastSegment = null;
+    mediaState.lastInitSegment = null;
   };
 
   private onMediaDetached_ = () => {
@@ -104,14 +141,14 @@ export class StreamController {
 
     const mediaTracks = new Map<MediaType, MediaTrack>();
 
-    for (const selectionSet of presentation.selectionSets) {
-      const switchingSet = selectionSet.switchingSets[0];
-      assertNotVoid(switchingSet, "No SwitchingSet available");
+    const streams = getStreams(this.manifest_);
+    const types = new Set(streams.map((s) => s.type));
 
-      const track = switchingSet.tracks[0];
-      assertNotVoid(track, "No Track available");
-
-      const type = selectionSet.type;
+    for (const type of types) {
+      const preference = this.preferences_.get(type);
+      const track = selectTrack(this.manifest_, presentation, type, preference);
+      const stream = streams.find((s) => s.type === type);
+      assertNotVoid(stream, `No stream for ${type}`);
 
       const mediaState: MediaState = {
         type,
@@ -127,7 +164,7 @@ export class StreamController {
       this.mediaStates_.set(type, mediaState);
       mediaTracks.set(type, {
         type,
-        mimeType: getMimeType(switchingSet.mimeType, switchingSet.codec),
+        mimeType: getContentType(type, stream.codec),
       });
     }
 
@@ -200,8 +237,14 @@ export class StreamController {
     }
 
     if (presentation !== mediaState.presentation) {
+      assertNotVoid(this.manifest_, "No Manifest");
       mediaState.presentation = presentation;
-      mediaState.track = this.getTrackForType_(presentation, mediaState.type);
+      mediaState.track = selectTrack(
+        this.manifest_,
+        presentation,
+        mediaState.type,
+        this.preferences_.get(mediaState.type),
+      );
       mediaState.lastSegment = null;
       return;
     }
@@ -266,25 +309,6 @@ export class StreamController {
       }
     }
     return null;
-  }
-
-  /**
-   * Walk the manifest hierarchy from presentation to track
-   * for the given media type.
-   */
-  private getTrackForType_(presentation: Presentation, type: MediaType): Track {
-    const selectionSet = presentation.selectionSets.find(
-      (s) => s.type === type,
-    );
-    assertNotVoid(selectionSet, `No SelectionSet for ${type}`);
-
-    const switchingSet = selectionSet.switchingSets[0];
-    assertNotVoid(switchingSet, "No SwitchingSet");
-
-    const track = switchingSet.tracks[0];
-    assertNotVoid(track, "No Track");
-
-    return track;
   }
 
   private getBufferEnd_(type: MediaType, time: number): number | null {
