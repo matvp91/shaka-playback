@@ -8,7 +8,6 @@ import { StreamController } from "./controllers/stream_controller";
 import type { EventMap } from "./events";
 import { Events } from "./events";
 import { NetworkService } from "./net/network_service";
-import type { SeekRange } from "./types";
 
 export class Player extends EventEmitter<EventMap> {
   private config_ = defaultConfig;
@@ -55,10 +54,6 @@ export class Player extends EventEmitter<EventMap> {
   detachMedia() {
     this.media_ = null;
     this.emit(Events.MEDIA_DETACHED);
-  }
-
-  getSeekRange(): SeekRange {
-    return this.streamController_.getSeekRange() ?? { start: 0, end: 0 };
   }
 
   destroy() {

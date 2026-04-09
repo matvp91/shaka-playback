@@ -1,4 +1,4 @@
-type BufferInfo = {
+export type BufferInfo = {
   start: number;
   end: number;
 };
@@ -35,8 +35,6 @@ export function getBufferInfo(
 
   return null;
 }
-
-export type { BufferInfo };
 
 /**
  * Find the start of the first buffered range after

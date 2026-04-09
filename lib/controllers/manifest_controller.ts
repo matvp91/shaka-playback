@@ -8,7 +8,7 @@ import { ABORTED } from "../net/types";
 import type { Player } from "../player";
 
 export class ManifestController {
-  private lastRequest_: Request<"text"> | null = null;
+  private request_: Request<"text"> | null = null;
 
   constructor(
     private player_: Player,
@@ -18,25 +18,25 @@ export class ManifestController {
   }
 
   destroy() {
-    if (this.lastRequest_) {
-      this.networkService_.cancel(this.lastRequest_);
+    if (this.request_) {
+      this.networkService_.cancel(this.request_);
     }
     this.player_.off(Events.MANIFEST_LOADING, this.onManifestLoading_);
   }
 
   private onManifestLoading_ = async (event: ManifestLoadingEvent) => {
-    this.lastRequest_ = this.networkService_.request(
+    this.request_ = this.networkService_.request(
       RequestType.MANIFEST,
       event.url,
       "text",
     );
 
-    const response = await this.lastRequest_.promise;
-    if (response === ABORTED) {
+    const result = await this.request_.promise;
+    if (result === ABORTED) {
       return;
     }
 
-    const manifest = await parseManifest(response.data, event.url);
+    const manifest = await parseManifest(result.data, event.url);
     this.player_.emit(Events.MANIFEST_PARSED, { manifest });
   };
 }

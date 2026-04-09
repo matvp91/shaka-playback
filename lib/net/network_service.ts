@@ -130,7 +130,7 @@ export class NetworkService {
       request,
       status: res.status,
       headers: res.headers,
-      data: data as Response["data"],
+      data,
       timeElapsed,
     };
   }

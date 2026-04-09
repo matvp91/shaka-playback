@@ -15,7 +15,6 @@ import type {
   MediaTrack,
   MediaType,
   Presentation,
-  SeekRange,
   Segment,
   Track,
 } from "../types";
@@ -68,22 +67,6 @@ export class StreamController {
     this.manifest_ = null;
     this.mediaStates_.clear();
     this.sourceBuffers_.clear();
-  }
-
-  getSeekRange(): SeekRange | null {
-    // TODO(matvp): We shall probably prioritize this by MediaType,
-    // or find the intersection maybe?
-    const state = this.mediaStates_.values().next().value;
-    if (!state) {
-      return null;
-    }
-    const { segments } = state.track;
-    const first = segments[0];
-    const last = segments.at(-1);
-    if (!first || !last) {
-      return null;
-    }
-    return { start: first.start, end: last.end };
   }
 
   private onManifestParsed_ = (event: ManifestParsedEvent) => {
@@ -254,8 +237,8 @@ export class StreamController {
       "arrayBuffer",
     );
 
-    const response = await mediaState.lastRequest.promise;
-    if (response === ABORTED) {
+    const result = await mediaState.lastRequest.promise;
+    if (result === ABORTED) {
       return;
     }
 
@@ -269,7 +252,7 @@ export class StreamController {
       type: mediaState.type,
       initSegment,
       segment,
-      data: response.data,
+      data: result.data,
     });
   }
 
