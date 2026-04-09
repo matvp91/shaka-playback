@@ -3,12 +3,16 @@ import { XMLParser } from "fast-xml-parser";
 import type {
   Manifest,
   Presentation,
-  SelectionSet,
   SwitchingSet,
   Track,
 } from "../types";
 import { MediaType } from "../types";
-import type { AdaptationSet, MPD, Period, Representation } from "../types/dash";
+import type {
+  AdaptationSet,
+  MPD,
+  Period,
+  Representation,
+} from "../types/dash";
 import { assertNotVoid } from "../utils/assert";
 import { filterMap, findMap } from "../utils/functional";
 import { asNumber } from "../utils/parse";
@@ -31,7 +35,10 @@ const DASH_ARRAY_NODES = [
   "Event",
 ];
 
-export async function parseManifest(text: string, sourceUrl: string) {
+export async function parseManifest(
+  text: string,
+  sourceUrl: string,
+) {
   const parser = new XMLParser({
     ignoreAttributes: false,
     alwaysCreateTextNode: true,
@@ -62,22 +69,21 @@ function parsePeriod(
     ? decodeIso8601Duration(period["@_start"])
     : 0;
 
-  const grouped = groupAdaptationSets(period.AdaptationSet);
-
-  const selectionSets: SelectionSet[] = Array.from(grouped.entries()).map(
-    ([_key, adaptationSets]) =>
-      parseSelectionSet(sourceUrl, mpd, period, adaptationSets),
-  );
+  const switchingSets = period.AdaptationSet.map((as) => {
+    const type = inferMediaType(as);
+    assertNotVoid(type, "Cannot infer media type");
+    return parseSwitchingSet(sourceUrl, mpd, period, as, type);
+  });
 
   const end = resolvePresentationEnd(
     mpd,
     period,
     periodIndex,
     start,
-    selectionSets,
+    switchingSets,
   );
 
-  return { start, end, selectionSets };
+  return { start, end, switchingSets };
 }
 
 /**
@@ -89,7 +95,7 @@ function resolvePresentationEnd(
   period: Period,
   periodIndex: number,
   start: number,
-  selectionSets: SelectionSet[],
+  switchingSets: SwitchingSet[],
 ): number {
   const duration = period["@_duration"];
   if (duration != null) {
@@ -107,27 +113,12 @@ function resolvePresentationEnd(
   }
 
   const lastSegmentEnd =
-    selectionSets[0]?.switchingSets[0]?.tracks[0]?.segments.at(-1)?.end;
-  assertNotVoid(lastSegmentEnd, "Cannot resolve presentation end");
-  return lastSegmentEnd;
-}
-
-function parseSelectionSet(
-  sourceUrl: string,
-  mpd: MPD,
-  period: Period,
-  adaptationSets: AdaptationSet[],
-): SelectionSet {
-  const first = adaptationSets[0];
-  assertNotVoid(first, "No AdaptationSet found");
-  const type = inferMediaType(first);
-  assertNotVoid(type, "Cannot infer media type");
-
-  const switchingSets = adaptationSets.map((as) =>
-    parseSwitchingSet(sourceUrl, mpd, period, as, type),
+    switchingSets[0]?.tracks[0]?.segments.at(-1)?.end;
+  assertNotVoid(
+    lastSegmentEnd,
+    "Cannot resolve presentation end",
   );
-
-  return { type, switchingSets };
+  return lastSegmentEnd;
 }
 
 function parseSwitchingSet(
@@ -140,16 +131,24 @@ function parseSwitchingSet(
   const firstRep = adaptationSet.Representation[0];
   assertNotVoid(firstRep, "No Representation found");
 
-  const codec = findMap([firstRep, adaptationSet], (node) =>
-    node["@_codecs"]?.toLowerCase(),
+  const codec = findMap(
+    [firstRep, adaptationSet],
+    (node) => node["@_codecs"]?.toLowerCase(),
   );
   assertNotVoid(codec, "codecs is mandatory");
 
   const tracks = adaptationSet.Representation.map((rep) =>
-    parseTrack(sourceUrl, mpd, period, adaptationSet, rep, type),
+    parseTrack(
+      sourceUrl,
+      mpd,
+      period,
+      adaptationSet,
+      rep,
+      type,
+    ),
   );
 
-  return { codec, tracks };
+  return { type, codec, tracks };
 }
 
 function parseTrack(
@@ -178,7 +177,9 @@ function parseTrack(
   );
 
   if (type === MediaType.VIDEO) {
-    const width = asNumber(findMap([representation, adaptationSet], "@_width"));
+    const width = asNumber(
+      findMap([representation, adaptationSet], "@_width"),
+    );
     assertNotVoid(width, "width is mandatory");
 
     const height = asNumber(
@@ -206,36 +207,9 @@ function parseTrack(
   throw new Error("TODO: Map TEXT type");
 }
 
-/**
- * Group AdaptationSets by @group or inferred content type.
- * Each group → SelectionSet, each AS within → SwitchingSet.
- */
-function groupAdaptationSets(adaptationSets: AdaptationSet[]) {
-  const groups = new Map<string, AdaptationSet[]>();
-  for (const adaptationSet of adaptationSets) {
-    const key = adaptationSet["@_group"] ?? inferContentType(adaptationSet);
-    const list = groups.get(key) ?? [];
-    list.push(adaptationSet);
-    groups.set(key, list);
-  }
-  return groups;
-}
-
-function inferContentType(adaptationSet: AdaptationSet) {
-  if (adaptationSet["@_contentType"]) {
-    return adaptationSet["@_contentType"];
-  }
-  const mimeType =
-    adaptationSet["@_mimeType"] ??
-    adaptationSet.Representation[0]?.["@_mimeType"];
-  if (mimeType) {
-    const type = mimeType.split("/")[0] ?? mimeType;
-    return type === "application" ? "text" : type;
-  }
-  return "unknown";
-}
-
-function inferMediaType(adaptationSet: AdaptationSet): MediaType | null {
+function inferMediaType(
+  adaptationSet: AdaptationSet,
+): MediaType | null {
   const contentType = adaptationSet["@_contentType"];
   if (contentType === "video") {
     return MediaType.VIDEO;
@@ -255,7 +229,10 @@ function inferMediaType(adaptationSet: AdaptationSet): MediaType | null {
   if (mimeType?.startsWith("audio/")) {
     return MediaType.AUDIO;
   }
-  if (mimeType?.startsWith("text/") || mimeType?.startsWith("application/")) {
+  if (
+    mimeType?.startsWith("text/") ||
+    mimeType?.startsWith("application/")
+  ) {
     return MediaType.TEXT;
   }
   return null;

@@ -13,7 +13,6 @@ export type Period = {
 };
 
 export type AdaptationSet = {
-  "@_group"?: string;
   "@_contentType"?: string;
   "@_mimeType"?: string;
   "@_codecs"?: string;
