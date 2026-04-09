@@ -1,6 +1,13 @@
 import { decodeIso8601Duration } from "@svta/cml-iso-8601";
 import { XMLParser } from "fast-xml-parser";
-import type { Manifest, Presentation, SwitchingSet, Track } from "../types";
+import type { ManifestParser } from "../manifest/manifest_parser";
+import type {
+  Manifest,
+  Presentation,
+  Response,
+  SwitchingSet,
+  Track,
+} from "../types";
 import { MediaType } from "../types";
 import type { AdaptationSet, MPD, Period, Representation } from "../types/dash";
 import { assertNotVoid } from "../utils/assert";
@@ -8,6 +15,14 @@ import { filterMap, findMap } from "../utils/functional";
 import { asNumber } from "../utils/parse";
 import { resolveUrls } from "../utils/url";
 import { parseSegmentData } from "./dash_presentation";
+
+export class DashParser implements ManifestParser {
+  mimeTypes = ["application/dash+xml"];
+
+  parse(response: Response<"text">): Manifest {
+    return parseManifest(response.data, response.request.url);
+  }
+}
 
 const DASH_ARRAY_NODES = [
   "Period",
@@ -25,7 +40,7 @@ const DASH_ARRAY_NODES = [
   "Event",
 ];
 
-export async function parseManifest(text: string, sourceUrl: string) {
+function parseManifest(text: string, sourceUrl: string) {
   const parser = new XMLParser({
     ignoreAttributes: false,
     alwaysCreateTextNode: true,

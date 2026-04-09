@@ -1,6 +1,9 @@
-import { Events, Player } from "@bap/player";
+import { Events, ManifestParserRegistry, Player } from "@bap/player";
+import { DashParser } from "@bap/player/dash";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.tsx";
+
+ManifestParserRegistry.add(DashParser);
 
 const player = new Player();
 Object.assign(window, { player });
