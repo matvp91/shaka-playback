@@ -112,10 +112,9 @@ player.load(url)
   → MANIFEST_PARSED
 
 Both MEDIA_ATTACHED and MANIFEST_PARSED received:
-  → StreamController selects tracks
-  → BUFFER_CODECS
+  → StreamController selects streams
+  → BUFFER_CODECS (per type)
   → BufferController creates SourceBuffers
-  → BUFFER_CREATED
   → StreamController tick loop starts
   → BUFFER_APPENDING (init, then media segments)
   → BUFFER_APPENDED
