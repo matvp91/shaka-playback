@@ -10,22 +10,15 @@ export type Manifest = {
 export type Presentation = {
   start: number;
   end: number;
-  selectionSets: SelectionSet[];
-};
-
-/**
- * Groups content by media type, maps 1:1 to a SourceBuffer.
- */
-export type SelectionSet = {
-  type: MediaType;
   switchingSets: SwitchingSet[];
 };
 
 /**
  * CMAF switching set — tracks that can be seamlessly
- * switched between (same codec).
+ * switched between (same codec, same type).
  */
 export type SwitchingSet = {
+  type: MediaType;
   codec: string;
   tracks: Track[];
 };

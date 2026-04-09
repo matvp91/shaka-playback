@@ -9,29 +9,36 @@ import type { Player } from "../player";
 import type {
   InitSegment,
   Manifest,
-  MediaTrack,
   MediaType,
   Presentation,
   Segment,
+  Stream,
   StreamPreference,
   Track,
 } from "../types";
 import type { Request } from "../types/net";
 import { ABORTED, RequestType } from "../types/net";
+import type { ByType } from "../types/utils";
 import { binarySearch } from "../utils/array";
 import { assertNotVoid } from "../utils/assert";
 import { getBufferedEnd } from "../utils/buffer";
 import { getContentType } from "../utils/codec";
-import { getStreams, selectTrack } from "../utils/stream_select";
+import {
+  getStreamAction,
+  getStreams,
+  resolveTrack,
+  selectStream,
+} from "../utils/stream_select";
 import { Timer } from "../utils/timer";
 
 const TICK_INTERVAL = 0.1;
 
-type MediaState = {
-  type: MediaType;
+type MediaState<T extends MediaType = MediaType> = {
+  type: T;
+  stream: ByType<Stream, T>;
   ended: boolean;
   presentation: Presentation;
-  track: Track;
+  track: ByType<Track, T>;
   lastSegment: Segment | null;
   lastInitSegment: InitSegment | null;
   lastRequest: Request<"arrayBuffer"> | null;
@@ -40,6 +47,7 @@ type MediaState = {
 
 export class StreamController {
   private manifest_: Manifest | null = null;
+  private streams_: Stream[] | null = null;
   private media_: HTMLMediaElement | null = null;
   private mediaStates_ = new Map<MediaType, MediaState>();
   private preferences_ = new Map<MediaType, StreamPreference>();
@@ -58,8 +66,8 @@ export class StreamController {
   }
 
   getStreams() {
-    assertNotVoid(this.manifest_, "No Manifest");
-    return getStreams(this.manifest_);
+    assertNotVoid(this.streams_, "No Streams");
+    return this.streams_;
   }
 
   destroy() {
@@ -77,12 +85,14 @@ export class StreamController {
       this.onStreamPreferenceChanged_,
     );
     this.manifest_ = null;
+    this.streams_ = null;
     this.mediaStates_.clear();
     this.preferences_.clear();
   }
 
   private onManifestParsed_ = (event: ManifestParsedEvent) => {
     this.manifest_ = event.manifest;
+    this.streams_ = getStreams(this.manifest_);
     this.tryStart_();
   };
 
@@ -107,13 +117,23 @@ export class StreamController {
       this.networkService_.cancel(mediaState.lastRequest);
     }
 
-    const { track } = selectTrack(
-      this.getStreams(),
-      mediaState.presentation,
-      mediaState.type,
-      preference,
-    );
-    mediaState.track = track;
+    const stream = selectStream(this.getStreams(), preference);
+    const action = getStreamAction(mediaState.stream, stream);
+
+    if (!action) {
+      return;
+    }
+
+    if (action === "changeType") {
+      this.player_.emit(Events.BUFFER_CODECS, {
+        type: mediaState.type,
+        mimeType: getContentType(mediaState.type, stream.codec),
+        duration: this.computeDuration_(),
+      });
+    }
+
+    mediaState.stream = stream;
+    mediaState.track = resolveTrack(mediaState.presentation, stream);
     mediaState.lastSegment = null;
     mediaState.lastInitSegment = null;
   };
@@ -137,22 +157,18 @@ export class StreamController {
     const presentation = this.manifest_.presentations[0];
     assertNotVoid(presentation, "No Presentation found");
 
-    const mediaTracks = new Map<MediaType, MediaTrack>();
-
     const streams = this.getStreams();
     const types = new Set(streams.map((s) => s.type));
 
     for (const type of types) {
-      const preference = this.preferences_.get(type);
-      const { track, stream } = selectTrack(
-        streams,
-        presentation,
-        type,
-        preference,
-      );
+      const preference = this.preferences_.get(type) ?? { type };
+      this.preferences_.set(type, preference);
+      const stream = selectStream(streams, preference);
+      const track = resolveTrack(presentation, stream);
 
       const mediaState: MediaState = {
         type,
+        stream,
         ended: false,
         presentation,
         track,
@@ -163,16 +179,13 @@ export class StreamController {
       };
 
       this.mediaStates_.set(type, mediaState);
-      mediaTracks.set(type, {
+
+      this.player_.emit(Events.BUFFER_CODECS, {
         type,
         mimeType: getContentType(type, stream.codec),
+        duration: this.computeDuration_(),
       });
     }
-
-    this.player_.emit(Events.BUFFER_CODECS, {
-      mediaTracks,
-      duration: this.computeDuration_(),
-    });
 
     for (const mediaState of this.mediaStates_.values()) {
       mediaState.timer.tickEvery(TICK_INTERVAL);
@@ -239,13 +252,7 @@ export class StreamController {
 
     if (presentation !== mediaState.presentation) {
       mediaState.presentation = presentation;
-      const { track } = selectTrack(
-        this.getStreams(),
-        presentation,
-        mediaState.type,
-        this.preferences_.get(mediaState.type),
-      );
-      mediaState.track = track;
+      mediaState.track = resolveTrack(presentation, mediaState.stream);
       mediaState.lastSegment = null;
       return;
     }

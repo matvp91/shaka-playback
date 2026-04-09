@@ -9,17 +9,15 @@ today) outputs this structure. Type definitions live in
 ```
 Manifest
   └── Presentation[]
-        └── SelectionSet[]
-              └── SwitchingSet[]
-                    └── Track[]
-                          └── Segment[]
+        └── SwitchingSet[]
+              └── Track[]
+                    └── Segment[]
 ```
 
 - **Presentation** — time-bounded content period.
-- **SelectionSet** — groups by media type, maps 1:1 to an
+- **SwitchingSet** — CMAF switching set. Tracks with same
+  type and codec, seamlessly switchable. Maps 1:1 to an
   MSE SourceBuffer.
-- **SwitchingSet** — tracks with same codec, seamlessly
-  switchable (CMAF switching set).
 - **Track** — single quality level. Discriminated union on
   `MediaType` — video carries `width`/`height`, audio has
   no additional properties yet.
@@ -39,8 +37,7 @@ rather than replacing the tree.
 |------|----------|
 | MPD | Manifest |
 | Period | Presentation |
-| AdaptationSet (grouped) | SelectionSet |
-| AdaptationSet (within group) | SwitchingSet |
+| AdaptationSet | SwitchingSet |
 | Representation | Track |
 | SegmentTemplate + Timeline | Segment[] + InitSegment |
 

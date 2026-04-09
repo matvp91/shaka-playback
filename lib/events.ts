@@ -1,7 +1,6 @@
 import type {
   InitSegment,
   Manifest,
-  MediaTrack,
   MediaType,
   Segment,
   StreamPreference,
@@ -41,7 +40,8 @@ export type MediaAttachedEvent = {
 };
 
 export type BufferCodecsEvent = {
-  mediaTracks: Map<MediaType, MediaTrack>;
+  type: MediaType;
+  mimeType: string;
   duration: number;
 };
 

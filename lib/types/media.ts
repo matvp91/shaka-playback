@@ -3,8 +3,3 @@ export enum MediaType {
   AUDIO = "audio",
   TEXT = "text",
 }
-
-export type MediaTrack = {
-  type: MediaType;
-  mimeType: string;
-};

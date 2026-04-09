@@ -49,9 +49,7 @@ export class BufferController {
 
   flush(type: MediaType) {
     const sb = this.sourceBuffers_.get(type);
-    if (!sb || sb.buffered.length === 0) {
-      return;
-    }
+    assertNotVoid(sb, `No SourceBuffer for ${type}`);
     this.opQueue_.enqueue(type, {
       execute: () => {
         sb.remove(0, Infinity);
@@ -81,17 +79,20 @@ export class BufferController {
     if (!this.mediaSource_) {
       return;
     }
-    for (const [type, track] of event.mediaTracks) {
-      if (this.sourceBuffers_.has(type)) {
-        continue;
-      }
-      const sb = this.mediaSource_.addSourceBuffer(track.mimeType);
-      this.sourceBuffers_.set(type, sb);
-      this.opQueue_.add(type, sb);
-      sb.addEventListener("updateend", () => {
-        this.opQueue_.shiftAndExecuteNext(type);
-      });
+
+    const { type, mimeType } = event;
+    if (this.sourceBuffers_.has(type)) {
+      return;
     }
+
+    const sb = this.mediaSource_.addSourceBuffer(mimeType);
+    this.sourceBuffers_.set(type, sb);
+    this.opQueue_.add(type, sb);
+
+    sb.addEventListener("updateend", () => {
+      this.opQueue_.shiftAndExecuteNext(type);
+    });
+
     this.duration_ = event.duration;
     this.updateDuration_();
   };
