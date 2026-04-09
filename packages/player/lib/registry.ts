@@ -2,29 +2,24 @@ import type { ManifestParser } from "./manifest/manifest_parser";
 import type { Player } from "./player";
 import type { ArrayMap } from "./types/helper";
 
-type RegistryTypeMap = {
-  [RegistryType.MANIFEST_PARSER]: ManifestParser;
-};
-
-type Factory<T> = new (player: Player) => T;
-
-type FactoryMap = {
-  [K in keyof RegistryTypeMap]: Factory<RegistryTypeMap[K]>[];
-};
-
-type InstanceMap = ArrayMap<RegistryTypeMap>;
-
 export enum RegistryType {
   MANIFEST_PARSER = "manifestParser",
 }
 
+type RegistryTypeMap = {
+  [RegistryType.MANIFEST_PARSER]: ManifestParser;
+};
+
 export class Registry {
-  private static factories_: FactoryMap = {
+  private static components_: ComponentMap = {
     [RegistryType.MANIFEST_PARSER]: [],
   };
 
-  static add<T extends RegistryType>(type: T, factory: Factory<RegistryTypeMap[T]>) {
-    Registry.factories_[type].push(factory);
+  static add<T extends RegistryType>(
+    type: T,
+    component: Component<RegistryTypeMap[T]>,
+  ) {
+    Registry.components_[type].push(component);
   }
 
   private instances_: InstanceMap = {
@@ -33,7 +28,7 @@ export class Registry {
 
   constructor(player: Player) {
     for (const type of Object.values(RegistryType)) {
-      this.instances_[type] = Registry.factories_[type].map(
+      this.instances_[type] = Registry.components_[type].map(
         (Ctor) => new Ctor(player),
       );
     }
@@ -43,3 +38,11 @@ export class Registry {
     return this.instances_[type];
   }
 }
+
+type Component<T> = new (player: Player) => T;
+
+type ComponentMap = {
+  [K in keyof RegistryTypeMap]: Component<RegistryTypeMap[K]>[];
+};
+
+type InstanceMap = ArrayMap<RegistryTypeMap>;
