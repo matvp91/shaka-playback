@@ -65,7 +65,7 @@ function getData(player: Player): BufferData | null {
  * within the seekable range. Returns "0%" if seekable
  * is null.
  */
-function _toPosition(time: string, seekable: TimeRange | null): string {
+function toPosition(time: string, seekable: TimeRange | null): string {
   if (!seekable) {
     return "0%";
   }
@@ -83,7 +83,7 @@ function _toPosition(time: string, seekable: TimeRange | null): string {
  * Converts a TimeRange to CSS left/width percentage
  * strings within the seekable range.
  */
-function _toBarStyle(
+function toBarStyle(
   range: TimeRange,
   seekable: TimeRange | null,
 ): { left: string; width: string } {
@@ -109,7 +109,7 @@ function _toBarStyle(
  * and returns ahead/behind distances. Returns null
  * if currentTime is not inside any range.
  */
-function _getBufferStat(
+function getBufferStat(
   ranges: TimeRange[],
   currentTime: string,
 ): { ahead: string; behind: string } | null {
