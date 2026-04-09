@@ -1,9 +1,9 @@
-# playback — Architecture & Technical Design
+# @bap/player — Architecture & Technical Design
 
 ## Overview
 
-CMAF-compliant media player library in TypeScript. Extends the
-HTML `<video>` element with adaptive streaming by parsing
+CMAF-compliant media player library in TypeScript. Augments
+the HTML `<video>` element with adaptive streaming by parsing
 manifests into an internal model, fetching segments, and
 buffering them through MSE.
 
@@ -16,7 +16,7 @@ buffering them through MSE.
 
 ### Non-goals (for now)
 
-- Plugin API, DRM, UI/chrome, ABR
+- DRM, UI/chrome, ABR
 
 ## Principles
 
@@ -45,10 +45,12 @@ Central class with three roles:
 
 1. **Event bus** — all controller communication flows through
    `EventEmitter`. Controllers never call each other directly.
-2. **Controller registry** — instantiates and holds all
-   controllers.
+2. **Owner** — instantiates and holds controllers,
+   NetworkService, and the component Registry.
 3. **Public API** — `load()`, `attachMedia()`, `detachMedia()`,
-   `getConfig()`, `setConfig()`.
+   `destroy()`, `getConfig()`, `setConfig()`,
+   `setPreference()`, `getStreams()`, `getBuffered()`,
+   `getMedia()`, `getRegistry()`, `getNetworkService()`.
 
 ## Controllers
 
@@ -58,8 +60,9 @@ event listeners, has a single responsibility, and provides
 
 ### ManifestController
 
-Fetches and parses manifests via NetworkService. Emits the
-parsed Manifest for downstream controllers.
+Fetches manifests via NetworkService and delegates parsing
+to a ManifestParser resolved through the Registry. Emits
+the parsed Manifest for downstream controllers.
 
 ### BufferController
 
@@ -72,15 +75,22 @@ operation at a time per SourceBuffer). Computes
 ### StreamController
 
 Orchestrates segment loading. Waits for both manifest and
-media to be ready, selects initial tracks, then runs a tick
-loop per media type that checks the buffer goal and fetches
-the next segment. Handles presentation transitions and
-seeking.
+media to be ready, selects initial streams (resolved to
+tracks per presentation), then runs a tick loop per media
+type that checks the buffer goal and fetches the next
+segment. Handles presentation transitions and seeking.
 
 ### GapController
 
 Detects playback stalls and jumps small gaps (up to 2s) to
 keep playback moving.
+
+## Registry
+
+Static component registry for extensible implementations.
+External code registers components (e.g., `DashParser`) via
+`Registry.add()`. Controllers resolve them at runtime through
+`player.getRegistry()`. Currently supports manifest parsers.
 
 ## Network Layer
 

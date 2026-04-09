@@ -11,8 +11,12 @@ CMAF-compliant media player library extending the HTML `<video>` element with ad
 
 - `lib/` — source code
   - `player.ts` — central Player class
-  - `controllers/` — event-driven controllers
+  - `config.ts` — player configuration and defaults
+  - `events.ts` — event definitions and type map
+  - `registry.ts` — extensible component registry
+  - `manifest/` — manifest loading and parser base class
+  - `media/` — buffer, stream, and gap controllers
   - `dash/` — DASH MPD parser
-  - `net/` — network layer
-  - `types/` — manifest model types
+  - `net/` — network service and response
+  - `types/` — manifest, media, and network types
   - `utils/` — shared helpers
