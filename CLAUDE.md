@@ -15,9 +15,9 @@ pnpm monorepo for BAP (Barely A Player).
 
 ## Scripts
 
-- `pnpm dev` — run demo dev server
-- `pnpm build` — build player library
-- `pnpm format` — format and lint with Biome
+- `pnpm dev` — run dev in all packages
+- `pnpm build` — build all packages
+- `pnpm format` — format and lint all packages
 - `pnpm tsc` — type check all packages
 
 ## Superpowers
