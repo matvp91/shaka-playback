@@ -1,4 +1,4 @@
-import type { MediaType } from "..";
+import type { MediaType } from "./media";
 
 export type Manifest = {
   presentations: Presentation[];

@@ -1,20 +1,25 @@
 import type {
-  ByType,
-  InitSegment,
-  Manifest,
   ManifestParsedEvent,
   MediaAttachedEvent,
-  MediaType,
-  NetworkRequest,
-  Player,
+  StreamPreferenceChangedEvent,
+} from "../events";
+import { Events } from "../events";
+import type { Player } from "../player";
+import type {
+  InitSegment,
+  Manifest,
   Presentation,
   Segment,
+  Track,
+} from "../types/manifest";
+import type {
+  ByType,
+  MediaType,
   Stream,
   StreamPreference,
-  StreamPreferenceChangedEvent,
-  Track,
-} from "..";
-import { ABORTED, Events, NetworkRequestType } from "..";
+} from "../types/media";
+import type { NetworkRequest } from "../types/net";
+import { ABORTED, NetworkRequestType } from "../types/net";
 import { binarySearch } from "../utils/array";
 import { assertNotVoid } from "../utils/assert";
 import { getBufferedEnd } from "../utils/buffer";

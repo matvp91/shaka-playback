@@ -1,5 +1,6 @@
-import type { MediaAttachedEvent, Player } from "..";
-import { Events } from "..";
+import type { MediaAttachedEvent } from "../events";
+import { Events } from "../events";
+import type { Player } from "../player";
 import { getNextBufferedStart } from "../utils/buffer";
 import { Timer } from "../utils/timer";
 

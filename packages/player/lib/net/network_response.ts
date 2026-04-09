@@ -1,4 +1,4 @@
-import type { NetworkRequest } from "./types";
+import type { NetworkRequest } from "../types/net";
 
 const decoder = new TextDecoder();
 

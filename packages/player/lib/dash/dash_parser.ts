@@ -1,13 +1,18 @@
 import { decodeIso8601Duration } from "@svta/cml-iso-8601";
 import { XMLParser } from "fast-xml-parser";
-import type { Manifest, Presentation, SwitchingSet, Track } from "..";
-import { MediaType } from "..";
+import type {
+  Manifest,
+  Presentation,
+  SwitchingSet,
+  Track,
+} from "../types/manifest";
+import { MediaType } from "../types/media";
 import { assertNotVoid } from "../utils/assert";
 import { filterMap, findMap } from "../utils/functional";
 import { asNumber } from "../utils/parse";
 import { resolveUrls } from "../utils/url";
 import { parseSegmentData } from "./dash_presentation";
-import type { AdaptationSet, MPD, Period, Representation } from "./types";
+import type { AdaptationSet, MPD, Period, Representation } from "./dash_types";
 
 const DASH_ARRAY_NODES = [
   "Period",

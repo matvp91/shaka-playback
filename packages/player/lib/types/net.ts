@@ -1,4 +1,4 @@
-import type { NetworkResponse } from "./network_response";
+import type { NetworkResponse } from "../net/network_response";
 
 export enum NetworkRequestType {
   MANIFEST = "manifest",

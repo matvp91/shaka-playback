@@ -2,12 +2,12 @@ import type {
   BufferAppendedEvent,
   BufferAppendingEvent,
   BufferCodecsEvent,
-  InitSegment,
   MediaAttachingEvent,
-  MediaType,
-  Player,
-} from "..";
-import { Events } from "..";
+} from "../events";
+import { Events } from "../events";
+import type { Player } from "../player";
+import type { InitSegment } from "../types/manifest";
+import type { MediaType } from "../types/media";
 import { assertNotVoid } from "../utils/assert";
 import { parseBaseMediaDecodeTime, parseTimescale } from "../utils/mp4";
 import { OperationQueue } from "./operation_queue";

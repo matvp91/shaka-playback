@@ -1,8 +1,8 @@
-import type { Player } from "..";
-import { Events } from "..";
+import { Events } from "../events";
+import type { Player } from "../player";
+import type { NetworkRequest, NetworkRequestType } from "../types/net";
+import { ABORTED } from "../types/net";
 import { NetworkResponse } from "./network_response";
-import type { NetworkRequest, NetworkRequestType } from "./types";
-import { ABORTED } from "./types";
 
 /**
  * Central service for all network requests. Owns request

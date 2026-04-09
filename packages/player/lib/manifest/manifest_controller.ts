@@ -1,5 +1,8 @@
-import type { ManifestLoadingEvent, NetworkRequest, Player } from "..";
-import { ABORTED, Events, NetworkRequestType } from "..";
+import type { ManifestLoadingEvent } from "../events";
+import { Events } from "../events";
+import type { Player } from "../player";
+import type { NetworkRequest } from "../types/net";
+import { ABORTED, NetworkRequestType } from "../types/net";
 import { assertNotVoid } from "../utils/assert";
 import { ManifestParserRegistry } from "./manifest_parser";
 
