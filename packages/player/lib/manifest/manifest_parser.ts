@@ -1,9 +1,8 @@
-import type { Player } from "../player";
-import type { Manifest, Response } from "../types";
+import type { Manifest, NetworkResponse, Player } from "..";
 
 export interface ManifestParser {
   mimeTypes: string[];
-  parse(response: Response): Manifest;
+  parse(response: NetworkResponse): Manifest;
 }
 
 export interface ManifestParserConstructor {

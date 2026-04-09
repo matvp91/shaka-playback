@@ -1,13 +1,10 @@
-import type { ManifestLoadingEvent } from "../events";
-import { Events } from "../events";
-import type { Player } from "../player";
-import type { Request } from "../types/net";
-import { ABORTED, RequestType } from "../types/net";
+import type { ManifestLoadingEvent, NetworkRequest, Player } from "..";
+import { ABORTED, Events, NetworkRequestType } from "..";
 import { assertNotVoid } from "../utils/assert";
 import { ManifestParserRegistry } from "./manifest_parser";
 
 export class ManifestController {
-  private request_: Request<"text"> | null = null;
+  private request_: NetworkRequest | null = null;
 
   private registry_: ManifestParserRegistry;
 
@@ -27,9 +24,8 @@ export class ManifestController {
   private onManifestLoading_ = async (event: ManifestLoadingEvent) => {
     const networkService = this.player_.getNetworkService();
     this.request_ = networkService.request(
-      RequestType.MANIFEST,
+      NetworkRequestType.MANIFEST,
       event.url,
-      "text",
     );
 
     const response = await this.request_.promise;

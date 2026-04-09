@@ -1,4 +1,4 @@
-import type { MediaType } from "../types";
+import type { MediaType } from "..";
 
 /**
  * Get MSE content type from MediaType and codec.

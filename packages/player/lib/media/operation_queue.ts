@@ -1,4 +1,4 @@
-import type { MediaType } from "../types";
+import type { MediaType } from "..";
 import { assertNotVoid } from "../utils/assert";
 
 type Operation = {

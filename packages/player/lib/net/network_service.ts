@@ -1,20 +1,15 @@
-import { Events } from "../events";
-import type { Player } from "../player";
-import type {
-  Request,
-  RequestPromise,
-  RequestType,
-  Response,
-  ResponseType,
-} from "../types/net";
-import { ABORTED } from "../types/net";
+import type { Player } from "..";
+import { Events } from "..";
+import { NetworkResponse } from "./network_response";
+import type { NetworkRequest, NetworkRequestType } from "./types";
+import { ABORTED } from "./types";
 
 /**
  * Central service for all network requests. Owns request
  * construction, fetch execution, and cancellation.
  */
 export class NetworkService {
-  private controllers_ = new Map<Request, AbortController>();
+  private controllers_ = new Map<NetworkRequest, AbortController>();
 
   constructor(private player_: Player) {}
 
@@ -22,21 +17,16 @@ export class NetworkService {
    * Construct and start a request. Emits NETWORK_REQUEST
    * synchronously before fetch, allowing listener mutation.
    */
-  request<T extends ResponseType>(
-    type: RequestType,
-    url: string,
-    responseType: T,
-  ): Request<T> {
+  request(type: NetworkRequestType, url: string): NetworkRequest {
     const controller = new AbortController();
 
     const request = {
       url,
       method: "GET",
       headers: new Headers(),
-      responseType,
       inFlight: true,
       cancelled: false,
-    } as Request<T>;
+    } as NetworkRequest;
 
     this.controllers_.set(request, controller);
 
@@ -45,16 +35,12 @@ export class NetworkService {
       request,
     });
 
-    request.promise = this.doFetch_(
-      type,
-      request,
-      controller.signal,
-    ) as RequestPromise<T>;
+    request.promise = this.doFetch_(type, request, controller.signal);
 
     return request;
   }
 
-  cancel(request: Request) {
+  cancel(request: NetworkRequest) {
     const controller = this.controllers_.get(request);
     if (!controller) {
       return;
@@ -71,16 +57,15 @@ export class NetworkService {
    * and clean up state in all cases.
    */
   private async doFetch_(
-    type: RequestType,
-    request: Request,
+    type: NetworkRequestType,
+    request: NetworkRequest,
     signal: AbortSignal,
-  ): Promise<Response | typeof ABORTED> {
+  ): Promise<NetworkResponse | typeof ABORTED> {
     try {
       const response = await this.fetch_(request, signal);
 
       this.player_.emit(Events.NETWORK_RESPONSE, {
         type,
-        request,
         response,
       });
 
@@ -97,9 +82,9 @@ export class NetworkService {
   }
 
   private async fetch_(
-    request: Request,
+    request: NetworkRequest,
     signal: AbortSignal,
-  ): Promise<Response> {
+  ): Promise<NetworkResponse> {
     const start = performance.now();
 
     const res = await fetch(request.url, {
@@ -112,19 +97,16 @@ export class NetworkService {
       throw new Error(`HTTP ${res.status} ${res.statusText}`);
     }
 
-    const data =
-      request.responseType === "text"
-        ? await res.text()
-        : await res.arrayBuffer();
+    const data = await res.arrayBuffer();
     const timeElapsed = performance.now() - start;
 
-    return {
+    return new NetworkResponse(
       request,
-      status: res.status,
-      headers: res.headers,
-      data,
+      res.status,
+      res.headers,
       timeElapsed,
-    };
+      data,
+    );
   }
 }
 

@@ -1,14 +1,11 @@
 import { EventEmitter } from "@matvp91/eventemitter3";
-import type { PlayerConfig } from "./config";
-import { defaultConfig } from "./config";
-import type { EventMap } from "./events";
-import { Events } from "./events";
+import type { EventMap, MediaType, PlayerConfig, StreamPreference } from ".";
+import { defaultConfig, Events } from ".";
 import { ManifestController } from "./manifest/manifest_controller";
 import { BufferController } from "./media/buffer_controller";
 import { GapController } from "./media/gap_controller";
 import { StreamController } from "./media/stream_controller";
 import { NetworkService } from "./net/network_service";
-import type { MediaType, StreamPreference } from "./types";
 
 export class Player extends EventEmitter<EventMap> {
   private config_ = defaultConfig;
