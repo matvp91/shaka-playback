@@ -4,10 +4,9 @@ export type ResponseType = "arrayBuffer" | "text";
 
 export const ABORTED: unique symbol = Symbol("ABORTED");
 
-type ResponseData = {
-  arrayBuffer: ArrayBuffer;
-  text: string;
-};
+export type RequestPromise<T extends ResponseType = ResponseType> = Promise<
+  Response<T> | typeof ABORTED
+>;
 
 export type Request<T extends ResponseType = ResponseType> = {
   url: string;
@@ -16,13 +15,16 @@ export type Request<T extends ResponseType = ResponseType> = {
   responseType: T;
   inFlight: boolean;
   cancelled: boolean;
-  promise: Promise<Response<T> | typeof ABORTED>;
+  promise: RequestPromise<T>;
 };
 
 export type Response<T extends ResponseType = ResponseType> = {
   request: Request<T>;
   status: number;
   headers: Headers;
-  data: ResponseData[T];
+  data: {
+    arrayBuffer: ArrayBuffer;
+    text: string;
+  }[T];
   timeElapsed: number;
 };

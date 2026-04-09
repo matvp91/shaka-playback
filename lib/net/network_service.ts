@@ -1,6 +1,6 @@
 import { Events } from "../events";
 import type { Player } from "../player";
-import type { Request, Response, ResponseType } from "./types";
+import type { Request, RequestPromise, Response, ResponseType } from "./types";
 import { ABORTED } from "./types";
 
 export enum RequestType {
@@ -54,7 +54,7 @@ export class NetworkService {
       type,
       request,
       controller.signal,
-    ) as Request<T>["promise"];
+    ) as RequestPromise<T>;
 
     return request;
   }
@@ -80,7 +80,7 @@ export class NetworkService {
     type: RequestType,
     request: Request,
     signal: AbortSignal,
-  ): Promise<Response | typeof ABORTED> {
+  ): RequestPromise {
     try {
       const response = await this.fetch_(request, signal);
 
