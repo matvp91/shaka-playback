@@ -8,16 +8,12 @@ import type { Player } from "../player";
 import type {
   InitSegment,
   Manifest,
-  Presentation,
   Segment,
+  SwitchingSet,
   Track,
 } from "../types/manifest";
-import type {
-  ByType,
-  MediaType,
-  Stream,
-  StreamPreference,
-} from "../types/media";
+import type { ByType, Stream, StreamPreference } from "../types/media";
+import { MediaType } from "../types/media";
 import type { NetworkRequest } from "../types/net";
 import { ABORTED, NetworkRequestType } from "../types/net";
 import * as ArrayUtils from "../utils/array_utils";
@@ -30,16 +26,67 @@ import { Timer } from "../utils/timer";
 const TICK_INTERVAL = 0.1;
 
 type MediaState<T extends MediaType = MediaType> = {
+  /** Identity */
   type: T;
   stream: ByType<Stream, T>;
-  ended: boolean;
-  presentation: Presentation;
+
+  /** Hierarchy */
+  switchingSet: SwitchingSet;
   track: ByType<Track, T>;
+
+  /** Delivery */
   lastSegment: Segment | null;
   lastInitSegment: InitSegment | null;
-  lastRequest: NetworkRequest | null;
+
+  /** Operational */
+  request: NetworkRequest | null;
+  ended: boolean;
   timer: Timer;
 };
+
+/**
+ * Find the SwitchingSet and Track matching a stream.
+ */
+function resolveHierarchy(
+  manifest: Manifest,
+  stream: Stream,
+): { switchingSet: SwitchingSet; track: Track } {
+  for (const switchingSet of manifest.switchingSets) {
+    if (
+      switchingSet.type !== stream.type ||
+      switchingSet.codec !== stream.codec
+    ) {
+      continue;
+    }
+    for (const track of switchingSet.tracks) {
+      if (
+        stream.type !== MediaType.VIDEO ||
+        track.type !== MediaType.VIDEO ||
+        (stream.width === track.width && stream.height === track.height)
+      ) {
+        return { switchingSet, track };
+      }
+    }
+  }
+  throw new Error("No matching hierarchy for stream");
+}
+
+/**
+ * Remap a segment to the equivalent position in a
+ * different track. CMAF guarantees aligned segments
+ * within a SwitchingSet.
+ */
+function remapSegment(
+  oldTrack: Track,
+  newTrack: Track,
+  lastSegment: Segment,
+): Segment {
+  const index = oldTrack.segments.indexOf(lastSegment);
+  asserts.assert(index !== -1, "Segment not found in old track");
+  const segment = newTrack.segments[index];
+  asserts.assertExists(segment, "Segment index out of bounds in new track");
+  return segment;
+}
 
 export class StreamController {
   private manifest_: Manifest | null = null;
@@ -72,8 +119,8 @@ export class StreamController {
   destroy() {
     const networkService = this.player_.getNetworkService();
     for (const mediaState of this.mediaStates_.values()) {
-      if (mediaState.lastRequest) {
-        networkService.cancel(mediaState.lastRequest);
+      if (mediaState.request) {
+        networkService.cancel(mediaState.request);
       }
       mediaState.timer.destroy();
     }
@@ -116,37 +163,55 @@ export class StreamController {
 
     const stream = StreamUtils.selectStream(this.getStreams(), preference);
     if (stream === mediaState.stream) {
-      // Stream is the same, there is nothing to do.
       return;
     }
 
     const networkService = this.player_.getNetworkService();
-    if (mediaState.lastRequest) {
-      networkService.cancel(mediaState.lastRequest);
+    if (mediaState.request) {
+      networkService.cancel(mediaState.request);
     }
 
     const oldTrack = mediaState.track;
-    const track = StreamUtils.resolveTrack(mediaState.presentation, stream);
+    const { switchingSet, track } = resolveHierarchy(
+      this.manifest_,
+      stream,
+    );
 
-    // TODO(matvp): This is how we'll signal a new buffer codec. We'll use this
-    // when we support MSE changeType.
-    // this.player_.emit(Events.BUFFER_CODECS, {
-    //   type: mediaState.type,
-    //   mimeType: CodecUtils.getContentType(mediaState.type, stream.codec),
-    //   duration: this.manifest_.duration,
-    // });
+    if (switchingSet !== mediaState.switchingSet) {
+      this.player_.emit(Events.BUFFER_CODECS, {
+        type: mediaState.type,
+        mimeType: CodecUtils.getContentType(mediaState.type, stream.codec),
+        duration: this.manifest_.duration,
+      });
+    }
+
+    if (track !== oldTrack && mediaState.lastSegment) {
+      if (switchingSet === mediaState.switchingSet) {
+        mediaState.lastSegment = remapSegment(
+          oldTrack, track, mediaState.lastSegment,
+        );
+      } else {
+        // Codec switch: segments may not align across
+        // SwitchingSets, use time-based lookup to find
+        // position in new track.
+        const lookupTime = mediaState.lastSegment.end;
+        mediaState.lastSegment = this.getSegmentForTime_(
+          track, lookupTime,
+        );
+      }
+    }
 
     mediaState.stream = stream;
+    mediaState.switchingSet = switchingSet;
     mediaState.track = track;
-    mediaState.lastSegment = null;
-    mediaState.lastInitSegment = null;
+    this.update_(mediaState);
   };
 
   private onMediaDetached_ = () => {
     const networkService = this.player_.getNetworkService();
     for (const mediaState of this.mediaStates_.values()) {
-      if (mediaState.lastRequest) {
-        networkService.cancel(mediaState.lastRequest);
+      if (mediaState.request) {
+        networkService.cancel(mediaState.request);
       }
       mediaState.timer.stop();
     }
@@ -159,9 +224,6 @@ export class StreamController {
       return;
     }
 
-    const presentation = this.manifest_.presentations[0];
-    asserts.assertExists(presentation, "No Presentation found");
-
     const streams = this.getStreams();
     const types = new Set(streams.map((s) => s.type));
 
@@ -169,17 +231,19 @@ export class StreamController {
       const preference = this.preferences_.get(type) ?? { type };
       this.preferences_.set(type, preference);
       const stream = StreamUtils.selectStream(streams, preference);
-      const track = StreamUtils.resolveTrack(presentation, stream);
+      const { switchingSet, track } = resolveHierarchy(
+        this.manifest_, stream,
+      );
 
       const mediaState: MediaState = {
         type,
         stream,
-        ended: false,
-        presentation,
+        switchingSet,
         track,
+        ended: false,
         lastSegment: null,
         lastInitSegment: null,
-        lastRequest: null,
+        request: null,
         timer: new Timer(() => this.update_(mediaState)),
       };
 
@@ -198,11 +262,11 @@ export class StreamController {
   }
 
   /**
-   * Core streaming decision for a single track. Runs every
-   * 100ms tick — kicks off async fetch but does not await.
+   * Core streaming tick. Finds the next segment to fetch
+   * via sequential index or time-based lookup.
    */
   private update_(mediaState: MediaState) {
-    if (mediaState.ended || mediaState.lastRequest?.inFlight) {
+    if (mediaState.ended || mediaState.request?.inFlight) {
       return;
     }
     if (!this.media_) {
@@ -224,62 +288,23 @@ export class StreamController {
       : this.getSegmentForTime_(mediaState.track, lookupTime);
 
     if (!segment) {
-      this.advanceOrEnd_(mediaState, lookupTime);
-      return;
-    }
-
-    if (mediaState.track.initSegment !== mediaState.lastInitSegment) {
-      this.loadSegment_(mediaState, mediaState.track.initSegment, null);
-      return;
-    }
-
-    this.loadSegment_(mediaState, mediaState.track.initSegment, segment);
-  }
-
-  /**
-   * No segment found — advance to next presentation
-   * or signal end of stream.
-   */
-  private advanceOrEnd_(mediaState: MediaState, lookupTime: number) {
-    asserts.assertExists(this.manifest_, "No Manifest");
-
-    // Sequential path resolves at the presentation
-    // boundary. Time-based path (seek or buffer-lost)
-    // resolves at the lookup time.
-    const time = mediaState.lastSegment
-      ? mediaState.presentation.end
-      : lookupTime;
-
-    const presentation = this.getPresentationForTime_(time);
-    if (!presentation) {
       mediaState.ended = true;
       this.checkEndOfStream_();
       return;
     }
 
-    if (presentation !== mediaState.presentation) {
-      mediaState.presentation = presentation;
-      mediaState.track = StreamUtils.resolveTrack(
-        presentation,
-        mediaState.stream,
-      );
-      mediaState.lastSegment = null;
+    if (segment.initSegment !== mediaState.lastInitSegment) {
+      this.loadSegment_(mediaState, segment.initSegment, null);
       return;
     }
 
-    // Same presentation, no segment — check EOS.
-    // Float precision means bufferEnd may never
-    // exactly reach the duration (Shaka v2).
-    const duration = this.manifest_.duration;
-    if (lookupTime >= duration - 1e-6) {
-      mediaState.ended = true;
-      this.checkEndOfStream_();
-    }
+    this.loadSegment_(mediaState, segment.initSegment, segment);
   }
 
   /**
-   * Fetch an init or media segment and emit BUFFER_APPENDING.
-   * State is updated only after the fetch resolves.
+   * Fetch an init or media segment and emit
+   * BUFFER_APPENDING. State is updated only after
+   * the fetch resolves.
    */
   private async loadSegment_(
     mediaState: MediaState,
@@ -289,12 +314,12 @@ export class StreamController {
     const networkService = this.player_.getNetworkService();
     const url = segment?.url ?? initSegment.url;
 
-    mediaState.lastRequest = networkService.request(
+    mediaState.request = networkService.request(
       NetworkRequestType.SEGMENT,
       url,
     );
 
-    const response = await mediaState.lastRequest.promise;
+    const response = await mediaState.request.promise;
     if (response === ABORTED) {
       return;
     }
@@ -313,22 +338,6 @@ export class StreamController {
     });
   }
 
-  /**
-   * Returns the first presentation whose end is past the
-   * given time, handling gaps and float-precision at boundaries.
-   */
-  private getPresentationForTime_(time: number): Presentation | null {
-    if (!this.manifest_) {
-      return null;
-    }
-    for (const p of this.manifest_.presentations) {
-      if (time < p.end) {
-        return p;
-      }
-    }
-    return null;
-  }
-
   private getBufferEnd_(type: MediaType, time: number): number | null {
     const { maxBufferHole } = this.player_.getConfig();
     const buffered = this.player_.getBuffered(type);
@@ -343,7 +352,8 @@ export class StreamController {
   }
 
   /**
-   * Binary search for the segment containing the given time.
+   * Binary search for the segment containing the given
+   * time.
    */
   private getSegmentForTime_(track: Track, time: number): Segment | null {
     const { maxSegmentLookupTolerance } = this.player_.getConfig();
@@ -366,7 +376,9 @@ export class StreamController {
   }
 
   private checkEndOfStream_() {
-    const allDone = [...this.mediaStates_.values()].every((ms) => ms.ended);
+    const allDone = [...this.mediaStates_.values()].every(
+      (ms) => ms.ended,
+    );
     if (allDone) {
       this.player_.emit(Events.BUFFER_EOS);
     }
@@ -375,9 +387,9 @@ export class StreamController {
   private onSeeking_ = () => {
     for (const mediaState of this.mediaStates_.values()) {
       mediaState.ended = false;
-      if (mediaState.lastRequest) {
+      if (mediaState.request) {
         const networkService = this.player_.getNetworkService();
-        networkService.cancel(mediaState.lastRequest);
+        networkService.cancel(mediaState.request);
       }
       mediaState.lastSegment = null;
       this.update_(mediaState);
