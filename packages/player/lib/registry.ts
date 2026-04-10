@@ -1,50 +1,43 @@
 import type { ManifestParser } from "./manifest/manifest_parser";
 import type { Player } from "./player";
-import type { ArrayMap } from "./types/helper";
 
 export enum RegistryType {
-  MANIFEST_PARSER = "manifestParser",
+  MANIFEST_PARSER,
 }
 
-type RegistryTypeMap = {
+export type RegistoryComponentCtor<T> = new (player: Player) => T;
+
+interface RegistryTypeMap {
   [RegistryType.MANIFEST_PARSER]: ManifestParser;
-};
+}
 
 export class Registry {
-  private static components_: ComponentMap = {
-    [RegistryType.MANIFEST_PARSER]: [],
-  };
+  private static entries_ = new Set<
+    [RegistryType, RegistoryComponentCtor<object>]
+  >();
 
   static add<T extends RegistryType>(
     type: T,
-    component: Component<RegistryTypeMap[T]>,
+    Ctor: RegistoryComponentCtor<RegistryTypeMap[T]>,
   ) {
-    Registry.components_[type].push(component);
+    Registry.entries_.add([type, Ctor]);
   }
 
-  private instances_: InstanceMap = {
-    [RegistryType.MANIFEST_PARSER]: [],
-  };
+  private components_ = new Set<[RegistryType, object]>();
 
   constructor(player: Player) {
-    this.construct_(RegistryType.MANIFEST_PARSER, player);
+    for (const [type, Ctor] of Registry.entries_) {
+      this.components_.add([type, new Ctor(player)]);
+    }
   }
 
-  private construct_<T extends RegistryType>(type: T, player: Player) {
-    (this.instances_[type] as RegistryTypeMap[T][]) = Registry.components_[
-      type
-    ].map((Ctor) => new Ctor(player));
-  }
-
-  get<T extends RegistryType>(type: T): InstanceMap[T] {
-    return this.instances_[type];
+  get<T extends RegistryType>(type: T) {
+    const instances = [];
+    for (const [key, instance] of this.components_) {
+      if (key === type) {
+        instances.push(instance as RegistryTypeMap[T]);
+      }
+    }
+    return instances;
   }
 }
-
-type Component<T> = new (player: Player) => T;
-
-type ComponentMap = {
-  [K in keyof RegistryTypeMap]: Component<RegistryTypeMap[K]>[];
-};
-
-type InstanceMap = ArrayMap<RegistryTypeMap>;
