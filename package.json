@@ -1,5 +1,4 @@
 {
-  "name": "bap",
   "private": true,
   "scripts": {
     "build": "pnpm -r build",

@@ -1,5 +1,5 @@
 {
-  "name": "@bap/player",
+  "name": "cmaf-lite",
   "type": "module",
   "main": "./dist/main.js",
   "module": "./dist/main.js",

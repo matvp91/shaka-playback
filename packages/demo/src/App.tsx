@@ -1,5 +1,5 @@
-import type { Player } from "@bap/player";
-import { MediaType } from "@bap/player";
+import type { Player } from "cmaf-lite";
+import { MediaType } from "cmaf-lite";
 import { BufferGraph } from "./components/buffer-graph/BufferGraph";
 import type { BufferData, TimeRange } from "./types";
 

@@ -1,4 +1,4 @@
-# @bap/player
+# cmaf-lite
 
 CMAF-compliant media player library extending the HTML `<video>` element with adaptive streaming. Currently supports DASH manifest parsing with an event-driven controller architecture.
 

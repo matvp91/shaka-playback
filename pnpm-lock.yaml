@@ -17,12 +17,12 @@ importers:
 
   packages/demo:
     dependencies:
-      '@bap/player':
-        specifier: workspace:*
-        version: link:../player
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      cmaf-lite:
+        specifier: workspace:*
+        version: link:../player
       react:
         specifier: ^19.2.5
         version: 19.2.5
@@ -50,7 +50,7 @@ importers:
         version: 4.2.2
       vite:
         specifier: ^8.0.3
-        version: 8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.7)
+        version: 8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
 
   packages/player:
     dependencies:
@@ -78,7 +78,7 @@ importers:
         version: 25.5.2
       tsup:
         specifier: ^8.5.1
-        version: 8.5.1
+        version: 8.5.1(typescript@5.9.3)
 
 packages:
 
@@ -1003,7 +1003,7 @@ packages:
       '@tailwindcss/node': 4.2.2
       '@tailwindcss/oxide': 4.2.2
       tailwindcss: 4.2.2
-      vite: 8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.7)
+      vite: 8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
     dev: true
 
   /@tybys/wasm-util@0.10.1:
@@ -1052,7 +1052,7 @@ packages:
         optional: true
     dependencies:
       '@rolldown/pluginutils': 1.0.0-rc.7
-      vite: 8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.7)
+      vite: 8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
     dev: true
 
   /acorn@8.16.0:
@@ -1628,7 +1628,7 @@ packages:
     dev: true
     optional: true
 
-  /tsup@8.5.1:
+  /tsup@8.5.1(typescript@5.9.3):
     resolution: {integrity: sha512-xtgkqwdhpKWr3tKPmCkvYmS9xnQK3m3XgxZHwSUjvfTjp7YfXe5tT3GgWi0F2N+ZSMsOeWeZFh7ZZFg5iPhing==}
     engines: {node: '>=18'}
     hasBin: true
@@ -1664,6 +1664,7 @@ packages:
       tinyexec: 0.3.2
       tinyglobby: 0.2.15
       tree-kill: 1.2.2
+      typescript: 5.9.3
     transitivePeerDependencies:
       - jiti
       - supports-color
@@ -1685,7 +1686,7 @@ packages:
     resolution: {integrity: sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==}
     dev: true
 
-  /vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)(esbuild@0.27.7):
+  /vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2):
     resolution: {integrity: sha512-B9ifbFudT1TFhfltfaIPgjo9Z3mDynBTJSUYxTjOQruf/zHH+ezCQKcoqO+h7a9Pw9Nm/OtlXAiGT1axBgwqrQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
@@ -1728,8 +1729,6 @@ packages:
       yaml:
         optional: true
     dependencies:
-      '@types/node': 25.5.2
-      esbuild: 0.27.7
       lightningcss: 1.32.0
       picomatch: 4.0.4
       postcss: 8.5.8

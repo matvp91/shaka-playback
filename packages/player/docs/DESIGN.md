@@ -1,4 +1,4 @@
-# @bap/player — Architecture & Technical Design
+# cmaf-lite — Architecture & Technical Design
 
 ## Overview
 

@@ -1,11 +1,11 @@
 # BAP
 
-pnpm monorepo for BAP (Barely A Player).
+pnpm monorepo for cmaf-lite.
 
 ## Packages
 
-- `packages/player` (`@bap/player`) — CMAF-compliant media player library. See [player docs](packages/player/docs/DESIGN.md).
-- `packages/demo` (`@bap/demo`) — demo app consuming `@bap/player`
+- `packages/cmaf-lite` (`cmaf-lite`) — CMAF-compliant media library. See [cmaf-lite docs](packages/cmaf-lite/docs/DESIGN.md).
+- `packages/demo` (`demo`) — demo app consuming `cmaf-lite`
 - `packages/docs` — documentation (out of scope)
 
 ## Tech Stack
