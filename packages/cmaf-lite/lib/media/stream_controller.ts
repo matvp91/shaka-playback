@@ -276,11 +276,11 @@ export class StreamController {
       return;
     }
 
-    const lookupTime = bufferEnd ?? currentTime;
-
-    const segment = mediaState.lastSegment
-      ? this.getNextSegment_(mediaState)
-      : this.getSegmentForTime_(mediaState.track, lookupTime);
+    let segment = this.getNextSegment_(mediaState);
+    if (!segment) {
+      const lookupTime = bufferEnd ?? currentTime;
+      segment = this.getSegmentForTime_(mediaState.track, lookupTime);
+    }
 
     if (!segment) {
       mediaState.ended = true;
@@ -290,10 +290,9 @@ export class StreamController {
 
     if (segment.initSegment !== mediaState.lastInitSegment) {
       this.loadSegment_(mediaState, segment.initSegment, null);
-      return;
+    } else {
+      this.loadSegment_(mediaState, segment.initSegment, segment);
     }
-
-    this.loadSegment_(mediaState, segment.initSegment, segment);
   }
 
   /**
@@ -340,8 +339,10 @@ export class StreamController {
   }
 
   private getNextSegment_(mediaState: MediaState): Segment | null {
+    if (!mediaState.lastSegment) {
+      return null;
+    }
     const { segments } = mediaState.track;
-    asserts.assertExists(mediaState.lastSegment, "No last segment");
     const lastIndex = segments.indexOf(mediaState.lastSegment);
     return segments[lastIndex + 1] ?? null;
   }
