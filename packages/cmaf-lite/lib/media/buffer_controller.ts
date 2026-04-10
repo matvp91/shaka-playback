@@ -88,15 +88,20 @@ export class BufferController {
     }
 
     const { type, mimeType } = event;
-    if (this.sourceBuffers_.has(type)) {
+    const sb = this.sourceBuffers_.get(type);
+
+    if (sb) {
+      this.opQueue_.enqueue(type, {
+        execute: () => sb.changeType(mimeType),
+      });
       return;
     }
 
-    const sb = this.mediaSource_.addSourceBuffer(mimeType);
-    this.sourceBuffers_.set(type, sb);
-    this.opQueue_.add(type, sb);
+    const newSb = this.mediaSource_.addSourceBuffer(mimeType);
+    this.sourceBuffers_.set(type, newSb);
+    this.opQueue_.add(type, newSb);
 
-    sb.addEventListener("updateend", () => {
+    newSb.addEventListener("updateend", () => {
       this.opQueue_.shiftAndExecuteNext(type);
     });
 
