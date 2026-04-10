@@ -7,7 +7,7 @@ import type {
 } from "../events";
 import { Events } from "../events";
 import type { Player } from "../player";
-import type { InitSegment } from "../types/manifest";
+import type { InitSegment, Segment } from "../types/manifest";
 import type { MediaType } from "../types/media";
 import * as asserts from "../utils/asserts";
 import * as Mp4BoxParser from "../utils/mp4_box_parser";
@@ -150,7 +150,7 @@ export class BufferController {
    */
   private computeTimestampOffset_(
     initSegment: InitSegment,
-    segment: { start: number },
+    segment: Segment,
     data: ArrayBuffer,
   ): number {
     const info = this.initSegmentInfo_.get(initSegment);
