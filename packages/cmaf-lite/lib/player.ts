@@ -10,8 +10,7 @@ import { StreamController } from "./media/stream_controller";
 import { NetworkService } from "./net/network_service";
 import type { RegistryType } from "./registry";
 import { Registry } from "./registry";
-import type { StreamPreference } from "./types/media";
-import { MediaType } from "./types/media";
+import type { MediaType, StreamPreference } from "./types/media";
 
 export class Player extends EventEmitter<EventMap> {
   private config_ = defaultConfig;
@@ -65,12 +64,8 @@ export class Player extends EventEmitter<EventMap> {
     return this.streamController_.getStreams();
   }
 
-  getAudioStreamIndex() {
-    return this.streamController_.getActiveStreamIndex(MediaType.AUDIO);
-  }
-
-  getVideoStreamIndex() {
-    return this.streamController_.getActiveStreamIndex(MediaType.VIDEO);
+  getActiveStream(type: MediaType) {
+    return this.streamController_.getActiveStream(type);
   }
 
   getNetworkService() {
