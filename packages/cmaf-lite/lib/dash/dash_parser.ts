@@ -25,7 +25,7 @@ const DASH_ARRAY_NODES = [
   "Event",
 ];
 
-export function parseManifest(text: string, sourceUrl: string) {
+export function parseManifest(text: string, sourceUrl: string): Manifest {
   const parser = new XMLParser({
     ignoreAttributes: false,
     alwaysCreateTextNode: true,
@@ -40,45 +40,39 @@ export function parseManifest(text: string, sourceUrl: string) {
   const switchingSets = flattenPeriods(sourceUrl, mpd);
   const duration = resolveDuration(mpd, switchingSets);
 
-  const manifest: Manifest = {
+  return {
     duration,
     switchingSets,
   };
-  return manifest;
 }
 
 function flattenPeriods(sourceUrl: string, mpd: MPD): SwitchingSet[] {
   const result: SwitchingSet[] = [];
 
-  for (let i = 0; i < mpd.Period.length; i++) {
-    const period = mpd.Period[i];
-    asserts.assertExists(period, "Period is undefined");
-    const duration = resolvePeriodDuration(mpd, period, i);
+  for (const period of mpd.Period) {
+    const index = mpd.Period.indexOf(period);
+    const duration = resolvePeriodDuration(mpd, period, index);
 
     for (const as of period.AdaptationSet) {
       const type = inferMediaType(as);
-      asserts.assertExists(type, "Cannot infer media type");
       const ss = parseSwitchingSet(sourceUrl, mpd, period, as, type, duration);
 
       const existing = result.find(
         (r) => r.type === ss.type && r.codec === ss.codec,
       );
 
-      if (existing) {
-        for (let t = 0; t < ss.tracks.length; t++) {
-          asserts.assertExists(
-            existing.tracks[t],
-            "Track count mismatch across periods",
-          );
-          asserts.assertExists(
-            ss.tracks[t],
-            "Track count mismatch across periods",
-          );
-          // biome-ignore lint/style/noNonNullAssertion: asserted above
-          existing.tracks[t]!.segments.push(...ss.tracks[t]!.segments);
-        }
-      } else {
+      if (!existing) {
         result.push(ss);
+      } else {
+        for (const track of ss.tracks) {
+          const trackIndex = ss.tracks.indexOf(track);
+          const existingTrack = existing.tracks.at(trackIndex);
+          asserts.assertExists(
+            existingTrack,
+            "Track count mismatch across periods",
+          );
+          existingTrack.segments.push(...track.segments);
+        }
       }
     }
   }
@@ -212,7 +206,7 @@ function parseTrack(
   throw new Error("TODO: Map TEXT type");
 }
 
-function inferMediaType(adaptationSet: AdaptationSet): MediaType | null {
+function inferMediaType(adaptationSet: AdaptationSet): MediaType {
   const contentType = adaptationSet["@_contentType"];
   if (contentType === "video") {
     return MediaType.VIDEO;
@@ -235,5 +229,5 @@ function inferMediaType(adaptationSet: AdaptationSet): MediaType | null {
   if (mimeType?.startsWith("text/") || mimeType?.startsWith("application/")) {
     return MediaType.TEXT;
   }
-  return null;
+  throw new Error("Failed to infer media type");
 }

@@ -153,13 +153,13 @@ export class StreamController {
     event: StreamPreferenceChangedEvent,
   ) => {
     const { preference } = event;
+    // We can set preferences before we load.
+    this.preferences_.set(preference.type, preference);
 
     const mediaState = this.mediaStates_.get(preference.type);
     if (!mediaState || !this.manifest_) {
       return;
     }
-
-    this.preferences_.set(preference.type, preference);
 
     const stream = StreamUtils.selectStream(this.getStreams(), preference);
     if (stream === mediaState.stream) {
