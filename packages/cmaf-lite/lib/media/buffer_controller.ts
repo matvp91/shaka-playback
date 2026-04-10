@@ -204,7 +204,7 @@ export class BufferController {
     }
     this.opQueue_.enqueue(
       type,
-      this.getFlushOp_(type, bufferedStart, evictEnd),
+      this.getFlushOperation_(type, bufferedStart, evictEnd),
     );
   }
 
@@ -277,9 +277,9 @@ export class BufferController {
       if (evictionEnd > bufferedStart) {
         this.quotaEvictionPending_.add(type);
         this.opQueue_.insertNext(type, [
-          this.getFlushOp_(type, bufferedStart, evictionEnd),
+          this.getFlushOperation_(type, bufferedStart, evictionEnd),
           operation,
-          this.getQuotaEvictedOp_(type),
+          this.getQuotaEvictedOperation_(type),
         ]);
         return;
       }
@@ -307,7 +307,7 @@ export class BufferController {
 
     this.quotaEvictionPending_.delete(type);
     this.opQueue_.insertNext(type, [
-      this.getFlushOp_(type, bufferedStart, evictionEnd),
+      this.getFlushOperation_(type, bufferedStart, evictionEnd),
       operation,
     ]);
   }
@@ -315,7 +315,11 @@ export class BufferController {
   /**
    * Create a remove operation for a SourceBuffer range.
    */
-  private getFlushOp_(type: MediaType, start: number, end: number): Operation {
+  private getFlushOperation_(
+    type: MediaType,
+    start: number,
+    end: number,
+  ): Operation {
     const sb = this.sourceBuffers_.get(type);
     asserts.assertExists(sb, `No SourceBuffer for ${type}`);
     return {
@@ -329,7 +333,7 @@ export class BufferController {
    * Create an operation that clears the quota eviction
    * pending flag for a given type.
    */
-  private getQuotaEvictedOp_(type: MediaType): Operation {
+  private getQuotaEvictedOperation_(type: MediaType): Operation {
     return {
       execute: () => {
         this.quotaEvictionPending_.delete(type);
