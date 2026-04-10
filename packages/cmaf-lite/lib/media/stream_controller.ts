@@ -105,39 +105,39 @@ export class StreamController {
   private onStreamPreferenceChanged_ = (
     event: StreamPreferenceChangedEvent,
   ) => {
-    const networkService = this.player_.getNetworkService();
     const { preference } = event;
-    this.preferences_.set(preference.type, preference);
 
     const mediaState = this.mediaStates_.get(preference.type);
     if (!mediaState || !this.manifest_) {
       return;
     }
 
+    this.preferences_.set(preference.type, preference);
+
+    const stream = StreamUtils.selectStream(this.getStreams(), preference);
+    if (stream === mediaState.stream) {
+      // Stream is the same, there is nothing to do.
+      return;
+    }
+
+    const networkService = this.player_.getNetworkService();
     if (mediaState.lastRequest) {
       networkService.cancel(mediaState.lastRequest);
     }
 
-    const stream = StreamUtils.selectStream(this.getStreams(), preference);
-    const action = StreamUtils.getStreamAction(mediaState.stream, stream);
+    const oldTrack = mediaState.track;
+    const track = StreamUtils.resolveTrack(mediaState.presentation, stream);
 
-    if (!action) {
-      return;
-    }
-
-    if (action === "changeType") {
-      this.player_.emit(Events.BUFFER_CODECS, {
-        type: mediaState.type,
-        mimeType: CodecUtils.getContentType(mediaState.type, stream.codec),
-        duration: this.manifest_.duration,
-      });
-    }
+    // TODO(matvp): This is how we'll signal a new buffer codec. We'll use this
+    // when we support MSE changeType.
+    // this.player_.emit(Events.BUFFER_CODECS, {
+    //   type: mediaState.type,
+    //   mimeType: CodecUtils.getContentType(mediaState.type, stream.codec),
+    //   duration: this.manifest_.duration,
+    // });
 
     mediaState.stream = stream;
-    mediaState.track = StreamUtils.resolveTrack(
-      mediaState.presentation,
-      stream,
-    );
+    mediaState.track = track;
     mediaState.lastSegment = null;
     mediaState.lastInitSegment = null;
   };
