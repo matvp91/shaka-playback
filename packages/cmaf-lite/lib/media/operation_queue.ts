@@ -1,7 +1,7 @@
 import type { MediaType } from "../types/media";
 import * as asserts from "../utils/asserts";
 
-type Operation = {
+export type Operation = {
   execute: () => void;
   onComplete?: () => void;
   onError?: (error: unknown) => void;

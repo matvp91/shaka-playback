@@ -11,6 +11,7 @@ import type { InitSegment } from "../types/manifest";
 import type { MediaType } from "../types/media";
 import * as asserts from "../utils/asserts";
 import * as Mp4BoxParser from "../utils/mp4_box_parser";
+import type { Operation } from "./operation_queue";
 import { OperationQueue } from "./operation_queue";
 import { SegmentTracker } from "./segment_tracker";
 
@@ -22,7 +23,6 @@ export class BufferController {
   private sourceBuffers_ = new Map<MediaType, SourceBuffer>();
   private opQueue_ = new OperationQueue();
   private mediaSource_: MediaSource | null = null;
-  private duration_ = 0;
   private initSegmentInfo_ = new Map<InitSegment, InitSegmentInfo>();
   private segmentTracker_ = new SegmentTracker();
   private quotaEvictionPending_ = new Set<MediaType>();
@@ -101,8 +101,7 @@ export class BufferController {
       this.opQueue_.shiftAndExecuteNext(type);
     });
 
-    this.duration_ = event.duration;
-    this.updateDuration_();
+    this.updateDuration_(event.duration);
   };
 
   private onBufferAppending_ = (event: BufferAppendingEvent) => {
@@ -176,42 +175,47 @@ export class BufferController {
 
     const sb = this.sourceBuffers_.get(type);
     asserts.assertExists(sb, `No SourceBuffer for ${type}`);
-    if (sb.buffered.length > 0) {
-      this.segmentTracker_.reconcile(type, sb.buffered);
-    }
+    this.segmentTracker_.reconcile(type, sb.buffered);
 
     const { backBufferLength } = this.player_.getConfig();
-    if (!Number.isFinite(backBufferLength)) {
-      return;
+    if (Number.isFinite(backBufferLength)) {
+      this.evictBackBuffer_(type, backBufferLength);
     }
+  };
+
+  /**
+   * Evict back buffer that exceeds the configured
+   * backBufferLength behind the playhead.
+   */
+  private evictBackBuffer_(type: MediaType, backBufferLength: number) {
     const media = this.player_.getMedia();
     if (!media) {
       return;
     }
-    if (sb.buffered.length === 0) {
+    const sb = this.sourceBuffers_.get(type);
+    asserts.assertExists(sb, `No SourceBuffer for ${type}`);
+    const bufferedStart = sb.buffered.length > 0 ? sb.buffered.start(0) : null;
+    if (bufferedStart === null) {
       return;
     }
-    const bufferedStart = sb.buffered.start(0);
     const evictEnd = media.currentTime - backBufferLength;
     if (bufferedStart >= evictEnd) {
       return;
     }
-    this.opQueue_.enqueue(type, {
-      execute: () => {
-        sb.remove(bufferedStart, evictEnd);
-      },
-    });
-  };
+    this.opQueue_.enqueue(
+      type,
+      this.getFlushOp_(type, bufferedStart, evictEnd),
+    );
+  }
 
   /**
    * Set mediaSource.duration through the operation queue
    * to avoid InvalidStateError when a SourceBuffer is updating.
    */
-  private updateDuration_() {
-    if (!this.mediaSource_ || this.mediaSource_.readyState !== "open") {
+  private updateDuration_(duration: number) {
+    if (this.mediaSource_?.readyState !== "open") {
       return;
     }
-    const duration = this.duration_;
     if (this.mediaSource_.duration === duration) {
       return;
     }
@@ -240,11 +244,7 @@ export class BufferController {
 
   private evictAndRetryAppend_(
     type: MediaType,
-    operation: {
-      execute: () => void;
-      onComplete?: () => void;
-      onError?: (error: unknown) => void;
-    },
+    operation: Operation,
     byteLength: number,
     error: DOMException,
   ) {
@@ -254,104 +254,44 @@ export class BufferController {
     asserts.assertExists(sb, `No SourceBuffer for ${type}`);
 
     // Nothing buffered, nothing to evict.
-    if (sb.buffered.length === 0) {
+    const bufferedStart = sb.buffered.length > 0 ? sb.buffered.start(0) : null;
+    if (bufferedStart === null) {
       return;
     }
 
     const currentTime = media.currentTime;
-    const bufferedStart = sb.buffered.start(0);
 
+    // Tier 1: evict minimum back buffer to fit the failed
+    // segment, plus padding for headroom.
     if (!this.quotaEvictionPending_.has(type)) {
-      if (
-        this.evictTargetedBackBuffer_(
-          type,
+      const { backBufferQuotaPadding } = this.player_.getConfig();
+      let evictionEnd = this.segmentTracker_.getEvictionEnd(
+        type,
+        currentTime,
+        byteLength,
+      );
+      evictionEnd = Math.min(evictionEnd + backBufferQuotaPadding, currentTime);
+
+      // Targeted eviction is possible when there is enough
+      // back buffer to free the required bytes.
+      if (evictionEnd > bufferedStart) {
+        this.quotaEvictionPending_.add(type);
+        this.opQueue_.insertNext(type, [
+          this.getFlushOp_(type, bufferedStart, evictionEnd),
           operation,
-          byteLength,
-          currentTime,
-          bufferedStart,
-        )
-      ) {
+          this.getQuotaEvictedOp_(type),
+        ]);
         return;
       }
     }
 
+    // Tier 2: aggressively trim back buffer to ~1 segment
+    // behind playhead.
     this.player_.emit(Events.BUFFER_ERROR, {
       type,
       error,
     } satisfies BufferErrorEvent);
 
-    this.evictAggressiveBackBuffer_(
-      type,
-      operation,
-      currentTime,
-      bufferedStart,
-    );
-  }
-
-  /**
-   * Tier 1: Evict minimum back buffer to fit the failed
-   * segment, plus padding for headroom. Returns true when
-   * eviction was queued, false when there is not enough
-   * back buffer to evict.
-   */
-  private evictTargetedBackBuffer_(
-    type: MediaType,
-    operation: {
-      execute: () => void;
-      onComplete?: () => void;
-      onError?: (error: unknown) => void;
-    },
-    byteLength: number,
-    currentTime: number,
-    bufferedStart: number,
-  ): boolean {
-    const { backBufferQuotaPadding } = this.player_.getConfig();
-    let evictionEnd = this.segmentTracker_.getEvictionEnd(
-      type,
-      currentTime,
-      byteLength,
-    );
-    evictionEnd = Math.min(evictionEnd + backBufferQuotaPadding, currentTime);
-
-    // Not enough back buffer to free the required bytes.
-    if (evictionEnd <= bufferedStart) {
-      return false;
-    }
-
-    this.quotaEvictionPending_.add(type);
-    const sb = this.sourceBuffers_.get(type);
-    asserts.assertExists(sb, `No SourceBuffer for ${type}`);
-
-    const removeOp = {
-      execute: () => {
-        sb.remove(bufferedStart, evictionEnd);
-      },
-    };
-
-    const clearOp = {
-      execute: () => {
-        this.quotaEvictionPending_.delete(type);
-      },
-    };
-
-    this.opQueue_.insertNext(type, [removeOp, operation, clearOp]);
-    return true;
-  }
-
-  /**
-   * Tier 2: Aggressively trim back buffer to ~1 segment
-   * behind playhead.
-   */
-  private evictAggressiveBackBuffer_(
-    type: MediaType,
-    operation: {
-      execute: () => void;
-      onComplete?: () => void;
-      onError?: (error: unknown) => void;
-    },
-    currentTime: number,
-    bufferedStart: number,
-  ) {
     const minBackBuffer = Math.max(
       this.segmentTracker_.getLastSegmentDuration(type),
       2,
@@ -366,16 +306,35 @@ export class BufferController {
     }
 
     this.quotaEvictionPending_.delete(type);
+    this.opQueue_.insertNext(type, [
+      this.getFlushOp_(type, bufferedStart, evictionEnd),
+      operation,
+    ]);
+  }
+
+  /**
+   * Create a remove operation for a SourceBuffer range.
+   */
+  private getFlushOp_(type: MediaType, start: number, end: number): Operation {
     const sb = this.sourceBuffers_.get(type);
     asserts.assertExists(sb, `No SourceBuffer for ${type}`);
-
-    const removeOp = {
+    return {
       execute: () => {
-        sb.remove(bufferedStart, evictionEnd);
+        sb.remove(start, end);
       },
     };
+  }
 
-    this.opQueue_.insertNext(type, [removeOp, operation]);
+  /**
+   * Create an operation that clears the quota eviction
+   * pending flag for a given type.
+   */
+  private getQuotaEvictedOp_(type: MediaType): Operation {
+    return {
+      execute: () => {
+        this.quotaEvictionPending_.delete(type);
+      },
+    };
   }
 }
 
