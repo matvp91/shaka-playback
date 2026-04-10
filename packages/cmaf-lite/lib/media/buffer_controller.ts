@@ -137,12 +137,7 @@ export class BufferController {
       },
       onError: (error: unknown) => {
         if (isQuotaExceededError(error)) {
-          this.evictAndRetryAppend_(
-            type,
-            operation,
-            data.byteLength,
-            error,
-          );
+          this.evictAndRetryAppend_(type, operation, data.byteLength, error);
         }
       },
     };
@@ -316,10 +311,7 @@ export class BufferController {
       currentTime,
       byteLength,
     );
-    evictionEnd = Math.min(
-      evictionEnd + backBufferQuotaPadding,
-      currentTime,
-    );
+    evictionEnd = Math.min(evictionEnd + backBufferQuotaPadding, currentTime);
 
     // Not enough back buffer to free the required bytes.
     if (evictionEnd <= bufferedStart) {

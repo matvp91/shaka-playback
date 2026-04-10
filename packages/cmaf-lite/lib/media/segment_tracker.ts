@@ -77,11 +77,10 @@ export class SegmentTracker {
     }
     // TODO(matvp): We shall think about not alloc a new array each
     // time we reconcile.
-    const filteredList = list.filter((segment) => isTimeBuffered(segment.start, segment.end, buffered));
-    this.segments_.set(
-      type,
-      filteredList,
+    const filteredList = list.filter((segment) =>
+      isTimeBuffered(segment.start, segment.end, buffered),
     );
+    this.segments_.set(type, filteredList);
   }
 
   destroy() {
