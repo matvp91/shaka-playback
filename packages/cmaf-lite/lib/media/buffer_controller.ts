@@ -265,19 +265,22 @@ export class BufferController {
     // segment, plus padding for headroom.
     if (!this.quotaEvictionPending_.has(type)) {
       const { backBufferQuotaPadding } = this.player_.getConfig();
-      let evictionEnd = this.segmentTracker_.getEvictionEnd(
+      const evictionEnd = this.segmentTracker_.getEvictionEnd(
         type,
         currentTime,
         byteLength,
       );
-      evictionEnd = Math.min(evictionEnd + backBufferQuotaPadding, currentTime);
+      const minEvictionEnd = Math.min(
+        evictionEnd + backBufferQuotaPadding,
+        currentTime,
+      );
 
       // Targeted eviction is possible when there is enough
       // back buffer to free the required bytes.
-      if (evictionEnd > bufferedStart) {
+      if (minEvictionEnd > bufferedStart) {
         this.quotaEvictionPending_.add(type);
         this.opQueue_.insertNext(type, [
-          this.getFlushOperation_(type, bufferedStart, evictionEnd),
+          this.getFlushOperation_(type, bufferedStart, minEvictionEnd),
           operation,
           this.getQuotaEvictedOperation_(type),
         ]);
