@@ -4,7 +4,7 @@ export function assert(condition: boolean, message: string): asserts condition {
   }
 }
 
-export function assertNotVoid<T>(
+export function assertExists<T>(
   value: T,
   message: string,
 ): asserts value is NonNullable<T> {

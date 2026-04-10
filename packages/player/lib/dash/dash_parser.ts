@@ -7,10 +7,10 @@ import type {
   Track,
 } from "../types/manifest";
 import { MediaType } from "../types/media";
-import { assertNotVoid } from "../utils/assert";
-import { filterMap, findMap } from "../utils/functional";
-import { asNumber } from "../utils/parse";
-import { resolveUrls } from "../utils/url";
+import * as asserts from "../utils/asserts";
+import * as Functional from "../utils/functional";
+import * as UrlUtils from "../utils/url_utils";
+import * as XmlUtils from "../utils/xml_utils";
 import { parseSegmentData } from "./dash_presentation";
 import type { AdaptationSet, MPD, Period, Representation } from "./dash_types";
 
@@ -63,7 +63,7 @@ function parsePeriod(
 
   const switchingSets = period.AdaptationSet.map((as) => {
     const type = inferMediaType(as);
-    assertNotVoid(type, "Cannot infer media type");
+    asserts.assertExists(type, "Cannot infer media type");
     return parseSwitchingSet(sourceUrl, mpd, period, as, type);
   });
 
@@ -105,7 +105,7 @@ function resolvePresentationEnd(
   }
 
   const lastSegmentEnd = switchingSets[0]?.tracks[0]?.segments.at(-1)?.end;
-  assertNotVoid(lastSegmentEnd, "Cannot resolve presentation end");
+  asserts.assertExists(lastSegmentEnd, "Cannot resolve presentation end");
   return lastSegmentEnd;
 }
 
@@ -117,12 +117,12 @@ function parseSwitchingSet(
   type: MediaType,
 ): SwitchingSet {
   const firstRep = adaptationSet.Representation[0];
-  assertNotVoid(firstRep, "No Representation found");
+  asserts.assertExists(firstRep, "No Representation found");
 
-  const codec = findMap([firstRep, adaptationSet], (node) =>
+  const codec = Functional.findMap([firstRep, adaptationSet], (node) =>
     node["@_codecs"]?.toLowerCase(),
   );
-  assertNotVoid(codec, "codecs is mandatory");
+  asserts.assertExists(codec, "codecs is mandatory");
 
   const tracks = adaptationSet.Representation.map((rep) =>
     parseTrack(sourceUrl, mpd, period, adaptationSet, rep, type),
@@ -139,14 +139,14 @@ function parseTrack(
   representation: Representation,
   type: MediaType,
 ): Track {
-  const baseUrls = filterMap(
+  const baseUrls = Functional.filterMap(
     [mpd, period, adaptationSet, representation],
     (node) => node.BaseURL?.["#text"],
   );
-  const baseUrl = resolveUrls([sourceUrl, ...baseUrls]);
+  const baseUrl = UrlUtils.resolveUrls([sourceUrl, ...baseUrls]);
 
-  const bandwidth = asNumber(representation["@_bandwidth"]);
-  assertNotVoid(bandwidth, "bandwidth is mandatory");
+  const bandwidth = XmlUtils.asNumber(representation["@_bandwidth"]);
+  asserts.assertExists(bandwidth, "bandwidth is mandatory");
 
   const segmentData = parseSegmentData(
     mpd,
@@ -157,13 +157,15 @@ function parseTrack(
   );
 
   if (type === MediaType.VIDEO) {
-    const width = asNumber(findMap([representation, adaptationSet], "@_width"));
-    assertNotVoid(width, "width is mandatory");
-
-    const height = asNumber(
-      findMap([representation, adaptationSet], "@_height"),
+    const width = XmlUtils.asNumber(
+      Functional.findMap([representation, adaptationSet], "@_width"),
     );
-    assertNotVoid(height, "height is mandatory");
+    asserts.assertExists(width, "width is mandatory");
+
+    const height = XmlUtils.asNumber(
+      Functional.findMap([representation, adaptationSet], "@_height"),
+    );
+    asserts.assertExists(height, "height is mandatory");
 
     return {
       type: MediaType.VIDEO,

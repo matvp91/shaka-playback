@@ -9,4 +9,6 @@ export default defineConfig({
   clean: true,
   format: "esm",
   dts: true,
+  treeshake: true,
+  metafile: true,
 });

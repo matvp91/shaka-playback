@@ -1,7 +1,7 @@
 import type { MediaAttachedEvent } from "../events";
 import { Events } from "../events";
 import type { Player } from "../player";
-import { getNextBufferedStart } from "../utils/buffer";
+import * as BufferUtils from "../utils/buffer_utils";
 import { Timer } from "../utils/timer";
 
 const TICK_INTERVAL = 0.1;
@@ -73,7 +73,10 @@ export class GapController {
       return;
     }
 
-    const nextStart = getNextBufferedStart(media.buffered, media.currentTime);
+    const nextStart = BufferUtils.getNextBufferedStart(
+      media.buffered,
+      media.currentTime,
+    );
     if (nextStart === null) {
       return;
     }

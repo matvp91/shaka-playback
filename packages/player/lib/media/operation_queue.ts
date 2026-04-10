@@ -1,5 +1,5 @@
 import type { MediaType } from "../types/media";
-import { assertNotVoid } from "../utils/assert";
+import * as asserts from "../utils/asserts";
 
 type Operation = {
   execute: () => void;
@@ -44,7 +44,7 @@ export class OperationQueue {
         execute: () => {
           resolve();
           const queue = this.queues_.get(type);
-          assertNotVoid(queue, "Queue missing for blocker");
+          asserts.assertExists(queue, "Queue missing for blocker");
           queue.shift();
           this.executeNext_(type);
         },
@@ -71,7 +71,7 @@ export class OperationQueue {
       return;
     }
     const operation = queue.shift();
-    assertNotVoid(operation, "Queue not empty but no operation");
+    asserts.assertExists(operation, "Queue not empty but no operation");
     operation.onComplete?.();
     this.executeNext_(type);
   }
@@ -87,7 +87,7 @@ export class OperationQueue {
       return;
     }
     const operation = queue[0];
-    assertNotVoid(operation, "Queue not empty but no operation");
+    asserts.assertExists(operation, "Queue not empty but no operation");
     try {
       operation.execute();
     } catch {

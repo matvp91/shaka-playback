@@ -8,8 +8,8 @@ import { Events } from "../events";
 import type { Player } from "../player";
 import type { InitSegment } from "../types/manifest";
 import type { MediaType } from "../types/media";
-import { assertNotVoid } from "../utils/assert";
-import { parseBaseMediaDecodeTime, parseTimescale } from "../utils/mp4";
+import * as asserts from "../utils/asserts";
+import * as Mp4BoxParser from "../utils/mp4_box_parser";
 import { OperationQueue } from "./operation_queue";
 
 type InitSegmentInfo = {
@@ -44,13 +44,13 @@ export class BufferController {
 
   getBuffered(type: MediaType): TimeRanges {
     const sb = this.sourceBuffers_.get(type);
-    assertNotVoid(sb, `No SourceBuffer for ${type}`);
+    asserts.assertExists(sb, `No SourceBuffer for ${type}`);
     return sb.buffered;
   }
 
   flush(type: MediaType) {
     const sb = this.sourceBuffers_.get(type);
-    assertNotVoid(sb, `No SourceBuffer for ${type}`);
+    asserts.assertExists(sb, `No SourceBuffer for ${type}`);
     this.opQueue_.enqueue(type, {
       execute: () => {
         sb.remove(0, Infinity);
@@ -64,7 +64,7 @@ export class BufferController {
     this.mediaSource_.addEventListener(
       "sourceopen",
       () => {
-        assertNotVoid(this.mediaSource_, "No MediaSource");
+        asserts.assertExists(this.mediaSource_, "No MediaSource");
         this.player_.emit(Events.MEDIA_ATTACHED, {
           media: event.media,
           mediaSource: this.mediaSource_,
@@ -103,7 +103,7 @@ export class BufferController {
 
     if (!segment) {
       this.initSegmentInfo_.set(initSegment, {
-        timescale: parseTimescale(data),
+        timescale: Mp4BoxParser.parseTimescale(data),
       });
     }
 
@@ -141,8 +141,9 @@ export class BufferController {
     data: ArrayBuffer,
   ): number {
     const info = this.initSegmentInfo_.get(initSegment);
-    assertNotVoid(info, "Init segment not parsed");
-    const mediaTime = parseBaseMediaDecodeTime(data) / info.timescale;
+    asserts.assertExists(info, "Init segment not parsed");
+    const mediaTime =
+      Mp4BoxParser.parseBaseMediaDecodeTime(data) / info.timescale;
     return segment.start - mediaTime;
   }
 

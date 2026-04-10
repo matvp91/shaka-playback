@@ -18,7 +18,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsup --minify",
     "dev": "tsup --watch",
     "format": "biome check --write --unsafe .",
     "tsc": "tsc --noEmit"

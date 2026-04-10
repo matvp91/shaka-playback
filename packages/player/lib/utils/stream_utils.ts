@@ -1,7 +1,7 @@
 import type { Manifest, Presentation, Track } from "../types/manifest";
 import type { ByType, Stream, StreamPreference } from "../types/media";
 import { MediaType } from "../types/media";
-import { assert, assertNotVoid } from "./assert";
+import * as asserts from "./asserts";
 
 /**
  * Derive the set of streams available across all
@@ -9,7 +9,7 @@ import { assert, assertNotVoid } from "./assert";
  * presentation are included (intersection).
  */
 export function getStreams(manifest: Manifest): Stream[] {
-  assert(manifest.presentations.length > 0, "No presentations");
+  asserts.assert(manifest.presentations.length > 0, "No presentations");
 
   const sets = manifest.presentations.map((presentation) => {
     const streams: Stream[] = [];
@@ -35,7 +35,10 @@ export function getStreams(manifest: Manifest): Stream[] {
   const result = sets.reduce((a, b) =>
     a.filter((s) => b.some((t) => isSameStream(s, t))),
   );
-  assert(result.length > 0, "No consistent streams across presentations");
+  asserts.assert(
+    result.length > 0,
+    "No consistent streams across presentations",
+  );
   return result;
 }
 
@@ -47,7 +50,7 @@ export function selectStream(
   preference: StreamPreference,
 ): Stream {
   const filtered = streams.filter((s) => s.type === preference.type);
-  assertNotVoid(filtered[0], `No streams for ${preference.type}`);
+  asserts.assertExists(filtered[0], `No streams for ${preference.type}`);
 
   if (preference.type === MediaType.VIDEO) {
     return matchVideoPreference(
@@ -128,7 +131,7 @@ function matchVideoPreference(
   streams: ByType<Stream, MediaType.VIDEO>[],
   preference: ByType<StreamPreference, MediaType.VIDEO>,
 ): Stream {
-  assertNotVoid(streams[0], "No video streams to match against");
+  asserts.assertExists(streams[0], "No video streams to match against");
   let best = streams[0];
   let bestDist = Number.POSITIVE_INFINITY;
 
@@ -162,6 +165,6 @@ function matchAudioPreference(
       return match;
     }
   }
-  assertNotVoid(streams[0], "No audio streams to match against");
+  asserts.assertExists(streams[0], "No audio streams to match against");
   return streams[0];
 }

@@ -1,4 +1,4 @@
-import { assertNotVoid } from "./assert";
+import * as asserts from "./asserts";
 
 /**
  * Schedules a callback as single-shot or repeating interval.
@@ -20,7 +20,7 @@ export class Timer {
     this.stop();
     this.id_ = setTimeout(() => {
       this.id_ = null;
-      assertNotVoid(this.callback_, "Timer fired after destroy");
+      asserts.assertExists(this.callback_, "Timer fired after destroy");
       this.callback_();
     }, seconds * 1000);
     return this;
@@ -67,7 +67,7 @@ export class Timer {
   private scheduleRepeating_(seconds: number) {
     this.id_ = setTimeout(() => {
       this.id_ = null;
-      assertNotVoid(this.callback_, "Timer fired after destroy");
+      asserts.assertExists(this.callback_, "Timer fired after destroy");
       this.scheduleRepeating_(seconds);
       this.callback_();
     }, seconds * 1000);

@@ -31,8 +31,9 @@ export class Registry {
   }
 
   private construct_<T extends RegistryType>(type: T, player: Player) {
-    (this.instances_[type] as RegistryTypeMap[T][]) =
-      Registry.components_[type].map((Ctor) => new Ctor(player));
+    (this.instances_[type] as RegistryTypeMap[T][]) = Registry.components_[
+      type
+    ].map((Ctor) => new Ctor(player));
   }
 
   get<T extends RegistryType>(type: T): InstanceMap[T] {

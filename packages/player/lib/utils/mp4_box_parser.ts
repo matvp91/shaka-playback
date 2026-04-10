@@ -5,7 +5,7 @@ import {
   readMdhd,
   readTfdt,
 } from "@svta/cml-iso-bmff";
-import { assertNotVoid } from "./assert";
+import * as asserts from "./asserts";
 
 /**
  * Parse timescale from an init segment's moov/trak/mdia/mdhd.
@@ -15,7 +15,7 @@ export function parseTimescale(data: ArrayBuffer): number {
     readers: { mdhd: readMdhd },
   });
   const mdhd = findIsoBox(boxes, (box) => isIsoBoxType("mdhd", box));
-  assertNotVoid(mdhd, "mdhd box not found");
+  asserts.assertExists(mdhd, "mdhd box not found");
   return mdhd.timescale;
 }
 
@@ -27,6 +27,6 @@ export function parseBaseMediaDecodeTime(data: ArrayBuffer): number {
     readers: { tfdt: readTfdt },
   });
   const tfdt = findIsoBox(boxes, (box) => isIsoBoxType("tfdt", box));
-  assertNotVoid(tfdt, "tfdt box not found");
+  asserts.assertExists(tfdt, "tfdt box not found");
   return tfdt.baseMediaDecodeTime;
 }

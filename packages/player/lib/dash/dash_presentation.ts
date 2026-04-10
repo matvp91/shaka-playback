@@ -1,10 +1,10 @@
 import { processUriTemplate } from "@svta/cml-dash";
 import { decodeIso8601Duration } from "@svta/cml-iso-8601";
 import type { InitSegment, Segment } from "../types/manifest";
-import { assertNotVoid } from "../utils/assert";
-import { findMap } from "../utils/functional";
-import { asNumber } from "../utils/parse";
-import { resolveUrl } from "../utils/url";
+import * as asserts from "../utils/asserts";
+import * as Functional from "../utils/functional";
+import * as UrlUtils from "../utils/url_utils";
+import * as XmlUtils from "../utils/xml_utils";
 import type {
   AdaptationSet,
   MPD,
@@ -28,27 +28,27 @@ export function parseSegmentData(
   );
 
   const timeline = st.SegmentTimeline;
-  assertNotVoid(timeline, "SegmentTimeline is mandatory");
+  asserts.assertExists(timeline, "SegmentTimeline is mandatory");
 
   const initialization = st["@_initialization"];
-  assertNotVoid(initialization, "initialization is mandatory");
+  asserts.assertExists(initialization, "initialization is mandatory");
 
   const media = st["@_media"];
-  assertNotVoid(media, "media is mandatory");
+  asserts.assertExists(media, "media is mandatory");
 
-  const timescale = asNumber(st["@_timescale"]);
-  assertNotVoid(timescale, "timescale is mandatory");
+  const timescale = XmlUtils.asNumber(st["@_timescale"]);
+  asserts.assertExists(timescale, "timescale is mandatory");
 
-  const bandwidth = asNumber(representation["@_bandwidth"]);
-  assertNotVoid(bandwidth, "bandwidth is mandatory");
+  const bandwidth = XmlUtils.asNumber(representation["@_bandwidth"]);
+  asserts.assertExists(bandwidth, "bandwidth is mandatory");
 
-  const pto = asNumber(st["@_presentationTimeOffset"]) ?? 0;
+  const pto = XmlUtils.asNumber(st["@_presentationTimeOffset"]) ?? 0;
 
   const periodStart = period["@_start"]
     ? decodeIso8601Duration(period["@_start"])
     : 0;
 
-  const initSegmentUrl = resolveUrl(
+  const initSegmentUrl = UrlUtils.resolveUrl(
     processUriTemplate(
       initialization,
       representation["@_id"],
@@ -88,18 +88,18 @@ function mapTemplateTimeline(
   pto: number,
   periodStart: number,
 ): Segment[] {
-  const timescale = asNumber(st["@_timescale"]) ?? 1;
-  const startNumber = asNumber(st["@_startNumber"]) ?? 1;
+  const timescale = XmlUtils.asNumber(st["@_timescale"]) ?? 1;
+  const startNumber = XmlUtils.asNumber(st["@_startNumber"]) ?? 1;
   const segments: Segment[] = [];
   let time = 0;
   let number = startNumber;
 
   for (const s of timeline.S) {
-    const d = asNumber(s["@_d"]);
-    assertNotVoid(d, "segment duration is mandatory");
-    const r = asNumber(s["@_r"]) ?? 0;
+    const d = XmlUtils.asNumber(s["@_d"]);
+    asserts.assertExists(d, "segment duration is mandatory");
+    const r = XmlUtils.asNumber(s["@_r"]) ?? 0;
 
-    const t = asNumber(s["@_t"]);
+    const t = XmlUtils.asNumber(s["@_t"]);
     if (t != null) {
       time = t;
     }
@@ -113,7 +113,7 @@ function mapTemplateTimeline(
         bandwidth,
         time,
       );
-      const url = resolveUrl(relativeUrl, baseUrl);
+      const url = UrlUtils.resolveUrl(relativeUrl, baseUrl);
       segments.push({
         url,
         start: (time - pto) / timescale + periodStart,
@@ -139,7 +139,7 @@ function resolveSegmentTemplate(
   // Child wins - rep overrides as overrides period
   const templates = [repSt, asSt, periodSt];
   const pick = <K extends keyof SegmentTemplate>(key: K) =>
-    findMap(templates, (st) => st?.[key]);
+    Functional.findMap(templates, (st) => st?.[key]);
 
   return {
     "@_timescale": pick("@_timescale"),
