@@ -63,6 +63,13 @@ export class StreamController {
     return this.streams_;
   }
 
+  getActiveStreamIndex(type: MediaType) {
+    asserts.assertExists(this.streams_, "No Streams");
+    const mediaState = this.mediaStates_.get(type);
+    asserts.assertExists(mediaState, `No Media State for ${type}`);
+    return this.streams_.indexOf(mediaState.stream);
+  }
+
   destroy() {
     const networkService = this.player_.getNetworkService();
     for (const mediaState of this.mediaStates_.values()) {

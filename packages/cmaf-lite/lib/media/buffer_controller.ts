@@ -1,5 +1,4 @@
 import type {
-  BufferAppendErrorEvent,
   BufferAppendedEvent,
   BufferAppendingEvent,
   BufferCodecsEvent,
