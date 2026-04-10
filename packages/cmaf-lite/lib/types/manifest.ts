@@ -1,6 +1,7 @@
 import type { MediaType } from "./media";
 
 export type Manifest = {
+  duration: number;
   presentations: Presentation[];
 };
 

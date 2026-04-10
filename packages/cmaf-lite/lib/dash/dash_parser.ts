@@ -46,8 +46,13 @@ export function parseManifest(text: string, sourceUrl: string) {
     parsePeriod(sourceUrl, mpd, period, periodIndex),
   );
 
-  const manifest: Manifest = { presentations };
+  const lastPresentation = presentations.at(-1);
+  asserts.assertExists(lastPresentation, "No Presentation");
 
+  const manifest: Manifest = {
+    duration: lastPresentation.end,
+    presentations,
+  };
   return manifest;
 }
 

@@ -129,7 +129,7 @@ export class StreamController {
       this.player_.emit(Events.BUFFER_CODECS, {
         type: mediaState.type,
         mimeType: CodecUtils.getContentType(mediaState.type, stream.codec),
-        duration: this.computeDuration_(),
+        duration: this.manifest_.duration,
       });
     }
 
@@ -188,7 +188,7 @@ export class StreamController {
       this.player_.emit(Events.BUFFER_CODECS, {
         type,
         mimeType: CodecUtils.getContentType(type, stream.codec),
-        duration: this.computeDuration_(),
+        duration: this.manifest_.duration,
       });
     }
 
@@ -241,6 +241,8 @@ export class StreamController {
    * or signal end of stream.
    */
   private advanceOrEnd_(mediaState: MediaState, lookupTime: number) {
+    asserts.assertExists(this.manifest_, "No Manifest");
+
     // Sequential path resolves at the presentation
     // boundary. Time-based path (seek or buffer-lost)
     // resolves at the lookup time.
@@ -268,7 +270,7 @@ export class StreamController {
     // Same presentation, no segment — check EOS.
     // Float precision means bufferEnd may never
     // exactly reach the duration (Shaka v2).
-    const duration = this.computeDuration_();
+    const duration = this.manifest_.duration;
     if (lookupTime >= duration - 1e-6) {
       mediaState.ended = true;
       this.checkEndOfStream_();
@@ -368,12 +370,6 @@ export class StreamController {
     if (allDone) {
       this.player_.emit(Events.BUFFER_EOS);
     }
-  }
-
-  private computeDuration_(): number {
-    const end = this.manifest_?.presentations.at(-1)?.end;
-    asserts.assertExists(end, "Cannot compute duration");
-    return end;
   }
 
   private onSeeking_ = () => {
