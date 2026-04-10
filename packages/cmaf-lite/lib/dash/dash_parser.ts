@@ -61,47 +61,63 @@ function parsePeriod(
     ? decodeIso8601Duration(period["@_start"])
     : 0;
 
+  const duration = resolvePresentationDuration(mpd, period, periodIndex, start);
+
   const switchingSets = period.AdaptationSet.map((as) => {
     const type = inferMediaType(as);
     asserts.assertExists(type, "Cannot infer media type");
-    return parseSwitchingSet(sourceUrl, mpd, period, as, type);
+    return parseSwitchingSet(sourceUrl, mpd, period, as, type, duration);
   });
 
-  const end = resolvePresentationEnd(
-    mpd,
-    period,
-    periodIndex,
-    start,
-    switchingSets,
-  );
+  const end = resolvePresentationEnd(duration, start, switchingSets);
 
   return { start, end, switchingSets };
 }
 
 /**
- * Resolve presentation end using the DASH fallback chain:
- * duration → next start → MPD duration → last segment end.
+ * Resolve the period's duration from manifest metadata only.
+ * Runs before segment parsing so duration-based segment
+ * generation has the information it needs. Returns null when
+ * metadata alone cannot determine the duration — callers must
+ * fall back to parsed segment data instead.
  */
-function resolvePresentationEnd(
+function resolvePresentationDuration(
   mpd: MPD,
   period: Period,
   periodIndex: number,
   start: number,
-  switchingSets: SwitchingSet[],
-): number {
+): number | null {
   const duration = period["@_duration"];
   if (duration != null) {
-    return start + decodeIso8601Duration(duration);
+    return decodeIso8601Duration(duration);
   }
 
   const nextStart = mpd.Period[periodIndex + 1]?.["@_start"];
   if (nextStart != null) {
-    return decodeIso8601Duration(nextStart);
+    return decodeIso8601Duration(nextStart) - start;
   }
 
   const mpdDuration = mpd["@_mediaPresentationDuration"];
   if (mpdDuration != null) {
-    return decodeIso8601Duration(mpdDuration);
+    return decodeIso8601Duration(mpdDuration) - start;
+  }
+
+  return null;
+}
+
+/**
+ * Resolve the absolute end time for the Presentation. Unlike
+ * resolvePresentationDuration, this runs after segment parsing
+ * and can use segment data as a last resort when metadata is
+ * incomplete (only valid for explicit addressing).
+ */
+function resolvePresentationEnd(
+  duration: number | null,
+  start: number,
+  switchingSets: SwitchingSet[],
+): number {
+  if (duration != null) {
+    return start + duration;
   }
 
   const lastSegmentEnd = switchingSets[0]?.tracks[0]?.segments.at(-1)?.end;
@@ -115,6 +131,7 @@ function parseSwitchingSet(
   period: Period,
   adaptationSet: AdaptationSet,
   type: MediaType,
+  duration: number | null,
 ): SwitchingSet {
   const firstRep = adaptationSet.Representation[0];
   asserts.assertExists(firstRep, "No Representation found");
@@ -125,7 +142,7 @@ function parseSwitchingSet(
   asserts.assertExists(codec, "codecs is mandatory");
 
   const tracks = adaptationSet.Representation.map((rep) =>
-    parseTrack(sourceUrl, mpd, period, adaptationSet, rep, type),
+    parseTrack(sourceUrl, mpd, period, adaptationSet, rep, type, duration),
   );
 
   return { type, codec, tracks };
@@ -138,6 +155,7 @@ function parseTrack(
   adaptationSet: AdaptationSet,
   representation: Representation,
   type: MediaType,
+  duration: number | null,
 ): Track {
   const baseUrls = Functional.filterMap(
     [mpd, period, adaptationSet, representation],
@@ -154,6 +172,7 @@ function parseTrack(
     adaptationSet,
     representation,
     baseUrl,
+    duration,
   );
 
   if (type === MediaType.VIDEO) {
