@@ -293,7 +293,7 @@ export class BufferController {
     this.player_.emit(Events.BUFFER_APPEND_ERROR, {
       type,
       error,
-    } satisfies BufferAppendErrorEvent);
+    });
 
     const minBackBuffer = Math.max(
       this.segmentTracker_.getLastSegmentDuration(type),
