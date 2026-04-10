@@ -12,7 +12,7 @@ type BufferGraphProps = {
 export function BufferGraph({ data }: BufferGraphProps) {
   return (
     <div className="bg-neutral-950 p-4 font-mono text-neutral-500">
-      <Header bufferGoal={data.bufferGoal} paused={data.paused} />
+      <Header frontBufferLength={data.frontBufferLength} paused={data.paused} />
       <SeekableLabels seekable={data.seekable} currentTime={data.currentTime} />
 
       <Bar label="buffered">
@@ -20,7 +20,7 @@ export function BufferGraph({ data }: BufferGraphProps) {
           ranges={data.buffered}
           seekable={data.seekable}
           currentTime={data.currentTime}
-          bufferGoal={data.bufferGoal}
+          frontBufferLength={data.frontBufferLength}
         />
       </Bar>
       <div className="mb-3">
@@ -30,7 +30,7 @@ export function BufferGraph({ data }: BufferGraphProps) {
             ranges={data.played}
             seekable={data.seekable}
             currentTime={data.currentTime}
-            bufferGoal={data.bufferGoal}
+            frontBufferLength={data.frontBufferLength}
             showMarkers={false}
           />
         </Bar>
@@ -44,7 +44,7 @@ export function BufferGraph({ data }: BufferGraphProps) {
           ranges={data.video}
           seekable={data.seekable}
           currentTime={data.currentTime}
-          bufferGoal={data.bufferGoal}
+          frontBufferLength={data.frontBufferLength}
         />
       </Bar>
       <div className="mb-3">
@@ -54,7 +54,7 @@ export function BufferGraph({ data }: BufferGraphProps) {
             ranges={data.audio}
             seekable={data.seekable}
             currentTime={data.currentTime}
-            bufferGoal={data.bufferGoal}
+            frontBufferLength={data.frontBufferLength}
           />
         </Bar>
       </div>

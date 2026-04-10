@@ -40,8 +40,8 @@ function getData(player: Player): BufferData | null {
     played: toTimeRanges(media.played),
     video: toTimeRanges(player.getBuffered(MediaType.VIDEO)),
     audio: toTimeRanges(player.getBuffered(MediaType.AUDIO)),
-    bufferGoal: config.bufferGoal,
-    bufferBehind: config.bufferBehind,
+    frontBufferLength: config.frontBufferLength,
+    backBufferLength: config.backBufferLength,
   };
 }
 

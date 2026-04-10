@@ -148,8 +148,8 @@ export class BufferController {
   }
 
   private onBufferAppended_ = (event: BufferAppendedEvent) => {
-    const { bufferBehind } = this.player_.getConfig();
-    if (!Number.isFinite(bufferBehind)) {
+    const { backBufferLength } = this.player_.getConfig();
+    if (!Number.isFinite(backBufferLength)) {
       return;
     }
     const media = this.player_.getMedia();
@@ -162,7 +162,7 @@ export class BufferController {
       return;
     }
     const bufferedStart = sb.buffered.start(0);
-    const evictEnd = media.currentTime - bufferBehind;
+    const evictEnd = media.currentTime - backBufferLength;
     if (bufferedStart >= evictEnd) {
       return;
     }

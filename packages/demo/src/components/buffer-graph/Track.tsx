@@ -8,7 +8,7 @@ type TrackProps = {
   ranges: TimeRange[];
   seekable: TimeRange | null;
   currentTime: number;
-  bufferGoal: number;
+  frontBufferLength: number;
   showMarkers?: boolean;
 };
 
@@ -18,7 +18,7 @@ export function Track({
   ranges,
   seekable,
   currentTime,
-  bufferGoal,
+  frontBufferLength,
   showMarkers = true,
 }: TrackProps) {
   return (
@@ -45,7 +45,7 @@ export function Track({
           <div
             className="absolute top-0 h-full border-l border-dashed border-neutral-600"
             style={{
-              left: toPosition(currentTime + bufferGoal, seekable),
+              left: toPosition(currentTime + frontBufferLength, seekable),
             }}
           />
         </>

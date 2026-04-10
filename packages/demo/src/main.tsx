@@ -9,7 +9,7 @@ const player = new Player();
 Object.assign(window, { player });
 
 player.setConfig({
-  bufferGoal: 30,
+  frontBufferLength: 30,
 });
 
 const video = document.getElementById("videoElement") as HTMLVideoElement;

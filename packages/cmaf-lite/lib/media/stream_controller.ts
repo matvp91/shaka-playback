@@ -204,10 +204,10 @@ export class StreamController {
     }
 
     const currentTime = this.media_.currentTime;
-    const bufferGoal = this.player_.getConfig().bufferGoal;
+    const frontBufferLength = this.player_.getConfig().frontBufferLength;
     const bufferEnd = this.getBufferEnd_(mediaState.type, currentTime);
 
-    if (bufferEnd !== null && bufferEnd - currentTime >= bufferGoal) {
+    if (bufferEnd !== null && bufferEnd - currentTime >= frontBufferLength) {
       return;
     }
 

@@ -1,13 +1,15 @@
 export type PlayerConfig = {
-  bufferGoal: number;
-  bufferBehind: number;
+  frontBufferLength: number;
+  backBufferLength: number;
+  backBufferQuotaPadding: number;
   maxBufferHole: number;
   maxSegmentLookupTolerance: number;
 };
 
 export const defaultConfig: PlayerConfig = {
-  bufferGoal: 30,
-  bufferBehind: Infinity,
+  frontBufferLength: 30,
+  backBufferLength: Infinity,
+  backBufferQuotaPadding: 2,
   maxBufferHole: 0.1,
   maxSegmentLookupTolerance: 0.25,
 };
