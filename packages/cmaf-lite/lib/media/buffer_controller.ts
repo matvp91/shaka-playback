@@ -346,11 +346,5 @@ export class BufferController {
 }
 
 function isQuotaExceededError(error: unknown): error is DOMException {
-  if (!(error instanceof DOMException)) {
-    return false;
-  }
-  return (
-    error.name === "QuotaExceededError" ||
-    error.code === DOMException.QUOTA_EXCEEDED_ERR
-  );
+  return error instanceof DOMException && error.name === "QuotaExceededError";
 }
