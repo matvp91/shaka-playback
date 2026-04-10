@@ -4,6 +4,7 @@ import * as asserts from "../utils/asserts";
 type Operation = {
   execute: () => void;
   onComplete?: () => void;
+  onError?: (error: unknown) => void;
 };
 
 export class OperationQueue {
@@ -62,6 +63,20 @@ export class OperationQueue {
   }
 
   /**
+   * Insert operations at the front of the queue, ahead
+   * of any pending operations. Executes the first
+   * inserted operation immediately.
+   */
+  insertNext(type: MediaType, operations: Operation[]) {
+    const queue = this.queues_.get(type);
+    if (!queue) {
+      return;
+    }
+    queue.unshift(...operations);
+    this.executeNext_(type);
+  }
+
+  /**
    * Complete the current operation and execute the next.
    * Called on SourceBuffer updateend.
    */
@@ -90,11 +105,16 @@ export class OperationQueue {
     asserts.assertExists(operation, "Queue not empty but no operation");
     try {
       operation.execute();
-    } catch {
-      const sb = this.sourceBuffers_.get(type);
-      if (!sb?.updating) {
+    } catch (error) {
+      if (operation.onError) {
         queue.shift();
-        this.executeNext_(type);
+        operation.onError(error);
+      } else {
+        const sb = this.sourceBuffers_.get(type);
+        if (!sb?.updating) {
+          queue.shift();
+          this.executeNext_(type);
+        }
       }
     }
   }
