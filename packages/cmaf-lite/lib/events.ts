@@ -19,7 +19,7 @@ export const Events = {
   BUFFER_APPENDING: "bufferAppending",
   BUFFER_APPENDED: "bufferAppended",
   BUFFER_EOS: "bufferEos",
-  BUFFER_ERROR: "bufferError",
+  BUFFER_APPEND_ERROR: "bufferAppendError",
   NETWORK_REQUEST: "networkRequest",
   NETWORK_RESPONSE: "networkResponse",
   STREAM_PREFERENCE_CHANGED: "streamPreferenceChanged",
@@ -62,7 +62,7 @@ export type BufferAppendedEvent = {
   segment: Segment | null;
 };
 
-export type BufferErrorEvent = {
+export type BufferAppendErrorEvent = {
   type: MediaType;
   error: DOMException;
 };
@@ -91,7 +91,7 @@ export interface EventMap {
   [Events.BUFFER_APPENDING]: (event: BufferAppendingEvent) => void;
   [Events.BUFFER_APPENDED]: (event: BufferAppendedEvent) => void;
   [Events.BUFFER_EOS]: undefined;
-  [Events.BUFFER_ERROR]: (event: BufferErrorEvent) => void;
+  [Events.BUFFER_APPEND_ERROR]: (event: BufferAppendErrorEvent) => void;
   [Events.NETWORK_REQUEST]: (event: NetworkRequestEvent) => void;
   [Events.NETWORK_RESPONSE]: (event: NetworkResponseEvent) => void;
   [Events.STREAM_PREFERENCE_CHANGED]: (

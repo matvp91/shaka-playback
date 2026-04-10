@@ -62,7 +62,7 @@ Does not work with `backBufferLength: Infinity` (our default) since
 - **Tier 1** — evict minimum back buffer to fit failed segment, using
   SegmentTracker byte data. Retry append via operation queue insertion.
 - **Tier 2** — aggressive back-buffer trim to ~1 segment behind
-  playhead. Emit `BUFFER_ERROR`.
+  playhead. Emit `BUFFER_APPEND_ERROR`.
 - **No forward buffer eviction** — forward buffer shrinks naturally.
 - **No `frontBufferLength` scaling** — the two eviction tiers plus natural
   forward buffer consumption handle quota pressure.
@@ -84,4 +84,4 @@ Does not work with `backBufferLength: Infinity` (our default) since
   `SourceBuffer.buffered` reconciliation.
 - `StreamController` — no changes needed. The `update_()` loop
   naturally pauses when buffer is sufficient.
-- `Events` — add `BUFFER_ERROR` event.
+- `Events` — add `BUFFER_APPEND_ERROR` event.

@@ -1,8 +1,8 @@
 import type {
+  BufferAppendErrorEvent,
   BufferAppendedEvent,
   BufferAppendingEvent,
   BufferCodecsEvent,
-  BufferErrorEvent,
   MediaAttachingEvent,
 } from "../events";
 import { Events } from "../events";
@@ -254,11 +254,11 @@ export class BufferController {
     asserts.assertExists(sb, `No SourceBuffer for ${type}`);
 
     // Nothing buffered, nothing to evict.
-    const bufferedStart = sb.buffered.length > 0 ? sb.buffered.start(0) : null;
-    if (bufferedStart === null) {
+    if (sb.buffered.length === 0) {
       return;
     }
 
+    const bufferedStart = sb.buffered.start(0);
     const currentTime = media.currentTime;
 
     // Tier 1: evict minimum back buffer to fit the failed
@@ -287,10 +287,10 @@ export class BufferController {
 
     // Tier 2: aggressively trim back buffer to ~1 segment
     // behind playhead.
-    this.player_.emit(Events.BUFFER_ERROR, {
+    this.player_.emit(Events.BUFFER_APPEND_ERROR, {
       type,
       error,
-    } satisfies BufferErrorEvent);
+    } satisfies BufferAppendErrorEvent);
 
     const minBackBuffer = Math.max(
       this.segmentTracker_.getLastSegmentDuration(type),
