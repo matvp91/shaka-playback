@@ -1,10 +1,10 @@
-# Barely a Player
+# cmaf-lite
 
 What would a media player look like if we started from scratch in 2026?
 
 I'm a [Shaka Player](https://github.com/shaka-project/shaka-player) maintainer. Shaka is built to be the player that works for everyone, and that's its strength. But I've spent years wondering what happens when you scope things down aggressively. Same learnings, way smaller scope. CMAF only. MSE/EME only. No legacy formats, no legacy key systems. That's it.
 
-## The Experiment
+## The Idea
 
 [Shaka Player](https://github.com/shaka-project/shaka-player) and [hls.js](https://github.com/video-dev/hls.js) have over a decade of learnings baked in. Some great, some painful. The thing is, they have to support everything. Every container format, every key system, every browser quirk. That's the deal when you're the player everyone depends on.
 
