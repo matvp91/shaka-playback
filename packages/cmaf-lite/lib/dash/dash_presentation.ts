@@ -20,15 +20,13 @@ export function parseSegmentData(
   adaptationSet: AdaptationSet,
   representation: Representation,
   baseUrl: string,
+  duration: number | null,
 ) {
   const st = resolveSegmentTemplate(
     period.SegmentTemplate,
     adaptationSet.SegmentTemplate,
     representation.SegmentTemplate,
   );
-
-  const timeline = st.SegmentTimeline;
-  asserts.assertExists(timeline, "SegmentTimeline is mandatory");
 
   const initialization = st["@_initialization"];
   asserts.assertExists(initialization, "initialization is mandatory");
@@ -60,16 +58,27 @@ export function parseSegmentData(
     baseUrl,
   );
 
-  const segments = mapTemplateTimeline(
-    timeline,
-    media,
-    st,
-    representation,
-    baseUrl,
-    bandwidth,
-    pto,
-    periodStart,
-  );
+  const segments = st.SegmentTimeline
+    ? mapTemplateTimeline(
+        st.SegmentTimeline,
+        media,
+        st,
+        representation,
+        baseUrl,
+        bandwidth,
+        pto,
+        periodStart,
+      )
+    : mapTemplateDuration(
+        st,
+        media,
+        representation,
+        baseUrl,
+        bandwidth,
+        pto,
+        periodStart,
+        duration,
+      );
 
   const initSegment: InitSegment = {
     url: initSegmentUrl,
@@ -122,6 +131,56 @@ function mapTemplateTimeline(
       time += d;
       number++;
     }
+  }
+
+  return segments;
+}
+
+function mapTemplateDuration(
+  st: SegmentTemplate,
+  media: string,
+  representation: Representation,
+  baseUrl: string,
+  bandwidth: number,
+  pto: number,
+  periodStart: number,
+  presentationDuration: number | null,
+): Segment[] {
+  asserts.assertExists(
+    presentationDuration,
+    "Duration-based addressing requires a resolvable presentation duration",
+  );
+
+  const templateDuration = XmlUtils.asNumber(st["@_duration"]);
+  asserts.assertExists(
+    templateDuration,
+    "SegmentTemplate requires either SegmentTimeline or @duration",
+  );
+
+  const timescale = XmlUtils.asNumber(st["@_timescale"]) ?? 1;
+  const startNumber = XmlUtils.asNumber(st["@_startNumber"]) ?? 1;
+  const segmentDuration = templateDuration / timescale;
+  const segmentCount = Math.ceil(presentationDuration / segmentDuration);
+
+  const segments: Segment[] = [];
+
+  for (let i = 0; i < segmentCount; i++) {
+    const number = startNumber + i;
+    const time = i * templateDuration;
+    const relativeUrl = processUriTemplate(
+      media,
+      representation["@_id"],
+      number,
+      null,
+      bandwidth,
+      time,
+    );
+    const url = UrlUtils.resolveUrl(relativeUrl, baseUrl);
+    segments.push({
+      url,
+      start: (time - pto) / timescale + periodStart,
+      end: (time - pto + templateDuration) / timescale + periodStart,
+    });
   }
 
   return segments;
