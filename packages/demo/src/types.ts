@@ -11,6 +11,6 @@ export type BufferData = {
   played: TimeRange[];
   video: TimeRange[];
   audio: TimeRange[];
-  bufferGoal: number;
-  bufferBehind: number;
+  frontBufferLength: number;
+  backBufferLength: number;
 };

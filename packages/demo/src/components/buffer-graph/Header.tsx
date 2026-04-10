@@ -1,12 +1,12 @@
 type HeaderProps = {
-  bufferGoal: number;
+  frontBufferLength: number;
   paused: boolean;
 };
 
-export function Header({ bufferGoal, paused }: HeaderProps) {
+export function Header({ frontBufferLength, paused }: HeaderProps) {
   return (
     <div className="mb-3">
-      goal {bufferGoal} · {paused ? "paused" : "playing"}
+      goal {frontBufferLength} · {paused ? "paused" : "playing"}
     </div>
   );
 }
