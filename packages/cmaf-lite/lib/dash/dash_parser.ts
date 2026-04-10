@@ -1,10 +1,6 @@
 import { decodeIso8601Duration } from "@svta/cml-iso-8601";
 import { XMLParser } from "fast-xml-parser";
-import type {
-  Manifest,
-  SwitchingSet,
-  Track,
-} from "../types/manifest";
+import type { Manifest, SwitchingSet, Track } from "../types/manifest";
 import { MediaType } from "../types/media";
 import * as asserts from "../utils/asserts";
 import * as Functional from "../utils/functional";
@@ -51,10 +47,7 @@ export function parseManifest(text: string, sourceUrl: string) {
   return manifest;
 }
 
-function flattenPeriods(
-  sourceUrl: string,
-  mpd: MPD,
-): SwitchingSet[] {
+function flattenPeriods(sourceUrl: string, mpd: MPD): SwitchingSet[] {
   const result: SwitchingSet[] = [];
 
   for (let i = 0; i < mpd.Period.length; i++) {
@@ -65,9 +58,7 @@ function flattenPeriods(
     for (const as of period.AdaptationSet) {
       const type = inferMediaType(as);
       asserts.assertExists(type, "Cannot infer media type");
-      const ss = parseSwitchingSet(
-        sourceUrl, mpd, period, as, type, duration,
-      );
+      const ss = parseSwitchingSet(sourceUrl, mpd, period, as, type, duration);
 
       const existing = result.find(
         (r) => r.type === ss.type && r.codec === ss.codec,
@@ -95,17 +86,13 @@ function flattenPeriods(
   return result;
 }
 
-function resolveDuration(
-  mpd: MPD,
-  switchingSets: SwitchingSet[],
-): number {
+function resolveDuration(mpd: MPD, switchingSets: SwitchingSet[]): number {
   const mpdDuration = mpd["@_mediaPresentationDuration"];
   if (mpdDuration != null) {
     return decodeIso8601Duration(mpdDuration);
   }
 
-  const lastSegmentEnd =
-    switchingSets[0]?.tracks[0]?.segments.at(-1)?.end;
+  const lastSegmentEnd = switchingSets[0]?.tracks[0]?.segments.at(-1)?.end;
   asserts.assertExists(lastSegmentEnd, "Cannot resolve duration");
   return lastSegmentEnd;
 }

@@ -172,10 +172,7 @@ export class StreamController {
     }
 
     const oldTrack = mediaState.track;
-    const { switchingSet, track } = resolveHierarchy(
-      this.manifest_,
-      stream,
-    );
+    const { switchingSet, track } = resolveHierarchy(this.manifest_, stream);
 
     if (switchingSet !== mediaState.switchingSet) {
       this.player_.emit(Events.BUFFER_CODECS, {
@@ -188,16 +185,16 @@ export class StreamController {
     if (track !== oldTrack && mediaState.lastSegment) {
       if (switchingSet === mediaState.switchingSet) {
         mediaState.lastSegment = remapSegment(
-          oldTrack, track, mediaState.lastSegment,
+          oldTrack,
+          track,
+          mediaState.lastSegment,
         );
       } else {
         // Codec switch: segments may not align across
         // SwitchingSets, use time-based lookup to find
         // position in new track.
         const lookupTime = mediaState.lastSegment.end;
-        mediaState.lastSegment = this.getSegmentForTime_(
-          track, lookupTime,
-        );
+        mediaState.lastSegment = this.getSegmentForTime_(track, lookupTime);
       }
     }
 
@@ -231,9 +228,7 @@ export class StreamController {
       const preference = this.preferences_.get(type) ?? { type };
       this.preferences_.set(type, preference);
       const stream = StreamUtils.selectStream(streams, preference);
-      const { switchingSet, track } = resolveHierarchy(
-        this.manifest_, stream,
-      );
+      const { switchingSet, track } = resolveHierarchy(this.manifest_, stream);
 
       const mediaState: MediaState = {
         type,
@@ -376,9 +371,7 @@ export class StreamController {
   }
 
   private checkEndOfStream_() {
-    const allDone = [...this.mediaStates_.values()].every(
-      (ms) => ms.ended,
-    );
+    const allDone = [...this.mediaStates_.values()].every((ms) => ms.ended);
     if (allDone) {
       this.player_.emit(Events.BUFFER_EOS);
     }
