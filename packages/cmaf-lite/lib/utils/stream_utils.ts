@@ -1,45 +1,31 @@
-import type { Manifest, Presentation, Track } from "../types/manifest";
+import type { Manifest } from "../types/manifest";
 import type { ByType, Stream, StreamPreference } from "../types/media";
 import { MediaType } from "../types/media";
 import * as asserts from "./asserts";
 
 /**
- * Derive the set of streams available across all
- * presentations. Only streams present in every
- * presentation are included (intersection).
+ * Derive the set of available streams from the manifest.
  */
 export function getStreams(manifest: Manifest): Stream[] {
-  asserts.assert(manifest.presentations.length > 0, "No presentations");
-
-  const sets = manifest.presentations.map((presentation) => {
-    const streams: Stream[] = [];
-    for (const ss of presentation.switchingSets) {
-      for (const track of ss.tracks) {
-        const stream: Stream =
-          track.type === MediaType.VIDEO
-            ? {
-                type: track.type,
-                codec: ss.codec,
-                width: track.width,
-                height: track.height,
-              }
-            : { type: track.type, codec: ss.codec };
-        if (!streams.some((s) => isSameStream(s, stream))) {
-          streams.push(stream);
-        }
+  const streams: Stream[] = [];
+  for (const ss of manifest.switchingSets) {
+    for (const track of ss.tracks) {
+      const stream: Stream =
+        track.type === MediaType.VIDEO
+          ? {
+              type: track.type,
+              codec: ss.codec,
+              width: track.width,
+              height: track.height,
+            }
+          : { type: track.type, codec: ss.codec };
+      if (!streams.some((s) => isSameStream(s, stream))) {
+        streams.push(stream);
       }
     }
-    return streams;
-  });
-
-  const result = sets.reduce((a, b) =>
-    a.filter((s) => b.some((t) => isSameStream(s, t))),
-  );
-  asserts.assert(
-    result.length > 0,
-    "No consistent streams across presentations",
-  );
-  return result;
+  }
+  asserts.assert(streams.length > 0, "No streams found");
+  return streams;
 }
 
 /**
@@ -66,55 +52,6 @@ export function selectStream(
   }
 
   throw new Error("Could not lookup preference type");
-}
-
-/**
- * Resolve a stream to a concrete track in a presentation.
- */
-export function resolveTrack(
-  presentation: Presentation,
-  stream: Stream,
-): Track {
-  for (const switchingSet of presentation.switchingSets) {
-    if (
-      switchingSet.type !== stream.type ||
-      switchingSet.codec !== stream.codec
-    ) {
-      continue;
-    }
-    for (const track of switchingSet.tracks) {
-      if (
-        stream.type !== MediaType.VIDEO ||
-        track.type !== MediaType.VIDEO ||
-        (stream.width === track.width && stream.height === track.height)
-      ) {
-        return track;
-      }
-    }
-  }
-
-  throw new Error("No track found for stream in presentation");
-}
-
-type StreamAction = "switch" | "changeType" | null;
-
-/**
- * Determine the action needed when changing from one
- * stream to another. Returns null if the streams are
- * identical, "changeType" if the codec differs, or
- * "switch" for a same-codec quality change.
- */
-export function getStreamAction(
-  oldStream: Stream,
-  newStream: Stream,
-): StreamAction {
-  if (isSameStream(oldStream, newStream)) {
-    return null;
-  }
-  if (oldStream.codec !== newStream.codec) {
-    return "changeType";
-  }
-  return "switch";
 }
 
 function isSameStream(a: Stream, b: Stream): boolean {
