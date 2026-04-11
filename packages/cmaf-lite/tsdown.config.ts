@@ -1,4 +1,4 @@
-import webpackStatsPlugin from "rollup-plugin-webpack-stats";
+import relativeCiAgent from "@relative-ci/rollup-plugin";
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
@@ -10,5 +10,5 @@ export default defineConfig({
   // TODO(matvp): Create priority in dev, we currently
   // do not clean due to demo relying on dist
   clean: false,
-  plugins: [webpackStatsPlugin()],
+  plugins: [relativeCiAgent()],
 });
