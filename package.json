@@ -6,7 +6,8 @@
     "build": "pnpm -r build",
     "dev": "pnpm -r --parallel dev",
     "format": "pnpm -r format",
-    "tsc": "pnpm -r tsc"
+    "tsc": "pnpm -r tsc",
+    "test": "pnpm --filter cmaf-lite test"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
