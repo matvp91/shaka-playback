@@ -19,7 +19,10 @@ export function getStreams(manifest: Manifest): Stream[] {
               width: track.width,
               height: track.height,
             }
-          : { type: track.type, codec: CodecUtils.getNormalizedCodec(ss.codec) };
+          : {
+              type: track.type,
+              codec: CodecUtils.getNormalizedCodec(ss.codec),
+            };
       if (!streams.some((s) => isSameStream(s, stream))) {
         streams.push(stream);
       }
