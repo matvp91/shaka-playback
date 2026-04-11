@@ -9,6 +9,7 @@ import type { Player } from "../player";
 import type { InitSegment, Segment } from "../types/manifest";
 import type { MediaType } from "../types/media";
 import * as asserts from "../utils/asserts";
+import * as CodecUtils from "../utils/codec_utils";
 import * as Mp4BoxParser from "../utils/mp4_box_parser";
 import type { Operation } from "./operation_queue";
 import { OperationQueue } from "./operation_queue";
@@ -87,8 +88,9 @@ export class BufferController {
       return;
     }
 
-    const { type, mimeType } = event;
+    const { type, codec } = event;
     const sb = this.sourceBuffers_.get(type);
+    const mimeType = CodecUtils.getContentType(type, codec);
 
     if (sb) {
       this.opQueue_.enqueue(type, {

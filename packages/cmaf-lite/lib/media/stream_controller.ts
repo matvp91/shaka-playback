@@ -12,64 +12,33 @@ import type {
   SwitchingSet,
   Track,
 } from "../types/manifest";
-import type { ByType, Stream, StreamPreference } from "../types/media";
-import { MediaType } from "../types/media";
+import type {
+  ByType,
+  MediaType,
+  Stream,
+  StreamPreference,
+} from "../types/media";
 import type { NetworkRequest } from "../types/net";
 import { ABORTED, NetworkRequestType } from "../types/net";
 import * as ArrayUtils from "../utils/array_utils";
 import * as asserts from "../utils/asserts";
 import * as BufferUtils from "../utils/buffer_utils";
-import * as CodecUtils from "../utils/codec_utils";
 import * as StreamUtils from "../utils/stream_utils";
 import { Timer } from "../utils/timer";
 
 const TICK_INTERVAL = 0.1;
 
 type MediaState<T extends MediaType = MediaType> = {
-  /** Identity */
   type: T;
   stream: ByType<Stream, T>;
-
-  /** Hierarchy */
   switchingSet: SwitchingSet;
   track: ByType<Track, T>;
-
-  /** Delivery */
   lastSegment: Segment | null;
   lastInitSegment: InitSegment | null;
-
-  /** Operational */
   request: NetworkRequest | null;
   ended: boolean;
   timer: Timer;
 };
-
-/**
- * Find the SwitchingSet and Track matching a stream.
- */
-function resolveHierarchy(
-  manifest: Manifest,
-  stream: Stream,
-): { switchingSet: SwitchingSet; track: Track } {
-  for (const switchingSet of manifest.switchingSets) {
-    if (
-      switchingSet.type !== stream.type ||
-      switchingSet.codec !== stream.codec
-    ) {
-      continue;
-    }
-    for (const track of switchingSet.tracks) {
-      if (
-        stream.type !== MediaType.VIDEO ||
-        track.type !== MediaType.VIDEO ||
-        (stream.width === track.width && stream.height === track.height)
-      ) {
-        return { switchingSet, track };
-      }
-    }
-  }
-  throw new Error("No matching hierarchy for stream");
-}
 
 /**
  * Remap a segment to the equivalent position in a
@@ -172,12 +141,15 @@ export class StreamController {
     }
 
     const oldTrack = mediaState.track;
-    const { switchingSet, track } = resolveHierarchy(this.manifest_, stream);
+    const [switchingSet, track] = StreamUtils.resolveHierarchy(
+      this.manifest_,
+      stream,
+    );
 
     if (switchingSet !== mediaState.switchingSet) {
       this.player_.emit(Events.BUFFER_CODECS, {
         type: mediaState.type,
-        mimeType: CodecUtils.getContentType(mediaState.type, stream.codec),
+        codec: stream.codec,
         duration: this.manifest_.duration,
       });
     }
@@ -228,7 +200,10 @@ export class StreamController {
       const preference = this.preferences_.get(type) ?? { type };
       this.preferences_.set(type, preference);
       const stream = StreamUtils.selectStream(streams, preference);
-      const { switchingSet, track } = resolveHierarchy(this.manifest_, stream);
+      const [switchingSet, track] = StreamUtils.resolveHierarchy(
+        this.manifest_,
+        stream,
+      );
 
       const mediaState: MediaState = {
         type,
@@ -246,7 +221,7 @@ export class StreamController {
 
       this.player_.emit(Events.BUFFER_CODECS, {
         type,
-        mimeType: CodecUtils.getContentType(type, stream.codec),
+        codec: stream.codec,
         duration: this.manifest_.duration,
       });
     }

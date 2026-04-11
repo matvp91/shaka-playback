@@ -44,7 +44,7 @@ export type MediaAttachedEvent = {
 
 export type BufferCodecsEvent = {
   type: MediaType;
-  mimeType: string;
+  codec: string;
   duration: number;
 };
 

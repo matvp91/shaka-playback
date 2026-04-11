@@ -1,4 +1,4 @@
-import type { Manifest } from "../types/manifest";
+import type { Manifest, SwitchingSet, Track } from "../types/manifest";
 import type { ByType, Stream, StreamPreference } from "../types/media";
 import { MediaType } from "../types/media";
 import * as asserts from "./asserts";
@@ -104,4 +104,31 @@ function matchAudioPreference(
   }
   asserts.assertExists(streams[0], "No audio streams to match against");
   return streams[0];
+}
+
+/**
+ * Find the SwitchingSet and Track matching a stream.
+ */
+export function resolveHierarchy(
+  manifest: Manifest,
+  stream: Stream,
+): [SwitchingSet, Track] {
+  for (const switchingSet of manifest.switchingSets) {
+    if (
+      switchingSet.type !== stream.type ||
+      switchingSet.codec !== stream.codec
+    ) {
+      continue;
+    }
+    for (const track of switchingSet.tracks) {
+      if (
+        stream.type !== MediaType.VIDEO ||
+        track.type !== MediaType.VIDEO ||
+        (stream.width === track.width && stream.height === track.height)
+      ) {
+        return [switchingSet, track];
+      }
+    }
+  }
+  throw new Error("No matching hierarchy for stream");
 }

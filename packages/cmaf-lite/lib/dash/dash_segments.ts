@@ -14,7 +14,7 @@ import type {
   SegmentTimeline,
 } from "./dash_types";
 
-export function parseSegmentData(
+export function parseSegments(
   _mpd: MPD,
   period: Period,
   adaptationSet: AdaptationSet,
@@ -86,7 +86,7 @@ export function parseSegmentData(
         initSegment,
       );
 
-  return { segments };
+  return segments;
 }
 
 function mapTemplateTimeline(

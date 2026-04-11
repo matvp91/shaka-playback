@@ -6,7 +6,7 @@ import * as asserts from "../utils/asserts";
 import * as Functional from "../utils/functional";
 import * as UrlUtils from "../utils/url_utils";
 import * as XmlUtils from "../utils/xml_utils";
-import { parseSegmentData } from "./dash_presentation";
+import { parseSegments } from "./dash_segments";
 import type { AdaptationSet, MPD, Period, Representation } from "./dash_types";
 
 const DASH_ARRAY_NODES = [
@@ -166,7 +166,7 @@ function parseTrack(
   const bandwidth = XmlUtils.asNumber(representation["@_bandwidth"]);
   asserts.assertExists(bandwidth, "bandwidth is mandatory");
 
-  const { segments } = parseSegmentData(
+  const segments = parseSegments(
     mpd,
     period,
     adaptationSet,
