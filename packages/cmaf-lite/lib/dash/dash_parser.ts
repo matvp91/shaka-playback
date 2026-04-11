@@ -231,3 +231,15 @@ function inferMediaType(adaptationSet: AdaptationSet): MediaType {
   }
   throw new Error("Failed to infer media type");
 }
+
+function resolveCodec(adaptationSet: AdaptationSet): string {
+  const firstRep = adaptationSet.Representation[0];
+  asserts.assertExists(firstRep, "No Representation found");
+
+  const codec = Functional.findMap([firstRep, adaptationSet], (node) =>
+    node["@_codecs"]?.toLowerCase(),
+  );
+  asserts.assertExists(codec, "codecs is mandatory");
+
+  return codec;
+}
