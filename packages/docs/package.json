@@ -5,7 +5,7 @@
   "scripts": {
     "generate-reference": "pnpm -r generate-reference && python3 generate-reference.py",
     "build": "pnpm generate-reference && astro build",
-    "dev": "pnpm generate-reference && astro dev"
+    "dev": "astro dev"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.38.3",
