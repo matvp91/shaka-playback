@@ -108,7 +108,6 @@ export class BufferController {
       this.opQueue_.shiftAndExecuteNext(type);
     });
 
-    this.updateDuration_(event.duration);
   };
 
   private onBufferAppending_ = (event: BufferAppendingEvent) => {

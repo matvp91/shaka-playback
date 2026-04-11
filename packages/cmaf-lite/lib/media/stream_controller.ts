@@ -134,7 +134,6 @@ export class StreamController {
       this.player_.emit(Events.BUFFER_CODECS, {
         type: mediaState.type,
         codec: switchingSet.codec,
-        duration: this.manifest_.duration,
       });
     }
 
@@ -207,7 +206,6 @@ export class StreamController {
       this.player_.emit(Events.BUFFER_CODECS, {
         type,
         codec: switchingSet.codec,
-        duration: this.manifest_.duration,
       });
     }
 
