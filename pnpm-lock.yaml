@@ -36,6 +36,9 @@ importers:
         specifier: ^5.4.1
         version: 5.5.10
     devDependencies:
+      '@microsoft/api-documenter':
+        specifier: ^7.30.0
+        version: 7.30.0(@types/node@25.5.2)
       '@microsoft/api-extractor':
         specifier: ^7.58.2
         version: 7.58.2(@types/node@25.5.2)
@@ -94,13 +97,6 @@ importers:
       sharp:
         specifier: ^0.34.5
         version: 0.34.5
-    devDependencies:
-      '@microsoft/api-documenter':
-        specifier: ^7.30.0
-        version: 7.30.0
-      '@microsoft/api-extractor':
-        specifier: ^7.58.2
-        version: 7.58.2(@types/node@25.5.2)
 
 packages:
 
@@ -939,7 +935,7 @@ packages:
       - supports-color
     dev: false
 
-  /@microsoft/api-documenter@7.30.0:
+  /@microsoft/api-documenter@7.30.0(@types/node@25.5.2):
     resolution: {integrity: sha512-VjnsEe4UhOanW0ERdGbsegLU4eoPuYPEpFwW8nILWlzBXBLneATHvQEIQfDokOP0nmHfSXAygRBrIx1wp9e9/w==}
     hasBin: true
     dependencies:

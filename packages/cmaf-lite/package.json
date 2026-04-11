@@ -20,10 +20,12 @@
   "scripts": {
     "build": "tsup --minify",
     "dev": "tsup --watch",
+    "docs": "api-extractor run --local && api-documenter markdown -i __generated_docs__ -o __generated_docs__/markdown",
     "format": "biome check --write --unsafe .",
     "tsc": "tsc --noEmit"
   },
   "devDependencies": {
+    "@microsoft/api-documenter": "^7.30.0",
     "@microsoft/api-extractor": "^7.58.2",
     "@types/node": "^25.5.2",
     "tsup": "^8.5.1"

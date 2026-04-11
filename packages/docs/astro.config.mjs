@@ -1,10 +1,6 @@
-import { readFileSync } from "node:fs";
 import starlight from "@astrojs/starlight";
 import { defineConfig } from "astro/config";
-
-const referenceSidebar = JSON.parse(
-  readFileSync(new URL("sidebar.json", import.meta.url), "utf-8"),
-);
+import referenceSidebar from "./sidebar-reference.json" with { type: "json" };
 
 export default defineConfig({
   integrations: [
