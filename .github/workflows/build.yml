@@ -1,7 +1,9 @@
-name: Deploy docs
+name: Build
 
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -11,11 +13,31 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm tsc
+
+      - run: pnpm test
+
+  deploy_docs:
+    if: github.ref == 'refs/heads/main'
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,7 +64,8 @@ jobs:
           path: packages/docs/dist
 
   deploy:
-    needs: build
+    if: github.ref == 'refs/heads/main'
+    needs: deploy_docs
     runs-on: ubuntu-latest
     environment:
       name: github-pages
