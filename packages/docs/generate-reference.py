@@ -51,7 +51,7 @@ for md in REF_DIR.glob("*.md"):
     title_match = re.search(r"^## (.+)$", content, re.M)
     title = KIND_RE.sub("", title_match.group(1)) if title_match else md.name
     slug = f"reference/{md.stem}"
-    rewritten = LINK_RE.sub(r"/reference/\1", content)
+    rewritten = LINK_RE.sub(r"/cmaf-lite/reference/\1", content)
     md.write_text(f"---\ntitle: {title}\nslug: {slug}\n---\n\n{rewritten}")
 
 # Write sidebar
