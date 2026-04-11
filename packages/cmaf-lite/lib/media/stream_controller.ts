@@ -264,9 +264,11 @@ export class StreamController {
     }
 
     if (segment.initSegment !== mediaState.lastInitSegment) {
-      this.loadSegment_(mediaState, segment.initSegment, null);
+      this.loadSegment_(mediaState, segment.initSegment);
+      mediaState.lastInitSegment = segment.initSegment;
     } else {
-      this.loadSegment_(mediaState, segment.initSegment, segment);
+      this.loadSegment_(mediaState, segment);
+      mediaState.lastSegment = segment;
     }
   }
 
@@ -277,15 +279,12 @@ export class StreamController {
    */
   private async loadSegment_(
     mediaState: MediaState,
-    initSegment: InitSegment,
-    segment: Segment | null,
+    segment: Segment | InitSegment,
   ) {
     const networkService = this.player_.getNetworkService();
-    const url = segment?.url ?? initSegment.url;
-
     mediaState.request = networkService.request(
       NetworkRequestType.SEGMENT,
-      url,
+      segment.url,
     );
 
     const response = await mediaState.request.promise;
@@ -293,15 +292,8 @@ export class StreamController {
       return;
     }
 
-    if (segment) {
-      mediaState.lastSegment = segment;
-    } else {
-      mediaState.lastInitSegment = initSegment;
-    }
-
     this.player_.emit(Events.BUFFER_APPENDING, {
       type: mediaState.type,
-      initSegment,
       segment,
       data: response.arrayBuffer,
     });

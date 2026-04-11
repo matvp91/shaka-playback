@@ -111,16 +111,20 @@ export class BufferController {
   };
 
   private onBufferAppending_ = (event: BufferAppendingEvent) => {
-    const { type, initSegment, data, segment } = event;
+    const { type, data, segment } = event;
 
-    if (!segment) {
-      this.initSegmentInfo_.set(initSegment, {
+    // TODO: Create a helper.
+    const isMedia = "initSegment" in segment;
+    const isInit = !isMedia;
+
+    if (isInit) {
+      this.initSegmentInfo_.set(segment, {
         timescale: Mp4BoxParser.parseTimescale(data),
       });
     }
 
-    const timestampOffset = segment
-      ? this.computeTimestampOffset_(initSegment, segment, data)
+    const timestampOffset = isMedia
+      ? this.computeTimestampOffset_(segment, data)
       : undefined;
 
     const operation = {
@@ -154,12 +158,8 @@ export class BufferController {
    * Derive timestampOffset from init segment timescale
    * and media segment baseMediaDecodeTime.
    */
-  private computeTimestampOffset_(
-    initSegment: InitSegment,
-    segment: Segment,
-    data: ArrayBuffer,
-  ): number {
-    const info = this.initSegmentInfo_.get(initSegment);
+  private computeTimestampOffset_(segment: Segment, data: ArrayBuffer): number {
+    const info = this.initSegmentInfo_.get(segment.initSegment);
     asserts.assertExists(info, "Init segment not parsed");
     const mediaTime =
       Mp4BoxParser.parseBaseMediaDecodeTime(data) / info.timescale;
@@ -170,7 +170,8 @@ export class BufferController {
     const { type, segment, data } = event;
 
     // Record byte size for quota-aware eviction decisions.
-    if (segment) {
+    // TODO(matvp): Create a helper
+    if ("initSegment" in segment) {
       this.segmentTracker_.trackAppend(
         type,
         segment.start,

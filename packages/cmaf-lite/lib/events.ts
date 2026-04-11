@@ -50,16 +50,14 @@ export type BufferCodecsEvent = {
 
 export type BufferAppendingEvent = {
   type: MediaType;
-  initSegment: InitSegment;
+  segment: InitSegment | Segment;
   data: ArrayBuffer;
-  segment: Segment | null;
 };
 
 export type BufferAppendedEvent = {
   type: MediaType;
-  initSegment: InitSegment;
+  segment: InitSegment | Segment;
   data: ArrayBuffer;
-  segment: Segment | null;
 };
 
 export type BufferAppendErrorEvent = {
