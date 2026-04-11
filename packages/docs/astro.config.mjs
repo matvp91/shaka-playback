@@ -10,6 +10,14 @@ export default defineConfig({
       title: "cmaf-lite",
       sidebar: [
         { label: "Guides", autogenerate: { directory: "guides" } },
+        {
+          label: "Architecture",
+          items: [
+            { label: "Technical Design", slug: "architecture/design" },
+            { label: "Buffer", slug: "architecture/buffer" },
+            { label: "Manifest", slug: "architecture/manifest" },
+          ],
+        },
         ...referenceSidebar,
       ],
     }),

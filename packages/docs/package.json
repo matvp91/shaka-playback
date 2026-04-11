@@ -3,8 +3,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "generate-reference": "pnpm -r generate-reference && python3 generate-reference.py",
-    "build": "pnpm generate-reference && astro build",
+    "generate": "pnpm -r generate-reference && python3 generate.py",
+    "build": "pnpm generate && astro build",
     "dev": "astro dev"
   },
   "dependencies": {
