@@ -1,185 +1,180 @@
 [
   {
     "label": "Reference",
+    "collapsed": true,
     "items": [
       {
-        "label": "cmaf-lite",
+        "label": "Class",
         "items": [
           {
-            "label": "Variable",
-            "collapsed": true,
-            "items": [
-              {
-                "label": "ABORTED",
-                "link": "/reference/cmaf-lite.aborted/"
-              },
-              {
-                "label": "Events",
-                "link": "/reference/cmaf-lite.events/"
-              },
-              {
-                "label": "defaultConfig",
-                "link": "/reference/cmaf-lite.defaultconfig/"
-              }
-            ]
+            "label": "DashParser",
+            "link": "/reference/cmaf-lite.dashparser/"
           },
           {
-            "label": "TypeAlias",
-            "collapsed": true,
-            "items": [
-              {
-                "label": "BufferAppendErrorEvent",
-                "link": "/reference/cmaf-lite.bufferappenderrorevent/"
-              },
-              {
-                "label": "BufferAppendedEvent",
-                "link": "/reference/cmaf-lite.bufferappendedevent/"
-              },
-              {
-                "label": "BufferAppendingEvent",
-                "link": "/reference/cmaf-lite.bufferappendingevent/"
-              },
-              {
-                "label": "BufferCodecsEvent",
-                "link": "/reference/cmaf-lite.buffercodecsevent/"
-              },
-              {
-                "label": "ByType",
-                "link": "/reference/cmaf-lite.bytype/"
-              },
-              {
-                "label": "InitSegment",
-                "link": "/reference/cmaf-lite.initsegment/"
-              },
-              {
-                "label": "Manifest",
-                "link": "/reference/cmaf-lite.manifest/"
-              },
-              {
-                "label": "ManifestLoadingEvent",
-                "link": "/reference/cmaf-lite.manifestloadingevent/"
-              },
-              {
-                "label": "ManifestParsedEvent",
-                "link": "/reference/cmaf-lite.manifestparsedevent/"
-              },
-              {
-                "label": "MediaAttachedEvent",
-                "link": "/reference/cmaf-lite.mediaattachedevent/"
-              },
-              {
-                "label": "MediaAttachingEvent",
-                "link": "/reference/cmaf-lite.mediaattachingevent/"
-              },
-              {
-                "label": "NetworkRequest",
-                "link": "/reference/cmaf-lite.networkrequest/"
-              },
-              {
-                "label": "NetworkRequestEvent",
-                "link": "/reference/cmaf-lite.networkrequestevent/"
-              },
-              {
-                "label": "NetworkResponseEvent",
-                "link": "/reference/cmaf-lite.networkresponseevent/"
-              },
-              {
-                "label": "NetworkResponsePromise",
-                "link": "/reference/cmaf-lite.networkresponsepromise/"
-              },
-              {
-                "label": "PlayerConfig",
-                "link": "/reference/cmaf-lite.playerconfig/"
-              },
-              {
-                "label": "RegistoryComponentCtor",
-                "link": "/reference/cmaf-lite.registorycomponentctor/"
-              },
-              {
-                "label": "Segment",
-                "link": "/reference/cmaf-lite.segment/"
-              },
-              {
-                "label": "Stream",
-                "link": "/reference/cmaf-lite.stream/"
-              },
-              {
-                "label": "StreamPreference",
-                "link": "/reference/cmaf-lite.streampreference/"
-              },
-              {
-                "label": "StreamPreferenceChangedEvent",
-                "link": "/reference/cmaf-lite.streampreferencechangedevent/"
-              },
-              {
-                "label": "SwitchingSet",
-                "link": "/reference/cmaf-lite.switchingset/"
-              },
-              {
-                "label": "Track",
-                "link": "/reference/cmaf-lite.track/"
-              }
-            ]
+            "label": "ManifestParser",
+            "link": "/reference/cmaf-lite.manifestparser/"
           },
           {
-            "label": "Class",
-            "collapsed": true,
-            "items": [
-              {
-                "label": "DashParser",
-                "link": "/reference/cmaf-lite.dashparser/"
-              },
-              {
-                "label": "ManifestParser",
-                "link": "/reference/cmaf-lite.manifestparser/"
-              },
-              {
-                "label": "NetworkResponse",
-                "link": "/reference/cmaf-lite.networkresponse/"
-              },
-              {
-                "label": "NetworkService",
-                "link": "/reference/cmaf-lite.networkservice/"
-              },
-              {
-                "label": "Player",
-                "link": "/reference/cmaf-lite.player/"
-              },
-              {
-                "label": "Registry",
-                "link": "/reference/cmaf-lite.registry/"
-              }
-            ]
+            "label": "NetworkResponse",
+            "link": "/reference/cmaf-lite.networkresponse/"
           },
           {
-            "label": "Interface",
-            "collapsed": true,
-            "items": [
-              {
-                "label": "EventMap",
-                "link": "/reference/cmaf-lite.eventmap/"
-              }
-            ]
+            "label": "NetworkService",
+            "link": "/reference/cmaf-lite.networkservice/"
           },
           {
-            "label": "Enum",
-            "collapsed": true,
-            "items": [
-              {
-                "label": "MediaType",
-                "link": "/reference/cmaf-lite.mediatype/"
-              },
-              {
-                "label": "NetworkRequestType",
-                "link": "/reference/cmaf-lite.networkrequesttype/"
-              },
-              {
-                "label": "RegistryType",
-                "link": "/reference/cmaf-lite.registrytype/"
-              }
-            ]
+            "label": "Player",
+            "link": "/reference/cmaf-lite.player/"
+          },
+          {
+            "label": "Registry",
+            "link": "/reference/cmaf-lite.registry/"
           }
         ]
+      },
+      {
+        "label": "Enum",
+        "items": [
+          {
+            "label": "MediaType",
+            "link": "/reference/cmaf-lite.mediatype/"
+          },
+          {
+            "label": "NetworkRequestType",
+            "link": "/reference/cmaf-lite.networkrequesttype/"
+          },
+          {
+            "label": "RegistryType",
+            "link": "/reference/cmaf-lite.registrytype/"
+          }
+        ],
+        "collapsed": true
+      },
+      {
+        "label": "Interface",
+        "items": [
+          {
+            "label": "EventMap",
+            "link": "/reference/cmaf-lite.eventmap/"
+          }
+        ],
+        "collapsed": true
+      },
+      {
+        "label": "TypeAlias",
+        "items": [
+          {
+            "label": "BufferAppendErrorEvent",
+            "link": "/reference/cmaf-lite.bufferappenderrorevent/"
+          },
+          {
+            "label": "BufferAppendedEvent",
+            "link": "/reference/cmaf-lite.bufferappendedevent/"
+          },
+          {
+            "label": "BufferAppendingEvent",
+            "link": "/reference/cmaf-lite.bufferappendingevent/"
+          },
+          {
+            "label": "BufferCodecsEvent",
+            "link": "/reference/cmaf-lite.buffercodecsevent/"
+          },
+          {
+            "label": "ByType",
+            "link": "/reference/cmaf-lite.bytype/"
+          },
+          {
+            "label": "InitSegment",
+            "link": "/reference/cmaf-lite.initsegment/"
+          },
+          {
+            "label": "Manifest",
+            "link": "/reference/cmaf-lite.manifest/"
+          },
+          {
+            "label": "ManifestLoadingEvent",
+            "link": "/reference/cmaf-lite.manifestloadingevent/"
+          },
+          {
+            "label": "ManifestParsedEvent",
+            "link": "/reference/cmaf-lite.manifestparsedevent/"
+          },
+          {
+            "label": "MediaAttachedEvent",
+            "link": "/reference/cmaf-lite.mediaattachedevent/"
+          },
+          {
+            "label": "MediaAttachingEvent",
+            "link": "/reference/cmaf-lite.mediaattachingevent/"
+          },
+          {
+            "label": "NetworkRequest",
+            "link": "/reference/cmaf-lite.networkrequest/"
+          },
+          {
+            "label": "NetworkRequestEvent",
+            "link": "/reference/cmaf-lite.networkrequestevent/"
+          },
+          {
+            "label": "NetworkResponseEvent",
+            "link": "/reference/cmaf-lite.networkresponseevent/"
+          },
+          {
+            "label": "NetworkResponsePromise",
+            "link": "/reference/cmaf-lite.networkresponsepromise/"
+          },
+          {
+            "label": "PlayerConfig",
+            "link": "/reference/cmaf-lite.playerconfig/"
+          },
+          {
+            "label": "RegistoryComponentCtor",
+            "link": "/reference/cmaf-lite.registorycomponentctor/"
+          },
+          {
+            "label": "Segment",
+            "link": "/reference/cmaf-lite.segment/"
+          },
+          {
+            "label": "Stream",
+            "link": "/reference/cmaf-lite.stream/"
+          },
+          {
+            "label": "StreamPreference",
+            "link": "/reference/cmaf-lite.streampreference/"
+          },
+          {
+            "label": "StreamPreferenceChangedEvent",
+            "link": "/reference/cmaf-lite.streampreferencechangedevent/"
+          },
+          {
+            "label": "SwitchingSet",
+            "link": "/reference/cmaf-lite.switchingset/"
+          },
+          {
+            "label": "Track",
+            "link": "/reference/cmaf-lite.track/"
+          }
+        ],
+        "collapsed": true
+      },
+      {
+        "label": "Variable",
+        "items": [
+          {
+            "label": "ABORTED",
+            "link": "/reference/cmaf-lite.aborted/"
+          },
+          {
+            "label": "Events",
+            "link": "/reference/cmaf-lite.events/"
+          },
+          {
+            "label": "defaultConfig",
+            "link": "/reference/cmaf-lite.defaultconfig/"
+          }
+        ],
+        "collapsed": true
       }
     ]
   }

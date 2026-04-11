@@ -28,10 +28,15 @@ for member in pkg.get("members", []):
     link = f"/reference/{pkg_name}.{name}/".lower()
     kind_groups[member["kind"]].append({"label": name, "link": link})
 
-sidebar = [
-    {"label": kind, "collapsed": True, "items": sorted(items, key=lambda x: x["label"])}
-    for kind, items in kind_groups.items()
-]
+sidebar = sorted(
+    [
+        {"label": kind, "items": sorted(items, key=lambda x: x["label"])}
+        for kind, items in kind_groups.items()
+    ],
+    key=lambda x: x["label"],
+)
+for group in sidebar[1:]:
+    group["collapsed"] = True
 
 # Add frontmatter and rewrite links
 KIND_RE = re.compile(r" (class|enum|interface|variable|type alias|type|package)$", re.I)
@@ -47,5 +52,5 @@ for md in REF_DIR.glob("*.md"):
 
 # Write sidebar
 sidebar_path = DOCS_DIR / "sidebar-reference.json"
-sidebar_json = [{"label": "Reference", "items": [{"label": "cmaf-lite", "items": sidebar}]}]
+sidebar_json = [{"label": "Reference", "collapsed": True, "items": sidebar}]
 sidebar_path.write_text(json.dumps(sidebar_json, indent=2))
