@@ -30,6 +30,8 @@ jobs:
   build:
     needs: config
     runs-on: ubuntu-latest
+    environment:
+      name: default
     concurrency:
       group: build_build_${{ github.ref }}
       cancel-in-progress: true
