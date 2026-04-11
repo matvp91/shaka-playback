@@ -3,6 +3,7 @@ name: Build
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -17,59 +18,86 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  config:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.extract_tag.outputs.result }}
+      isMainBranch: ${{ github.ref == 'refs/heads/main' }}
+    steps:
+      - name: extract tag
+        id: extract_tag
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const prefix = 'refs/tags/';
+            const ref = context.ref;
+            return ref.startsWith(prefix) ? ref.substring(prefix.length) : '';
+          result-encoding: string
+
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: checkout
+        uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - name: setup pnpm
+        uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
+      - name: setup node
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
-
-      - run: pnpm tsc
-
-      - run: pnpm test
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: type check
+        run: pnpm tsc
+      - name: run tests
+        run: pnpm test
 
   deploy_docs:
-    if: github.ref == 'refs/heads/main'
-    needs: test
+    if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
+    needs: [config, test]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: checkout
+        uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - name: setup pnpm
+        uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
+      - name: setup node
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
 
-      - uses: actions/setup-python@v5
+      - name: setup python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - run: pnpm install --frozen-lockfile
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: build library
+        run: pnpm --filter cmaf-lite build
+      - name: build docs
+        run: pnpm --filter docs build
 
-      - run: pnpm --filter cmaf-lite build
-
-      - run: pnpm --filter docs build
-
-      - uses: actions/upload-pages-artifact@v3
+      - name: upload pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
           path: packages/docs/dist
 
   deploy:
-    if: github.ref == 'refs/heads/main'
-    needs: deploy_docs
+    if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
+    needs: [config, deploy_docs]
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - id: deployment
+      - name: deploy to github pages
+        id: deployment
         uses: actions/deploy-pages@v4
