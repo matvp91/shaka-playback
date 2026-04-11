@@ -2,11 +2,12 @@ import type {
   BufferAppendedEvent,
   BufferAppendingEvent,
   BufferCodecsEvent,
+  ManifestParsedEvent,
   MediaAttachingEvent,
 } from "../events";
 import { Events } from "../events";
 import type { Player } from "../player";
-import type { InitSegment, Segment } from "../types/manifest";
+import type { InitSegment, Manifest, Segment } from "../types/manifest";
 import type { MediaType } from "../types/media";
 import * as asserts from "../utils/asserts";
 import * as CodecUtils from "../utils/codec_utils";
@@ -27,9 +28,11 @@ export class BufferController {
   private initSegmentInfo_ = new Map<InitSegment, InitSegmentInfo>();
   private segmentTracker_ = new SegmentTracker();
   private quotaEvictionPending_ = new Set<MediaType>();
+  private manifest_: Manifest | null = null;
 
   constructor(private player_: Player) {
     this.player_.on(Events.MEDIA_ATTACHING, this.onMediaAttaching_);
+    this.player_.on(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.on(Events.BUFFER_CODECS, this.onBufferCodecs_);
     this.player_.on(Events.BUFFER_APPENDING, this.onBufferAppending_);
     this.player_.on(Events.BUFFER_EOS, this.onBufferEos_);
@@ -38,6 +41,7 @@ export class BufferController {
 
   destroy() {
     this.player_.off(Events.MEDIA_ATTACHING, this.onMediaAttaching_);
+    this.player_.off(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.off(Events.BUFFER_CODECS, this.onBufferCodecs_);
     this.player_.off(Events.BUFFER_APPENDING, this.onBufferAppending_);
     this.player_.off(Events.BUFFER_EOS, this.onBufferEos_);
@@ -47,6 +51,7 @@ export class BufferController {
     this.quotaEvictionPending_.clear();
     this.sourceBuffers_.clear();
     this.mediaSource_ = null;
+    this.manifest_ = null;
   }
 
   getBuffered(type: MediaType): TimeRanges {
@@ -66,6 +71,11 @@ export class BufferController {
     });
   }
 
+  private onManifestParsed_ = (event: ManifestParsedEvent) => {
+    this.manifest_ = event.manifest;
+    this.updateDuration_();
+  };
+
   private onMediaAttaching_ = (event: MediaAttachingEvent) => {
     this.mediaSource_ = new MediaSource();
 
@@ -77,6 +87,7 @@ export class BufferController {
           media: event.media,
           mediaSource: this.mediaSource_,
         });
+        this.updateDuration_();
       },
       { once: true },
     );
@@ -214,37 +225,42 @@ export class BufferController {
   }
 
   /**
-   * Set mediaSource.duration through the operation queue
-   * to avoid InvalidStateError when a SourceBuffer is updating.
+   * Block all source buffer operation queues, then run
+   * callback once they drain. If no source buffers exist,
+   * the callback runs immediately.
    */
-  private updateDuration_(duration: number) {
-    if (this.mediaSource_?.readyState !== "open") {
+  private blockUntil(callback: () => void) {
+    const types = [...this.sourceBuffers_.keys()];
+    const blockers = types.map((type) => this.opQueue_.block(type));
+    Promise.all(blockers).then(callback);
+  }
+
+  /**
+   * Set mediaSource.duration from the manifest. Uses
+   * blockUntil to avoid InvalidStateError when a
+   * SourceBuffer is updating.
+   */
+  private updateDuration_() {
+    if (!this.manifest_ || this.mediaSource_?.readyState !== "open") {
       return;
     }
+    const duration = this.manifest_.duration;
     if (this.mediaSource_.duration === duration) {
       return;
     }
-    const types = [...this.sourceBuffers_.keys()];
-    const blockers = types.map((type) => this.opQueue_.block(type));
-    Promise.all(blockers).then(() => {
-      if (
-        this.mediaSource_ &&
-        this.mediaSource_.readyState === "open" &&
-        this.mediaSource_.duration !== duration
-      ) {
+    this.blockUntil(() => {
+      if (this.mediaSource_?.readyState === "open") {
         this.mediaSource_.duration = duration;
       }
     });
   }
 
-  private onBufferEos_ = async () => {
-    const blockers = [...this.sourceBuffers_.keys()].map((type) =>
-      this.opQueue_.block(type),
-    );
-    await Promise.all(blockers);
-    if (this.mediaSource_?.readyState === "open") {
-      this.mediaSource_.endOfStream();
-    }
+  private onBufferEos_ = () => {
+    this.blockUntil(() => {
+      if (this.mediaSource_?.readyState === "open") {
+        this.mediaSource_.endOfStream();
+      }
+    });
   };
 
   private evictAndRetryAppend_(
