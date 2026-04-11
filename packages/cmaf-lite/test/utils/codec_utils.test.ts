@@ -5,10 +5,11 @@ import {
   getContentType,
   getNormalizedCodec,
 } from "../../lib/utils/codec_utils";
+import { MediaType } from "../../lib/types/media";
 
 describe("getContentType", () => {
   it("returns MIME type string with codec for given track type", () => {
-    expect(getContentType("video", "avc1.64001f")).toBe(
+    expect(getContentType(MediaType.VIDEO, "avc1.64001f")).toBe(
       'video/mp4; codecs="avc1.64001f"',
     );
   });
