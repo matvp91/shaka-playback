@@ -40,8 +40,8 @@ describe("resolveUrl", () => {
     expect(resolveUrl("seg.m4s", "video/")).toBe("video/seg.m4s");
   });
 
-  it("concatenates with non-absolute base not ending in slash", () => {
-    expect(resolveUrl("seg.m4s", "video")).toBe("videoseg.m4s");
+  it("inserts separator when non-absolute base lacks trailing slash", () => {
+    expect(resolveUrl("seg.m4s", "video")).toBe("video/seg.m4s");
   });
 });
 
