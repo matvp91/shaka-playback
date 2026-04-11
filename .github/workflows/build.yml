@@ -8,21 +8,14 @@ on:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: build-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   config:
     runs-on: ubuntu-latest
+    concurrency:
+      group: build_config_${{ github.ref }}
+      cancel-in-progress: true
     outputs:
       tag: ${{ steps.extract_tag.outputs.result }}
-      isMainBranch: ${{ github.ref == 'refs/heads/main' }}
     steps:
       - name: extract tag
         id: extract_tag
@@ -34,8 +27,12 @@ jobs:
             return ref.startsWith(prefix) ? ref.substring(prefix.length) : '';
           result-encoding: string
 
-  test:
+  build:
+    needs: config
     runs-on: ubuntu-latest
+    concurrency:
+      group: build_build_${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - name: checkout
         uses: actions/checkout@v4
@@ -51,51 +48,46 @@ jobs:
 
       - name: install dependencies
         run: pnpm install --frozen-lockfile
-      - name: run tests
-        run: pnpm test
 
-  deploy_docs:
-    if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
-    needs: [config, test]
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout
-        uses: actions/checkout@v4
+      - name: type check
+        run: pnpm --filter cmaf-lite tsc
 
-      - name: setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: lint
+        run: pnpm --filter cmaf-lite check
 
-      - name: setup node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: setup python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: build library
+      - name: build
         run: pnpm --filter cmaf-lite build
-      - name: build docs
-        run: pnpm --filter docs build
 
-      - name: upload pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: deploy package
+        run: pnpm deploy --filter cmaf-lite ./artifact
+
+      - name: upload build artifact
+        uses: actions/upload-artifact@v4
         with:
-          path: packages/docs/dist
+          name: build
+          path: ./artifact
 
-  deploy:
-    if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
-    needs: [config, deploy_docs]
+  test:
+    needs: build
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: build_test_${{ github.ref }}
+      cancel-in-progress: true
     steps:
-      - name: deploy to github pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: run tests
+        run: pnpm --filter cmaf-lite test
