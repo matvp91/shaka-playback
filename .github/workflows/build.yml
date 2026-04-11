@@ -59,7 +59,7 @@ jobs:
 
       - name: build
         env:
-          MY_ENV_VAR: ${{ secrets.MY_ENV_VAR }}
+          RELATIVE_CI_KEY: ${{ secrets.RELATIVE_CI_KEY }}
         run: pnpm --filter cmaf-lite build
 
       - name: build artifact
