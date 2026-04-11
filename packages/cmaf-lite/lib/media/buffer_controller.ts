@@ -118,7 +118,6 @@ export class BufferController {
     newSb.addEventListener("updateend", () => {
       this.opQueue_.shiftAndExecuteNext(type);
     });
-
   };
 
   private onBufferAppending_ = (event: BufferAppendingEvent) => {
