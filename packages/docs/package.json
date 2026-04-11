@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "generate": "pnpm -r generate-reference && python3 generate.py",
-    "build": "pnpm generate && astro build",
+    "build": "astro build",
     "dev": "astro dev"
   },
   "dependencies": {

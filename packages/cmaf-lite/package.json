@@ -1,5 +1,6 @@
 {
   "name": "cmaf-lite",
+  "version": "0.0.1",
   "type": "module",
   "main": "./dist/main.js",
   "module": "./dist/main.js",
