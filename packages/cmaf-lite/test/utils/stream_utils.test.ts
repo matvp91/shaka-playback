@@ -34,6 +34,11 @@ describe("StreamUtils", () => {
       expect(videoStreams).toHaveLength(1);
     });
 
+    it("throws when manifest has no switching sets", () => {
+      const manifest = createManifest({ switchingSets: [] });
+      expect(() => getStreams(manifest)).toThrow("No streams found");
+    });
+
     it("produces separate streams for tracks with different resolutions", () => {
       const manifest = createManifest({
         switchingSets: [
@@ -89,6 +94,39 @@ describe("StreamUtils", () => {
       expect(stream.codec).toBe("aac");
     });
 
+    it("penalizes codec mismatch when selecting video streams", () => {
+      const multiCodecStreams = getStreams(
+        createManifest({
+          switchingSets: [
+            createSwitchingSet({
+              codec: "avc1.64001f",
+              tracks: [createVideoTrack({ width: 1920, height: 1080 })],
+            }),
+            createSwitchingSet({
+              codec: "hev1.1.6.L93",
+              tracks: [createVideoTrack({ width: 1920, height: 1080 })],
+            }),
+          ],
+        }),
+      );
+      const stream = selectStream(multiCodecStreams, {
+        type: MediaType.VIDEO,
+        codec: "hevc",
+      });
+      expect(stream.codec).toBe("hevc");
+    });
+
+    it("selects video stream closest to preferred width", () => {
+      const stream = selectStream(streams, {
+        type: MediaType.VIDEO,
+        width: 1300,
+      });
+      expect(stream.type).toBe(MediaType.VIDEO);
+      if (stream.type === MediaType.VIDEO) {
+        expect(stream.width).toBe(1280);
+      }
+    });
+
     it("falls back to the first audio stream when preferred codec is unavailable", () => {
       const stream = selectStream(streams, {
         type: MediaType.AUDIO,
@@ -131,6 +169,20 @@ describe("StreamUtils", () => {
       const newTrack = createVideoTrack({ segments: [newSeg0, newSeg1] });
 
       expect(remapSegment(oldTrack, newTrack, seg1)).toBe(newSeg1);
+    });
+
+    it("throws when new track has fewer segments than the remapped index", () => {
+      const seg0 = createSegment({ url: "old-0.m4s", start: 0, end: 4 });
+      const seg1 = createSegment({ url: "old-1.m4s", start: 4, end: 8 });
+
+      const oldTrack = createVideoTrack({ segments: [seg0, seg1] });
+      const newTrack = createVideoTrack({
+        segments: [createSegment({ url: "new-0.m4s" })],
+      });
+
+      expect(() => remapSegment(oldTrack, newTrack, seg1)).toThrow(
+        "Segment index out of bounds",
+      );
     });
 
     it("throws when the segment does not exist in the old track", () => {

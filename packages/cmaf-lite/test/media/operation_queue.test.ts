@@ -98,6 +98,38 @@ describe("OperationQueue", () => {
     expect(execute).not.toHaveBeenCalled();
   });
 
+  it("drops the failed operation and advances when execute throws without onError and sourceBuffer is not updating", () => {
+    const queue = new OperationQueue();
+    const sb = createMockSourceBuffer();
+    queue.add(MediaType.VIDEO, sb);
+
+    const second = vi.fn();
+    queue.enqueue(MediaType.VIDEO, {
+      execute: () => {
+        throw new Error("Boom");
+      },
+    });
+    queue.enqueue(MediaType.VIDEO, { execute: second });
+
+    expect(second).toHaveBeenCalledOnce();
+  });
+
+  it("stalls the queue when execute throws without onError and sourceBuffer is updating", () => {
+    const queue = new OperationQueue();
+    const sb = { updating: true } as unknown as SourceBuffer;
+    queue.add(MediaType.VIDEO, sb);
+
+    const second = vi.fn();
+    queue.enqueue(MediaType.VIDEO, {
+      execute: () => {
+        throw new Error("Boom");
+      },
+    });
+    queue.enqueue(MediaType.VIDEO, { execute: second });
+
+    expect(second).not.toHaveBeenCalled();
+  });
+
   it("clears all queues on destroy so new enqueues are ignored", () => {
     const queue = new OperationQueue();
     queue.add(MediaType.VIDEO, createMockSourceBuffer());
