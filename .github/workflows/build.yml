@@ -1,0 +1,93 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  config:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: build_config_${{ github.ref }}
+      cancel-in-progress: true
+    outputs:
+      tag: ${{ steps.extract_tag.outputs.result }}
+    steps:
+      - name: extract tag
+        id: extract_tag
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const prefix = 'refs/tags/';
+            const ref = context.ref;
+            return ref.startsWith(prefix) ? ref.substring(prefix.length) : '';
+          result-encoding: string
+
+  build:
+    needs: config
+    runs-on: ubuntu-latest
+    concurrency:
+      group: build_build_${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: type check
+        run: pnpm --filter cmaf-lite tsc
+
+      - name: lint
+        run: pnpm --filter cmaf-lite check
+
+      - name: build
+        run: pnpm --filter cmaf-lite build
+
+      - name: deploy package
+        run: pnpm deploy --filter cmaf-lite ./artifact
+
+      - name: upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: ./artifact
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    concurrency:
+      group: build_test_${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: run tests
+        run: pnpm --filter cmaf-lite test

@@ -5,6 +5,7 @@ import { parseManifest } from "./dash_parser";
 
 /**
  * A parser that parses MPEG-DASH.
+ *
  * @public
  */
 export class DashParser extends ManifestParser {

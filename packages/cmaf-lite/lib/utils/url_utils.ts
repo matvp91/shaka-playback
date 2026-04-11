@@ -12,7 +12,7 @@ export function resolveUrl(url: string, base?: string) {
   if (isAbsoluteUrl(base)) {
     return new URL(url, base).href;
   }
-  return base.endsWith("/") ? base + url : base + url;
+  return base.endsWith("/") ? `${base}${url}` : `${base}/${url}`;
 }
 
 export function resolveUrls(urls: string[]) {
