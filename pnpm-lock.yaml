@@ -48,6 +48,9 @@ importers:
       happy-dom:
         specifier: ^20.8.9
         version: 20.8.9
+      rollup-plugin-webpack-stats:
+        specifier: ^3.1.0
+        version: 3.1.0(rolldown@1.0.0-rc.12)(vite@8.0.3)
       tsdown:
         specifier: ^0.21.7
         version: 0.21.7(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(typescript@5.9.3)
@@ -4483,6 +4486,45 @@ packages:
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
+    dev: true
+
+  /rollup-plugin-stats@2.1.0(rolldown@1.0.0-rc.12)(vite@8.0.3):
+    resolution: {integrity: sha512-mkthlSVb8T2AKfdt/FEJqB/1Nvsr4G+otKZ4dhPKjyWQA6fdL7STRPA4epwVOBsj1yYYv/dcgAmfwfNtMpZ6sw==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      rolldown: ^1.0.0-beta.0
+      rollup: ^3.0.0 || ^4.0.0
+      vite: ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0
+    peerDependenciesMeta:
+      rolldown:
+        optional: true
+      rollup:
+        optional: true
+      vite:
+        optional: true
+    dependencies:
+      rolldown: 1.0.0-rc.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+      vite: 8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)
+    dev: true
+
+  /rollup-plugin-webpack-stats@3.1.0(rolldown@1.0.0-rc.12)(vite@8.0.3):
+    resolution: {integrity: sha512-c8J0EJynWkSpluDs5w1yQj27ST9bp6SUWC3/Ql3eGTGpDKgpBnwmh8S/sveUhppbNppUf1oFtaqQh+X8EM3Hjg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      rolldown: ^1.0.0-beta.0
+      rollup: ^3.0.0 || ^4.0.0
+      vite: ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0
+    peerDependenciesMeta:
+      rolldown:
+        optional: true
+      rollup:
+        optional: true
+      vite:
+        optional: true
+    dependencies:
+      rolldown: 1.0.0-rc.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+      rollup-plugin-stats: 2.1.0(rolldown@1.0.0-rc.12)(vite@8.0.3)
+      vite: 8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.5.2)
     dev: true
 
   /rollup@4.60.1:
