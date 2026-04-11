@@ -10,6 +10,7 @@ import type { InitSegment, Segment } from "../types/manifest";
 import type { MediaType } from "../types/media";
 import * as asserts from "../utils/asserts";
 import * as CodecUtils from "../utils/codec_utils";
+import * as ManifestUtils from "../utils/manifest_utils";
 import * as Mp4BoxParser from "../utils/mp4_box_parser";
 import type { Operation } from "./operation_queue";
 import { OperationQueue } from "./operation_queue";
@@ -113,19 +114,18 @@ export class BufferController {
   private onBufferAppending_ = (event: BufferAppendingEvent) => {
     const { type, data, segment } = event;
 
-    // TODO: Create a helper.
-    const isMedia = "initSegment" in segment;
-    const isInit = !isMedia;
-
-    if (isInit) {
+    if (ManifestUtils.isInitSegment(segment)) {
+      // Handle init segment.
       this.initSegmentInfo_.set(segment, {
         timescale: Mp4BoxParser.parseTimescale(data),
       });
     }
 
-    const timestampOffset = isMedia
-      ? this.computeTimestampOffset_(segment, data)
-      : undefined;
+    let timestampOffset: number | undefined;
+    if (ManifestUtils.isMediaSegment(segment)) {
+      // Handle media segment.
+      timestampOffset = this.computeTimestampOffset_(segment, data);
+    }
 
     const operation = {
       execute: () => {
@@ -170,8 +170,7 @@ export class BufferController {
     const { type, segment, data } = event;
 
     // Record byte size for quota-aware eviction decisions.
-    // TODO(matvp): Create a helper
-    if ("initSegment" in segment) {
+    if (ManifestUtils.isMediaSegment(segment)) {
       this.segmentTracker_.trackAppend(
         type,
         segment.start,
