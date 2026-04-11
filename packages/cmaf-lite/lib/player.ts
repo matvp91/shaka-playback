@@ -10,7 +10,7 @@ import { StreamController } from "./media/stream_controller";
 import { NetworkService } from "./net/network_service";
 import type { RegistryType } from "./registry";
 import { Registry } from "./registry";
-import type { MediaType, StreamPreference } from "./types/media";
+import type { ByType, MediaType, StreamPreference } from "./types/media";
 
 export class Player extends EventEmitter<EventMap> {
   private config_ = defaultConfig;
@@ -72,7 +72,15 @@ export class Player extends EventEmitter<EventMap> {
     return this.networkService_;
   }
 
-  setPreference(preference: StreamPreference, flushBuffer?: boolean) {
+  setStreamPreference<T extends MediaType>(
+    type: T,
+    params: Omit<ByType<StreamPreference, T>, "type">,
+    flushBuffer?: boolean,
+  ) {
+    const preference = {
+      type,
+      ...params,
+    } as ByType<StreamPreference, T>;
     this.emit(Events.STREAM_PREFERENCE_CHANGED, { preference });
     if (flushBuffer) {
       this.bufferController_.flush(preference.type);
