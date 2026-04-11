@@ -1,9 +1,7 @@
 /**
  * Creates a TimeRanges-compatible object from pairs.
  */
-export function createTimeRanges(
-  ...ranges: [number, number][]
-): TimeRanges {
+export function createTimeRanges(...ranges: [number, number][]): TimeRanges {
   const sorted = [...ranges].sort((a, b) => a[0] - b[0]);
   return {
     length: sorted.length,

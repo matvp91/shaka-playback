@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
+import { MediaType } from "../../lib/types/media";
 import {
   getSwitchingSetId,
   getTrackId,
   isInitSegment,
   isMediaSegment,
 } from "../../lib/utils/manifest_utils";
-import { MediaType } from "../../lib/types/media";
 import {
+  createAudioTrack,
   createInitSegment,
   createSegment,
   createVideoTrack,
-  createAudioTrack,
 } from "../__framework__/factories";
 
 describe("isMediaSegment", () => {
@@ -35,9 +35,7 @@ describe("isInitSegment", () => {
 
 describe("getSwitchingSetId", () => {
   it("returns a colon-joined string of media type and codec", () => {
-    expect(getSwitchingSetId(MediaType.VIDEO, "avc")).toBe(
-      "video:avc",
-    );
+    expect(getSwitchingSetId(MediaType.VIDEO, "avc")).toBe("video:avc");
   });
 });
 

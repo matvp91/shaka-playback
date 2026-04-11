@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { MediaType } from "../../lib/types/media";
 import {
   getCodecBase,
   getCodecProfile,
   getContentType,
   getNormalizedCodec,
 } from "../../lib/utils/codec_utils";
-import { MediaType } from "../../lib/types/media";
 
 describe("getContentType", () => {
   it("returns MIME type string with codec for given track type", () => {
@@ -73,8 +73,6 @@ describe("getNormalizedCodec", () => {
   });
 
   it("throws on unsupported codec", () => {
-    expect(() => getNormalizedCodec("vp9")).toThrow(
-      "Unsupported codec: vp9",
-    );
+    expect(() => getNormalizedCodec("vp9")).toThrow("Unsupported codec: vp9");
   });
 });

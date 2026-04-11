@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { MediaType } from "../../lib/types/media";
 import {
   getStreams,
   remapSegment,
   resolveHierarchy,
   selectStream,
 } from "../../lib/utils/stream_utils";
-import { MediaType } from "../../lib/types/media";
 import {
   createAudioTrack,
   createManifest,
@@ -26,14 +26,10 @@ describe("getStreams", () => {
   it("deduplicates streams with identical type, codec, and resolution", () => {
     const track = createVideoTrack();
     const manifest = createManifest({
-      switchingSets: [
-        createSwitchingSet({ tracks: [track, track] }),
-      ],
+      switchingSets: [createSwitchingSet({ tracks: [track, track] })],
     });
     const streams = getStreams(manifest);
-    const videoStreams = streams.filter(
-      (s) => s.type === MediaType.VIDEO,
-    );
+    const videoStreams = streams.filter((s) => s.type === MediaType.VIDEO);
     expect(videoStreams).toHaveLength(1);
   });
 
@@ -54,21 +50,23 @@ describe("getStreams", () => {
 });
 
 describe("selectStream", () => {
-  const streams = getStreams(createManifest({
-    switchingSets: [
-      createSwitchingSet({
-        tracks: [
-          createVideoTrack({ width: 1920, height: 1080 }),
-          createVideoTrack({ width: 1280, height: 720 }),
-        ],
-      }),
-      createSwitchingSet({
-        type: MediaType.AUDIO,
-        codec: "mp4a.40.2",
-        tracks: [createAudioTrack()],
-      }),
-    ],
-  }));
+  const streams = getStreams(
+    createManifest({
+      switchingSets: [
+        createSwitchingSet({
+          tracks: [
+            createVideoTrack({ width: 1920, height: 1080 }),
+            createVideoTrack({ width: 1280, height: 720 }),
+          ],
+        }),
+        createSwitchingSet({
+          type: MediaType.AUDIO,
+          codec: "mp4a.40.2",
+          tracks: [createAudioTrack()],
+        }),
+      ],
+    }),
+  );
 
   it("selects the video stream closest to preferred height", () => {
     const stream = selectStream(streams, {
@@ -103,10 +101,7 @@ describe("resolveHierarchy", () => {
   it("resolves the switching set and track for a given stream", () => {
     const manifest = createManifest();
     const streams = getStreams(manifest);
-    const [switchingSet, track] = resolveHierarchy(
-      manifest,
-      streams[0]!,
-    );
+    const [switchingSet, track] = resolveHierarchy(manifest, streams[0]!);
     expect(switchingSet.type).toBe(MediaType.VIDEO);
     expect(track.type).toBe(MediaType.VIDEO);
   });

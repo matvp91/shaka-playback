@@ -4,9 +4,7 @@ import { filterMap, findMap } from "../../lib/utils/functional";
 describe("findMap", () => {
   it("returns first non-null result from function", () => {
     const items = [1, 2, 3];
-    const result = findMap(items, (n) =>
-      n > 1 ? `found-${n}` : undefined,
-    );
+    const result = findMap(items, (n) => (n > 1 ? `found-${n}` : undefined));
     expect(result).toBe("found-2");
   });
 
@@ -16,11 +14,7 @@ describe("findMap", () => {
   });
 
   it("returns first non-null property by key", () => {
-    const items = [
-      { name: undefined },
-      { name: "alice" },
-      { name: "bob" },
-    ];
+    const items = [{ name: undefined }, { name: "alice" }, { name: "bob" }];
     const result = findMap(items, "name");
     expect(result).toBe("alice");
   });
@@ -34,9 +28,7 @@ describe("findMap", () => {
 describe("filterMap", () => {
   it("collects non-null results from function", () => {
     const items = [1, 2, 3, 4];
-    const result = filterMap(items, (n) =>
-      n % 2 === 0 ? n * 10 : undefined,
-    );
+    const result = filterMap(items, (n) => (n % 2 === 0 ? n * 10 : undefined));
     expect(result).toEqual([20, 40]);
   });
 
@@ -46,11 +38,7 @@ describe("filterMap", () => {
   });
 
   it("collects non-null properties by key", () => {
-    const items = [
-      { val: "a" },
-      { val: undefined },
-      { val: "c" },
-    ];
+    const items = [{ val: "a" }, { val: undefined }, { val: "c" }];
     const result = filterMap(items, "val");
     expect(result).toEqual(["a", "c"]);
   });

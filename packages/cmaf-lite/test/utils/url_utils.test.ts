@@ -47,11 +47,7 @@ describe("resolveUrl", () => {
 
 describe("resolveUrls", () => {
   it("resolves each url against the previous to produce a final url", () => {
-    const result = resolveUrls([
-      "https://cdn.test/",
-      "video/",
-      "seg-1.m4s",
-    ]);
+    const result = resolveUrls(["https://cdn.test/", "video/", "seg-1.m4s"]);
     expect(result).toBe("https://cdn.test/video/seg-1.m4s");
   });
 

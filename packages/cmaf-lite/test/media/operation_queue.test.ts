@@ -54,9 +54,7 @@ describe("OperationQueue", () => {
     queue.enqueue(MediaType.VIDEO, { execute: () => order.push(3) });
     // insertNext unshifts op2 before op3 while op1 is still current
     // executeNext_ runs op2 immediately since op1 is already "running"
-    queue.insertNext(MediaType.VIDEO, [
-      { execute: () => order.push(2) },
-    ]);
+    queue.insertNext(MediaType.VIDEO, [{ execute: () => order.push(2) }]);
     // shift op2, run op1 (index 1); shift op1, run op3
     queue.shiftAndExecuteNext(MediaType.VIDEO);
     queue.shiftAndExecuteNext(MediaType.VIDEO);
@@ -85,7 +83,9 @@ describe("OperationQueue", () => {
     const error = new Error("boom");
     const onError = vi.fn();
     queue.enqueue(MediaType.VIDEO, {
-      execute: () => { throw error; },
+      execute: () => {
+        throw error;
+      },
       onError,
     });
     expect(onError).toHaveBeenCalledWith(error);

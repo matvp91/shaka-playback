@@ -8,10 +8,7 @@ const sourceUrl = "https://cdn.test/manifest.mpd";
 describe("dash_segments", () => {
   describe("duration-based segments", () => {
     it("generates segments that cover the full presentation duration", () => {
-      const manifest = parseManifest(
-        loadFixture("basic.mpd"),
-        sourceUrl,
-      );
+      const manifest = parseManifest(loadFixture("basic.mpd"), sourceUrl);
       const video = manifest.switchingSets.find(
         (ss) => ss.type === MediaType.VIDEO,
       )!;
@@ -20,27 +17,18 @@ describe("dash_segments", () => {
     });
 
     it("produces contiguous segments with no gaps between them", () => {
-      const manifest = parseManifest(
-        loadFixture("basic.mpd"),
-        sourceUrl,
-      );
+      const manifest = parseManifest(loadFixture("basic.mpd"), sourceUrl);
       const segments = manifest.switchingSets.find(
         (ss) => ss.type === MediaType.VIDEO,
       )!.tracks[0]!.segments;
 
       for (let i = 1; i < segments.length; i++) {
-        expect(segments[i]!.start).toBeCloseTo(
-          segments[i - 1]!.end,
-          5,
-        );
+        expect(segments[i]!.start).toBeCloseTo(segments[i - 1]!.end, 5);
       }
     });
 
     it("attaches an init segment to every media segment", () => {
-      const manifest = parseManifest(
-        loadFixture("basic.mpd"),
-        sourceUrl,
-      );
+      const manifest = parseManifest(loadFixture("basic.mpd"), sourceUrl);
       const segments = manifest.switchingSets.find(
         (ss) => ss.type === MediaType.VIDEO,
       )!.tracks[0]!.segments;
@@ -54,10 +42,7 @@ describe("dash_segments", () => {
 
   describe("timeline-based segments", () => {
     it("generates the correct number of segments from SegmentTimeline with repeat count", () => {
-      const manifest = parseManifest(
-        loadFixture("timeline.mpd"),
-        sourceUrl,
-      );
+      const manifest = parseManifest(loadFixture("timeline.mpd"), sourceUrl);
       const segments = manifest.switchingSets.find(
         (ss) => ss.type === MediaType.VIDEO,
       )!.tracks[0]!.segments;
@@ -67,10 +52,7 @@ describe("dash_segments", () => {
     });
 
     it("calculates correct start and end times from timeline entries", () => {
-      const manifest = parseManifest(
-        loadFixture("timeline.mpd"),
-        sourceUrl,
-      );
+      const manifest = parseManifest(loadFixture("timeline.mpd"), sourceUrl);
       const segments = manifest.switchingSets.find(
         (ss) => ss.type === MediaType.VIDEO,
       )!.tracks[0]!.segments;
