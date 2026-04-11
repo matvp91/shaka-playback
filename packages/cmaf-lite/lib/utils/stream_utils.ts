@@ -2,6 +2,7 @@ import type { Manifest, SwitchingSet, Track } from "../types/manifest";
 import type { ByType, Stream, StreamPreference } from "../types/media";
 import { MediaType } from "../types/media";
 import * as asserts from "./asserts";
+import * as CodecUtils from "./codec_utils";
 
 /**
  * Derive the set of available streams from the manifest.
@@ -14,11 +15,11 @@ export function getStreams(manifest: Manifest): Stream[] {
         track.type === MediaType.VIDEO
           ? {
               type: track.type,
-              codec: ss.codec,
+              codec: CodecUtils.getNormalizedCodec(ss.codec),
               width: track.width,
               height: track.height,
             }
-          : { type: track.type, codec: ss.codec };
+          : { type: track.type, codec: CodecUtils.getNormalizedCodec(ss.codec) };
       if (!streams.some((s) => isSameStream(s, stream))) {
         streams.push(stream);
       }
@@ -116,7 +117,7 @@ export function resolveHierarchy(
   for (const switchingSet of manifest.switchingSets) {
     if (
       switchingSet.type !== stream.type ||
-      switchingSet.codec !== stream.codec
+      CodecUtils.getNormalizedCodec(switchingSet.codec) !== stream.codec
     ) {
       continue;
     }
