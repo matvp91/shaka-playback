@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.manifestparsedevent
 
 ## ManifestParsedEvent type
 
+Fired when a manifest has been fetched and parsed.
+
 **Signature:**
 
 ```typescript
-declare type ManifestParsedEvent = {
+type ManifestParsedEvent = {
     manifest: Manifest;
 };
 ```

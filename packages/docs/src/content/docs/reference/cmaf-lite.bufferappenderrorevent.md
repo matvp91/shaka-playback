@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.bufferappenderrorevent
 
 ## BufferAppendErrorEvent type
 
+Fired when a SourceBuffer append operation failed.
+
 **Signature:**
 
 ```typescript
-declare type BufferAppendErrorEvent = {
+type BufferAppendErrorEvent = {
     type: MediaType;
     error: DOMException;
 };

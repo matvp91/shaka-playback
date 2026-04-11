@@ -5,8 +5,10 @@ import { ABORTED } from "../types/net";
 import { NetworkResponse } from "./network_response";
 
 /**
- * Central service for all network requests. Owns request
- * construction, fetch execution, and cancellation.
+ * Central service for all network requests. Owns request construction,
+ * fetch execution, and cancellation.
+ *
+ * @public
  */
 export class NetworkService {
   private controllers_ = new Map<NetworkRequest, AbortController>();
@@ -14,8 +16,9 @@ export class NetworkService {
   constructor(private player_: Player) {}
 
   /**
-   * Construct and start a request. Emits NETWORK_REQUEST
-   * synchronously before fetch, allowing listener mutation.
+   * Creates and starts an HTTP request. Emits |NETWORK_REQUEST| before
+   * fetch, allowing listeners to mutate the request (URL, headers,
+   * method).
    */
   request(type: NetworkRequestType, url: string): NetworkRequest {
     const controller = new AbortController();
@@ -40,6 +43,10 @@ export class NetworkService {
     return request;
   }
 
+  /**
+   * Aborts an in-flight request. No-op if already completed or
+   * cancelled.
+   */
   cancel(request: NetworkRequest) {
     const controller = this.controllers_.get(request);
     if (!controller) {
@@ -52,10 +59,6 @@ export class NetworkService {
     this.controllers_.delete(request);
   }
 
-  /**
-   * Execute fetch, emit NETWORK_RESPONSE on success,
-   * and clean up state in all cases.
-   */
   private async doFetch_(
     type: NetworkRequestType,
     request: NetworkRequest,

@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.manifestloadingevent
 
 ## ManifestLoadingEvent type
 
+Fired when [Player.load()](/reference/cmaf-lite.player.load) started loading a manifest.
+
 **Signature:**
 
 ```typescript
-declare type ManifestLoadingEvent = {
+type ManifestLoadingEvent = {
     url: string;
 };
 ```

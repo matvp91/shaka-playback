@@ -47,6 +47,8 @@ request
 
 </td><td>
 
+The originating request.
+
 
 </td></tr>
 <tr><td>
@@ -60,6 +62,8 @@ number
 
 
 </td><td>
+
+HTTP status code.
 
 
 </td></tr>
@@ -75,6 +79,8 @@ Headers
 
 </td><td>
 
+Response headers.
+
 
 </td></tr>
 <tr><td>
@@ -89,6 +95,8 @@ number
 
 </td><td>
 
+Round-trip time in milliseconds.
+
 
 </td></tr>
 <tr><td>
@@ -102,6 +110,8 @@ ArrayBuffer
 
 
 </td><td>
+
+Raw response body.
 
 
 </td></tr>

@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.registry.get
 
 ## Registry.get() method
 
+Returns all instances of the given component type.
+
 **Signature:**
 
 ```typescript
@@ -51,5 +53,5 @@ T
 
 **Returns:**
 
-RegistryTypeMap\[T\]\[\]
+[RegistryTypeMap](/reference/cmaf-lite.registrytypemap)<!-- -->\[T\]\[\]
 

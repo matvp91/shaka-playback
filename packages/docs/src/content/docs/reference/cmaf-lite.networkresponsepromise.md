@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.networkresponsepromise
 
 ## NetworkResponsePromise type
 
+Promise that resolves to a [NetworkResponse](/reference/cmaf-lite.networkresponse) or [ABORTED](/reference/cmaf-lite.aborted) if the request was cancelled.
+
 **Signature:**
 
 ```typescript
-declare type NetworkResponsePromise = Promise<NetworkResponse | typeof ABORTED>;
+type NetworkResponsePromise = Promise<NetworkResponse | typeof ABORTED>;
 ```
 **References:** [NetworkResponse](/reference/cmaf-lite.networkresponse)<!-- -->, [ABORTED](/reference/cmaf-lite.aborted)
 

@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.networkrequest
 
 ## NetworkRequest type
 
+Mutable request descriptor. Listeners can modify `url`<!-- -->, `method`<!-- -->, and `headers` before the fetch is sent.
+
 **Signature:**
 
 ```typescript
-declare type NetworkRequest = {
+type NetworkRequest = {
     url: string;
     method: "GET" | "POST";
     headers: Headers;

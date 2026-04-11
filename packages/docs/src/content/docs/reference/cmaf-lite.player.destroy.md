@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.player.destroy
 
 ## Player.destroy() method
 
+Destroys the player and releases all resources. The instance cannot be reused after this call.
+
 **Signature:**
 
 ```typescript

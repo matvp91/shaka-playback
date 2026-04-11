@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.player
 
 ## Player class
 
+CMAF media player. Augments a `<video>` element with adaptive streaming through MSE.
+
 **Signature:**
 
 ```typescript
@@ -78,6 +80,8 @@ Description
 
 </td><td>
 
+Attaches a `<video>` or `<audio>` element. Required before playback can begin.
+
 
 </td></tr>
 <tr><td>
@@ -89,6 +93,8 @@ Description
 
 
 </td><td>
+
+Destroys the player and releases all resources. The instance cannot be reused after this call.
 
 
 </td></tr>
@@ -102,6 +108,8 @@ Description
 
 </td><td>
 
+Detaches the current media element.
+
 
 </td></tr>
 <tr><td>
@@ -113,6 +121,8 @@ Description
 
 
 </td><td>
+
+Returns the currently active stream for the given type.
 
 
 </td></tr>
@@ -126,6 +136,8 @@ Description
 
 </td><td>
 
+Returns buffered time ranges for the given type.
+
 
 </td></tr>
 <tr><td>
@@ -137,6 +149,8 @@ Description
 
 
 </td><td>
+
+Returns the current player config.
 
 
 </td></tr>
@@ -150,6 +164,8 @@ Description
 
 </td><td>
 
+Returns the attached media element, or null.
+
 
 </td></tr>
 <tr><td>
@@ -161,6 +177,8 @@ Description
 
 
 </td><td>
+
+Returns the network service instance.
 
 
 </td></tr>
@@ -174,6 +192,8 @@ Description
 
 </td><td>
 
+Returns registered components for the given type.
+
 
 </td></tr>
 <tr><td>
@@ -185,6 +205,8 @@ Description
 
 
 </td><td>
+
+Returns all resolved streams.
 
 
 </td></tr>
@@ -198,6 +220,8 @@ Description
 
 </td><td>
 
+Starts loading and parsing the manifest at the given URL, then begins segment fetching.
+
 
 </td></tr>
 <tr><td>
@@ -210,6 +234,8 @@ Description
 
 </td><td>
 
+Merges the given config into the current config.
+
 
 </td></tr>
 <tr><td>
@@ -221,6 +247,8 @@ Description
 
 
 </td><td>
+
+Sets the preferred stream for a media type. Optionally flushes the buffer to switch immediately.
 
 
 </td></tr>

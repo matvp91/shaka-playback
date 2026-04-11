@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.player.getmedia
 
 ## Player.getMedia() method
 
+Returns the attached media element, or null.
+
 **Signature:**
 
 ```typescript

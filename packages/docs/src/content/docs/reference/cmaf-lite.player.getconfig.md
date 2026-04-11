@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.player.getconfig
 
 ## Player.getConfig() method
 
+Returns the current player config.
+
 **Signature:**
 
 ```typescript

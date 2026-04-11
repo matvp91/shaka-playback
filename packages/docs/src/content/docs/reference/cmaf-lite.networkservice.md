@@ -79,6 +79,8 @@ Description
 
 </td><td>
 
+Aborts an in-flight request. No-op if already completed or cancelled.
+
 
 </td></tr>
 <tr><td>
@@ -91,7 +93,7 @@ Description
 
 </td><td>
 
-Construct and start a request. Emits NETWORK\_REQUEST synchronously before fetch, allowing listener mutation.
+Creates and starts an HTTP request. Emits \|NETWORK\_REQUEST\| before fetch, allowing listeners to mutate the request (URL, headers, method).
 
 
 </td></tr>

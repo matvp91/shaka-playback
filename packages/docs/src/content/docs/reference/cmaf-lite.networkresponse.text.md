@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.networkresponse.text
 
 ## NetworkResponse.text property
 
+Response body decoded as UTF-8 text.
+
 **Signature:**
 
 ```typescript

@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.registry.add
 
 ## Registry.add() method
 
+Registers a component constructor globally.
+
 **Signature:**
 
 ```typescript
@@ -54,7 +56,7 @@ Ctor
 
 </td><td>
 
-[RegistoryComponentCtor](/reference/cmaf-lite.registorycomponentctor)<!-- -->&lt;RegistryTypeMap\[T\]&gt;
+[RegistoryComponentCtor](/reference/cmaf-lite.registorycomponentctor)<!-- -->&lt;[RegistryTypeMap](/reference/cmaf-lite.registrytypemap)<!-- -->\[T\]&gt;
 
 
 </td><td>

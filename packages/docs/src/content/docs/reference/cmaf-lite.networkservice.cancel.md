@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.networkservice.cancel
 
 ## NetworkService.cancel() method
 
+Aborts an in-flight request. No-op if already completed or cancelled.
+
 **Signature:**
 
 ```typescript

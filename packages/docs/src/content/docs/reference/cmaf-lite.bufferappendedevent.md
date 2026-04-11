@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.bufferappendedevent
 
 ## BufferAppendedEvent type
 
+Fired after a segment has been appended to a SourceBuffer.
+
 **Signature:**
 
 ```typescript
-declare type BufferAppendedEvent = {
+type BufferAppendedEvent = {
     type: MediaType;
     segment: InitSegment | Segment;
     data: ArrayBuffer;

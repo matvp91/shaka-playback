@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.events
 
 ## Events variable
 
+Event name constants emitted by the [Player](/reference/cmaf-lite.player)<!-- -->.
+
 **Signature:**
 
 ```typescript

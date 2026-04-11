@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.player.getregistry
 
 ## Player.getRegistry() method
 
+Returns registered components for the given type.
+
 **Signature:**
 
 ```typescript

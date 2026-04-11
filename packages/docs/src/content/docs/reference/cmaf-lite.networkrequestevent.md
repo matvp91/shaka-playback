@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.networkrequestevent
 
 ## NetworkRequestEvent type
 
+Fired before a network request is sent. Listeners can mutate the request URL, headers, and method.
+
 **Signature:**
 
 ```typescript
-declare type NetworkRequestEvent = {
+type NetworkRequestEvent = {
     type: NetworkRequestType;
     request: NetworkRequest;
 };

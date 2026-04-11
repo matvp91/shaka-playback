@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.player.getactivestream
 
 ## Player.getActiveStream() method
 
+Returns the currently active stream for the given type.
+
 **Signature:**
 
 ```typescript

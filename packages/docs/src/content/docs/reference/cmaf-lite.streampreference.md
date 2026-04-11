@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.streampreference
 
 ## StreamPreference type
 
+User preference for stream selection. Properties are optional — only specified fields constrain selection.
+
 **Signature:**
 
 ```typescript
-declare type StreamPreference = {
+type StreamPreference = {
     [K in Stream as K["type"]]: {
         type: K["type"];
     } & Partial<Omit<K, "type">>;

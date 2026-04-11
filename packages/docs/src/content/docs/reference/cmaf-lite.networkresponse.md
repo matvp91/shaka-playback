@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.networkresponse
 
 ## NetworkResponse class
 
+Completed network response with access to the response body as raw bytes or decoded text.
+
 **Signature:**
 
 ```typescript
@@ -89,6 +91,8 @@ ArrayBuffer
 
 </td><td>
 
+Response body as raw bytes.
+
 
 </td></tr>
 <tr><td>
@@ -158,6 +162,8 @@ string
 
 
 </td><td>
+
+Response body decoded as UTF-8 text.
 
 
 </td></tr>

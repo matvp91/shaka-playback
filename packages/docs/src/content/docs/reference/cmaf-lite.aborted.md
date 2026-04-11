@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.aborted
 
 ## ABORTED variable
 
+Sentinel returned when a request is cancelled via [NetworkService.cancel()](/reference/cmaf-lite.networkservice.cancel)<!-- -->.
+
 **Signature:**
 
 ```typescript

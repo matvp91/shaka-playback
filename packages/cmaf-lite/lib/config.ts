@@ -1,3 +1,8 @@
+/**
+ * Player configuration.
+ *
+ * @public
+ */
 export type PlayerConfig = {
   frontBufferLength: number;
   backBufferLength: number;
@@ -6,7 +11,12 @@ export type PlayerConfig = {
   maxSegmentLookupTolerance: number;
 };
 
-export const defaultConfig: PlayerConfig = {
+/**
+ * Default config.
+ *
+ * @public
+ */
+export const DEFAULT_CONFIG: PlayerConfig = {
   frontBufferLength: 30,
   backBufferLength: Infinity,
   backBufferQuotaPadding: 2,

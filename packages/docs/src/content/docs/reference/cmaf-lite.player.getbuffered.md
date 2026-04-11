@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.player.getbuffered
 
 ## Player.getBuffered() method
 
+Returns buffered time ranges for the given type.
+
 **Signature:**
 
 ```typescript

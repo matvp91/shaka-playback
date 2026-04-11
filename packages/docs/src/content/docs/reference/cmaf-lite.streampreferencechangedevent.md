@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.streampreferencechangedevent
 
 ## StreamPreferenceChangedEvent type
 
+Fired when [Player.setStreamPreference()](/reference/cmaf-lite.player.setstreampreference) changed the active stream preference.
+
 **Signature:**
 
 ```typescript
-declare type StreamPreferenceChangedEvent = {
+type StreamPreferenceChangedEvent = {
     preference: StreamPreference;
 };
 ```

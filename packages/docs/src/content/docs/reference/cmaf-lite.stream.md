@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.stream
 
 ## Stream type
 
+Set of compatible, switchable tracks sharing a codec and media type. Discriminated by [MediaType](/reference/cmaf-lite.mediatype)<!-- -->.
+
 **Signature:**
 
 ```typescript
-declare type Stream = {
+type Stream = {
     codec: string;
 } & ({
     type: MediaType.VIDEO;

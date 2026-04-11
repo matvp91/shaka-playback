@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.networkresponse.arraybuffer
 
 ## NetworkResponse.arrayBuffer property
 
+Response body as raw bytes.
+
 **Signature:**
 
 ```typescript

@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.dashparser
 
 ## DashParser class
 
+A parser that parses MPEG-DASH.
+
 **Signature:**
 
 ```typescript
-export declare class DashParser extends ManifestParser 
+declare class DashParser extends ManifestParser 
 ```
 **Extends:** [ManifestParser](/reference/cmaf-lite.manifestparser)
 

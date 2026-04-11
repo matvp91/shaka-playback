@@ -14,7 +14,7 @@ CMAF switching set — tracks that can be seamlessly switched between (same code
 **Signature:**
 
 ```typescript
-declare type SwitchingSet = {
+type SwitchingSet = {
     type: MediaType;
     codec: string;
     tracks: Track[];

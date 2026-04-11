@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.registorycomponentctor
 
 ## RegistoryComponentCtor type
 
+Constructor signature for registerable components.
+
 **Signature:**
 
 ```typescript
-declare type RegistoryComponentCtor<T> = new (player: Player) => T;
+type RegistoryComponentCtor<T> = new (player: Player) => T;
 ```
 **References:** [Player](/reference/cmaf-lite.player)
 

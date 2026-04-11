@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.registry
 
 ## Registry class
 
+Extensible component registry. External code registers components (e.g. a DASH parser) via [Registry.add()](/reference/cmaf-lite.registry.add)<!-- -->, the player resolves them at runtime.
+
 **Signature:**
 
 ```typescript
@@ -79,6 +81,8 @@ Description
 
 </td><td>
 
+Registers a component constructor globally.
+
 
 </td></tr>
 <tr><td>
@@ -90,6 +94,8 @@ Description
 
 
 </td><td>
+
+Returns all instances of the given component type.
 
 
 </td></tr>

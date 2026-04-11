@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.player.setstreampreference
 
 ## Player.setStreamPreference() method
 
+Sets the preferred stream for a media type. Optionally flushes the buffer to switch immediately.
+
 **Signature:**
 
 ```typescript

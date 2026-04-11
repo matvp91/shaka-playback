@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.manifestparser
 
 ## ManifestParser class
 
+Base class for manifest parsers. Subclasses implement format-specific parsing (e.g. DASH, HLS).
+
 **Signature:**
 
 ```typescript
@@ -89,6 +91,8 @@ string\[\]
 
 </td><td>
 
+Supported MIME types for this parser.
+
 
 </td></tr>
 <tr><td>
@@ -141,6 +145,8 @@ Description
 
 
 </td><td>
+
+Parses a network response into a [Manifest](/reference/cmaf-lite.manifest)<!-- -->.
 
 
 </td></tr>

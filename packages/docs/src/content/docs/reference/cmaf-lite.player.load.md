@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.player.load
 
 ## Player.load() method
 
+Starts loading and parsing the manifest at the given URL, then begins segment fetching.
+
 **Signature:**
 
 ```typescript

@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.initsegment
 
 ## InitSegment type
 
+CMAF initialization segment (moov box).
+
 **Signature:**
 
 ```typescript
-declare type InitSegment = {
+type InitSegment = {
     url: string;
 };
 ```

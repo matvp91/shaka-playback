@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.networkrequesttype
 
 ## NetworkRequestType enum
 
+Categorizes a network request for event listeners.
+
 **Signature:**
 
 ```typescript

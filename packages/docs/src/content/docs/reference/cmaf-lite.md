@@ -29,6 +29,8 @@ Description
 
 </td><td>
 
+A parser that parses MPEG-DASH.
+
 
 </td></tr>
 <tr><td>
@@ -37,6 +39,8 @@ Description
 
 
 </td><td>
+
+Completed network response with access to the response body as raw bytes or decoded text.
 
 
 </td></tr>
@@ -58,6 +62,8 @@ Central service for all network requests. Owns request construction, fetch execu
 
 </td><td>
 
+CMAF media player. Augments a `<video>` element with adaptive streaming through MSE.
+
 
 </td></tr>
 <tr><td>
@@ -66,6 +72,8 @@ Central service for all network requests. Owns request construction, fetch execu
 
 
 </td><td>
+
+Extensible component registry. External code registers components (e.g. a DASH parser) via [Registry.add()](/reference/cmaf-lite.registry.add)<!-- -->, the player resolves them at runtime.
 
 
 </td></tr>
@@ -91,6 +99,8 @@ Description
 
 </td><td>
 
+Base class for manifest parsers. Subclasses implement format-specific parsing (e.g. DASH, HLS).
+
 
 </td></tr>
 </tbody></table>
@@ -115,6 +125,8 @@ Description
 
 </td><td>
 
+Supported media types.
+
 
 </td></tr>
 <tr><td>
@@ -124,6 +136,8 @@ Description
 
 </td><td>
 
+Categorizes a network request for event listeners.
+
 
 </td></tr>
 <tr><td>
@@ -132,6 +146,8 @@ Description
 
 
 </td><td>
+
+Available component types for registration.
 
 
 </td></tr>
@@ -157,6 +173,19 @@ Description
 
 </td><td>
 
+Maps each event name to its listener signature.
+
+
+</td></tr>
+<tr><td>
+
+[RegistryTypeMap](/reference/cmaf-lite.registrytypemap)
+
+
+</td><td>
+
+Maps each [RegistryType](/reference/cmaf-lite.registrytype) to its component interface.
+
 
 </td></tr>
 </tbody></table>
@@ -181,14 +210,18 @@ Description
 
 </td><td>
 
+Sentinel returned when a request is cancelled via [NetworkService.cancel()](/reference/cmaf-lite.networkservice.cancel)<!-- -->.
+
 
 </td></tr>
 <tr><td>
 
-[defaultConfig](/reference/cmaf-lite.defaultconfig)
+[DEFAULT\_CONFIG](/reference/cmaf-lite.default_config)
 
 
 </td><td>
+
+Default config.
 
 
 </td></tr>
@@ -198,6 +231,8 @@ Description
 
 
 </td><td>
+
+Event name constants emitted by the [Player](/reference/cmaf-lite.player)<!-- -->.
 
 
 </td></tr>
@@ -223,6 +258,8 @@ Description
 
 </td><td>
 
+Fired after a segment has been appended to a SourceBuffer.
+
 
 </td></tr>
 <tr><td>
@@ -231,6 +268,8 @@ Description
 
 
 </td><td>
+
+Fired when a SourceBuffer append operation failed.
 
 
 </td></tr>
@@ -241,6 +280,8 @@ Description
 
 </td><td>
 
+Fired before a segment is appended to a SourceBuffer.
+
 
 </td></tr>
 <tr><td>
@@ -249,6 +290,8 @@ Description
 
 
 </td><td>
+
+Fired when a SourceBuffer is being created for a new media type.
 
 
 </td></tr>
@@ -259,6 +302,8 @@ Description
 
 </td><td>
 
+Narrows a union to the given [MediaType](/reference/cmaf-lite.mediatype)<!-- -->.
+
 
 </td></tr>
 <tr><td>
@@ -267,6 +312,8 @@ Description
 
 
 </td><td>
+
+CMAF initialization segment (moov box).
 
 
 </td></tr>
@@ -277,6 +324,8 @@ Description
 
 </td><td>
 
+Parsed manifest representing a CMAF presentation.
+
 
 </td></tr>
 <tr><td>
@@ -285,6 +334,8 @@ Description
 
 
 </td><td>
+
+Fired when [Player.load()](/reference/cmaf-lite.player.load) started loading a manifest.
 
 
 </td></tr>
@@ -295,6 +346,8 @@ Description
 
 </td><td>
 
+Fired when a manifest has been fetched and parsed.
+
 
 </td></tr>
 <tr><td>
@@ -303,6 +356,8 @@ Description
 
 
 </td><td>
+
+Fired when the media element and MediaSource are ready for buffering.
 
 
 </td></tr>
@@ -313,6 +368,8 @@ Description
 
 </td><td>
 
+Fired when [Player.attachMedia()](/reference/cmaf-lite.player.attachmedia) is called and the media element is being attached.
+
 
 </td></tr>
 <tr><td>
@@ -321,6 +378,8 @@ Description
 
 
 </td><td>
+
+Mutable request descriptor. Listeners can modify `url`<!-- -->, `method`<!-- -->, and `headers` before the fetch is sent.
 
 
 </td></tr>
@@ -331,6 +390,8 @@ Description
 
 </td><td>
 
+Fired before a network request is sent. Listeners can mutate the request URL, headers, and method.
+
 
 </td></tr>
 <tr><td>
@@ -339,6 +400,8 @@ Description
 
 
 </td><td>
+
+Fired when a network response has been received.
 
 
 </td></tr>
@@ -349,6 +412,8 @@ Description
 
 </td><td>
 
+Promise that resolves to a [NetworkResponse](/reference/cmaf-lite.networkresponse) or [ABORTED](/reference/cmaf-lite.aborted) if the request was cancelled.
+
 
 </td></tr>
 <tr><td>
@@ -357,6 +422,8 @@ Description
 
 
 </td><td>
+
+Player configuration.
 
 
 </td></tr>
@@ -367,6 +434,8 @@ Description
 
 </td><td>
 
+Constructor signature for registerable components.
+
 
 </td></tr>
 <tr><td>
@@ -375,6 +444,8 @@ Description
 
 
 </td><td>
+
+Addressable media chunk on the presentation timeline.
 
 
 </td></tr>
@@ -385,6 +456,8 @@ Description
 
 </td><td>
 
+Set of compatible, switchable tracks sharing a codec and media type. Discriminated by [MediaType](/reference/cmaf-lite.mediatype)<!-- -->.
+
 
 </td></tr>
 <tr><td>
@@ -394,6 +467,8 @@ Description
 
 </td><td>
 
+User preference for stream selection. Properties are optional — only specified fields constrain selection.
+
 
 </td></tr>
 <tr><td>
@@ -402,6 +477,8 @@ Description
 
 
 </td><td>
+
+Fired when [Player.setStreamPreference()](/reference/cmaf-lite.player.setstreampreference) changed the active stream preference.
 
 
 </td></tr>
@@ -423,7 +500,7 @@ CMAF switching set — tracks that can be seamlessly switched between (same code
 
 </td><td>
 
-Single quality level as a sequence of segments, discriminated by media type.
+Single track with its segment list, discriminated by [MediaType](/reference/cmaf-lite.mediatype)<!-- -->.
 
 
 </td></tr>

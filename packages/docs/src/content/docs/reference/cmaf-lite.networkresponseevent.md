@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.networkresponseevent
 
 ## NetworkResponseEvent type
 
+Fired when a network response has been received.
+
 **Signature:**
 
 ```typescript
-declare type NetworkResponseEvent = {
+type NetworkResponseEvent = {
     type: NetworkRequestType;
     response: NetworkResponse;
 };

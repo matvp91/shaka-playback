@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.bytype
 
 ## ByType type
 
+Narrows a union to the given [MediaType](/reference/cmaf-lite.mediatype)<!-- -->.
+
 **Signature:**
 
 ```typescript
-declare type ByType<K, T extends MediaType> = Extract<K, {
+type ByType<K, T extends MediaType> = Extract<K, {
     type: T;
 }>;
 ```

@@ -9,7 +9,7 @@ slug: reference/cmaf-lite.networkservice.request
 
 ## NetworkService.request() method
 
-Construct and start a request. Emits NETWORK\_REQUEST synchronously before fetch, allowing listener mutation.
+Creates and starts an HTTP request. Emits \|NETWORK\_REQUEST\| before fetch, allowing listeners to mutate the request (URL, headers, method).
 
 **Signature:**
 

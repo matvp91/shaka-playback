@@ -9,12 +9,12 @@ slug: reference/cmaf-lite.track
 
 ## Track type
 
-Single quality level as a sequence of segments, discriminated by media type.
+Single track with its segment list, discriminated by [MediaType](/reference/cmaf-lite.mediatype)<!-- -->.
 
 **Signature:**
 
 ```typescript
-declare type Track = {
+type Track = {
     bandwidth: number;
     segments: Segment[];
 } & ({

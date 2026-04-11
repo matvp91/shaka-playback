@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.mediatype
 
 ## MediaType enum
 
+Supported media types.
+
 **Signature:**
 
 ```typescript

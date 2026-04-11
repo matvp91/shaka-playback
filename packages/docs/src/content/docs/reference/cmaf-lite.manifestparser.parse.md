@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.manifestparser.parse
 
 ## ManifestParser.parse() method
 
+Parses a network response into a [Manifest](/reference/cmaf-lite.manifest)<!-- -->.
+
 **Signature:**
 
 ```typescript

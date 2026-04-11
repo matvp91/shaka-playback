@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.playerconfig
 
 ## PlayerConfig type
 
+Player configuration.
+
 **Signature:**
 
 ```typescript
-declare type PlayerConfig = {
+type PlayerConfig = {
     frontBufferLength: number;
     backBufferLength: number;
     backBufferQuotaPadding: number;

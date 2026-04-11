@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.segment
 
 ## Segment type
 
+Addressable media chunk on the presentation timeline.
+
 **Signature:**
 
 ```typescript
-declare type Segment = {
+type Segment = {
     url: string;
     start: number;
     end: number;

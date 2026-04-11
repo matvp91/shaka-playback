@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.buffercodecsevent
 
 ## BufferCodecsEvent type
 
+Fired when a SourceBuffer is being created for a new media type.
+
 **Signature:**
 
 ```typescript
-declare type BufferCodecsEvent = {
+type BufferCodecsEvent = {
     type: MediaType;
     codec: string;
     duration: number;

@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.eventmap
 
 ## EventMap interface
 
+Maps each event name to its listener signature.
+
 **Signature:**
 
 ```typescript
-declare interface EventMap 
+interface EventMap 
 ```
 
 ## Properties

@@ -9,6 +9,11 @@ import type {
   StreamPreference,
 } from ".";
 
+/**
+ * Event name constants emitted by the {@link Player}.
+ *
+ * @public
+ */
 export const Events = {
   MANIFEST_LOADING: "manifestLoading",
   MANIFEST_PARSED: "manifestParsed",
@@ -25,60 +30,123 @@ export const Events = {
   STREAM_PREFERENCE_CHANGED: "streamPreferenceChanged",
 } as const;
 
+/**
+ * Fired when {@link Player.load} started loading a manifest.
+ *
+ * @public
+ */
 export type ManifestLoadingEvent = {
   url: string;
 };
 
+/**
+ * Fired when a manifest has been fetched and parsed.
+ *
+ * @public
+ */
 export type ManifestParsedEvent = {
   manifest: Manifest;
 };
 
+/**
+ * Fired when {@link Player.attachMedia} is called and the media element
+ * is being attached.
+ *
+ * @public
+ */
 export type MediaAttachingEvent = {
   media: HTMLMediaElement;
 };
 
+/**
+ * Fired when the media element and MediaSource are ready for buffering.
+ *
+ * @public
+ */
 export type MediaAttachedEvent = {
   media: HTMLMediaElement;
   mediaSource: MediaSource;
 };
 
+/**
+ * Fired when a SourceBuffer is being created for a new media type.
+ *
+ * @public
+ */
 export type BufferCodecsEvent = {
   type: MediaType;
   codec: string;
   duration: number;
 };
 
+/**
+ * Fired before a segment is appended to a SourceBuffer.
+ *
+ * @public
+ */
 export type BufferAppendingEvent = {
   type: MediaType;
   segment: InitSegment | Segment;
   data: ArrayBuffer;
 };
 
+/**
+ * Fired after a segment has been appended to a SourceBuffer.
+ *
+ * @public
+ */
 export type BufferAppendedEvent = {
   type: MediaType;
   segment: InitSegment | Segment;
   data: ArrayBuffer;
 };
 
+/**
+ * Fired when a SourceBuffer append operation failed.
+ *
+ * @public
+ */
 export type BufferAppendErrorEvent = {
   type: MediaType;
   error: DOMException;
 };
 
+/**
+ * Fired before a network request is sent. Listeners can mutate the request
+ * URL, headers, and method.
+ *
+ * @public
+ */
 export type NetworkRequestEvent = {
   type: NetworkRequestType;
   request: NetworkRequest;
 };
 
+/**
+ * Fired when a network response has been received.
+ *
+ * @public
+ */
 export type NetworkResponseEvent = {
   type: NetworkRequestType;
   response: NetworkResponse;
 };
 
+/**
+ * Fired when {@link Player.setStreamPreference} changed the active stream
+ * preference.
+ *
+ * @public
+ */
 export type StreamPreferenceChangedEvent = {
   preference: StreamPreference;
 };
 
+/**
+ * Maps each event name to its listener signature.
+ *
+ * @public
+ */
 export interface EventMap {
   [Events.MANIFEST_LOADING]: (event: ManifestLoadingEvent) => void;
   [Events.MANIFEST_PARSED]: (event: ManifestParsedEvent) => void;

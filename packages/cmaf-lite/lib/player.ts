@@ -1,6 +1,6 @@
 import { EventEmitter } from "@matvp91/eventemitter3";
 import type { PlayerConfig } from "./config";
-import { defaultConfig } from "./config";
+import { DEFAULT_CONFIG } from "./config";
 import type { EventMap } from "./events";
 import { Events } from "./events";
 import { ManifestController } from "./manifest/manifest_controller";
@@ -12,8 +12,14 @@ import type { RegistryType } from "./registry";
 import { Registry } from "./registry";
 import type { ByType, MediaType, StreamPreference } from "./types/media";
 
+/**
+ * CMAF media player. Augments a `<video>` element with adaptive streaming
+ * through MSE.
+ *
+ * @public
+ */
 export class Player extends EventEmitter<EventMap> {
-  private config_ = defaultConfig;
+  private config_ = DEFAULT_CONFIG;
   private media_: HTMLMediaElement | null = null;
 
   private registry_: Registry;
@@ -36,42 +42,74 @@ export class Player extends EventEmitter<EventMap> {
     this.streamController_ = new StreamController(this);
   }
 
+  /**
+   * Starts loading and parsing the manifest at the given URL, then begins
+   * segment fetching.
+   */
   load(url: string) {
     this.emit(Events.MANIFEST_LOADING, { url });
   }
 
+  /**
+   * Returns registered components for the given type.
+   */
   getRegistry(type: RegistryType) {
     return this.registry_.get(type);
   }
 
+  /**
+   * Returns the attached media element, or null.
+   */
   getMedia() {
     return this.media_;
   }
 
+  /**
+   * Merges the given config into the current config.
+   */
   setConfig(config: Partial<PlayerConfig>) {
     this.config_ = { ...this.config_, ...config };
   }
 
+  /**
+   * Returns the current player config.
+   */
   getConfig() {
     return this.config_;
   }
 
+  /**
+   * Returns buffered time ranges for the given type.
+   */
   getBuffered(type: MediaType) {
     return this.bufferController_.getBuffered(type);
   }
 
+  /**
+   * Returns all resolved streams.
+   */
   getStreams() {
     return this.streamController_.getStreams();
   }
 
+  /**
+   * Returns the currently active stream for the given type.
+   */
   getActiveStream(type: MediaType) {
     return this.streamController_.getActiveStream(type);
   }
 
+  /**
+   * Returns the network service instance.
+   */
   getNetworkService() {
     return this.networkService_;
   }
 
+  /**
+   * Sets the preferred stream for a media type. Optionally flushes the
+   * buffer to switch immediately.
+   */
   setStreamPreference<T extends MediaType>(
     type: T,
     params: Omit<ByType<StreamPreference, T>, "type">,
@@ -87,16 +125,27 @@ export class Player extends EventEmitter<EventMap> {
     }
   }
 
+  /**
+   * Attaches a `<video>` or `<audio>` element. Required before playback
+   * can begin.
+   */
   attachMedia(media: HTMLMediaElement) {
     this.media_ = media;
     this.emit(Events.MEDIA_ATTACHING, { media });
   }
 
+  /**
+   * Detaches the current media element.
+   */
   detachMedia() {
     this.media_ = null;
     this.emit(Events.MEDIA_DETACHED);
   }
 
+  /**
+   * Destroys the player and releases all resources. The instance cannot
+   * be reused after this call.
+   */
   destroy() {
     this.manifestController_.destroy();
     this.bufferController_.destroy();

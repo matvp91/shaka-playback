@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.manifest
 
 ## Manifest type
 
+Parsed manifest representing a CMAF presentation.
+
 **Signature:**
 
 ```typescript
-declare type Manifest = {
+type Manifest = {
     duration: number;
     switchingSets: SwitchingSet[];
 };

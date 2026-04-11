@@ -56,6 +56,10 @@
           {
             "label": "EventMap",
             "link": "/reference/cmaf-lite.eventmap/"
+          },
+          {
+            "label": "RegistryTypeMap",
+            "link": "/reference/cmaf-lite.registrytypemap/"
           }
         ],
         "collapsed": true
@@ -166,12 +170,12 @@
             "link": "/reference/cmaf-lite.aborted/"
           },
           {
-            "label": "Events",
-            "link": "/reference/cmaf-lite.events/"
+            "label": "DEFAULT_CONFIG",
+            "link": "/reference/cmaf-lite.default_config/"
           },
           {
-            "label": "defaultConfig",
-            "link": "/reference/cmaf-lite.defaultconfig/"
+            "label": "Events",
+            "link": "/reference/cmaf-lite.events/"
           }
         ],
         "collapsed": true

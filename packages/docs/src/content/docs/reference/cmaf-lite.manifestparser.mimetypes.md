@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.manifestparser.mimetypes
 
 ## ManifestParser.mimeTypes property
 
+Supported MIME types for this parser.
+
 **Signature:**
 
 ```typescript

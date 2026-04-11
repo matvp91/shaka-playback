@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.player.getstreams
 
 ## Player.getStreams() method
 
+Returns all resolved streams.
+
 **Signature:**
 
 ```typescript

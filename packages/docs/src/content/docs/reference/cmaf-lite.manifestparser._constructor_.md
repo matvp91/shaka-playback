@@ -47,6 +47,8 @@ player\_
 
 </td><td>
 
+The parent player instance.
+
 
 </td></tr>
 </tbody></table>

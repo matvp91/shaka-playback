@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.mediaattachingevent
 
 ## MediaAttachingEvent type
 
+Fired when [Player.attachMedia()](/reference/cmaf-lite.player.attachmedia) is called and the media element is being attached.
+
 **Signature:**
 
 ```typescript
-declare type MediaAttachingEvent = {
+type MediaAttachingEvent = {
     media: HTMLMediaElement;
 };
 ```

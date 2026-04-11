@@ -9,10 +9,12 @@ slug: reference/cmaf-lite.mediaattachedevent
 
 ## MediaAttachedEvent type
 
+Fired when the media element and MediaSource are ready for buffering.
+
 **Signature:**
 
 ```typescript
-declare type MediaAttachedEvent = {
+type MediaAttachedEvent = {
     media: HTMLMediaElement;
     mediaSource: MediaSource;
 };

@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.player.attachmedia
 
 ## Player.attachMedia() method
 
+Attaches a `<video>` or `<audio>` element. Required before playback can begin.
+
 **Signature:**
 
 ```typescript

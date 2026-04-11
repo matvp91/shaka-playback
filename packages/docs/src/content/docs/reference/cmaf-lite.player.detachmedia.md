@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.player.detachmedia
 
 ## Player.detachMedia() method
 
+Detaches the current media element.
+
 **Signature:**
 
 ```typescript

@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.player.setconfig
 
 ## Player.setConfig() method
 
+Merges the given config into the current config.
+
 **Signature:**
 
 ```typescript

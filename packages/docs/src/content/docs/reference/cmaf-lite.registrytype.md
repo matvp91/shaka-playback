@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.registrytype
 
 ## RegistryType enum
 
+Available component types for registration.
+
 **Signature:**
 
 ```typescript

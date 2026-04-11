@@ -9,6 +9,8 @@ slug: reference/cmaf-lite.player.getnetworkservice
 
 ## Player.getNetworkService() method
 
+Returns the network service instance.
+
 **Signature:**
 
 ```typescript
