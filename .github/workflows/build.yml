@@ -8,6 +8,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+environment:
+  name: default
+
 jobs:
   config:
     runs-on: ubuntu-latest
@@ -30,8 +33,6 @@ jobs:
   build:
     needs: config
     runs-on: ubuntu-latest
-    environment:
-      name: default
     concurrency:
       group: build_build_${{ github.ref }}
       cancel-in-progress: true
@@ -58,6 +59,8 @@ jobs:
         run: pnpm --filter cmaf-lite check
 
       - name: build
+        env:
+          MY_ENV_VAR: ${{ secrets.MY_ENV_VAR }}
         run: pnpm --filter cmaf-lite build
 
       - name: build artifact
