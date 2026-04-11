@@ -16,10 +16,7 @@ export function isInitSegment(
 /**
  * Unique identity of a switching set: type + codec.
  */
-export function getSwitchingSetId(
-  type: MediaType,
-  codec: string,
-): string {
+export function getSwitchingSetId(type: MediaType, codec: string): string {
   return `${type}:${codec}`;
 }
 

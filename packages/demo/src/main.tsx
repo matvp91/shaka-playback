@@ -12,7 +12,7 @@ player.setConfig({
   frontBufferLength: 30,
 });
 
-player.setPreference({ type: MediaType.VIDEO, codec: "hev1.1.6.l120.90" })
+player.setPreference({ type: MediaType.VIDEO, codec: "hev1.1.6.l120.90" });
 
 const video = document.getElementById("videoElement") as HTMLVideoElement;
 
