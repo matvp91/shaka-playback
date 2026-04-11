@@ -51,21 +51,7 @@
         "collapsed": true
       },
       {
-        "label": "Interface",
-        "items": [
-          {
-            "label": "EventMap",
-            "link": "/reference/cmaf-lite.eventmap/"
-          },
-          {
-            "label": "RegistryTypeMap",
-            "link": "/reference/cmaf-lite.registrytypemap/"
-          }
-        ],
-        "collapsed": true
-      },
-      {
-        "label": "TypeAlias",
+        "label": "Event",
         "items": [
           {
             "label": "BufferAppendErrorEvent",
@@ -84,18 +70,6 @@
             "link": "/reference/cmaf-lite.buffercodecsevent/"
           },
           {
-            "label": "ByType",
-            "link": "/reference/cmaf-lite.bytype/"
-          },
-          {
-            "label": "InitSegment",
-            "link": "/reference/cmaf-lite.initsegment/"
-          },
-          {
-            "label": "Manifest",
-            "link": "/reference/cmaf-lite.manifest/"
-          },
-          {
             "label": "ManifestLoadingEvent",
             "link": "/reference/cmaf-lite.manifestloadingevent/"
           },
@@ -112,16 +86,52 @@
             "link": "/reference/cmaf-lite.mediaattachingevent/"
           },
           {
-            "label": "NetworkRequest",
-            "link": "/reference/cmaf-lite.networkrequest/"
-          },
-          {
             "label": "NetworkRequestEvent",
             "link": "/reference/cmaf-lite.networkrequestevent/"
           },
           {
             "label": "NetworkResponseEvent",
             "link": "/reference/cmaf-lite.networkresponseevent/"
+          },
+          {
+            "label": "StreamPreferenceChangedEvent",
+            "link": "/reference/cmaf-lite.streampreferencechangedevent/"
+          }
+        ],
+        "collapsed": true
+      },
+      {
+        "label": "Interface",
+        "items": [
+          {
+            "label": "EventMap",
+            "link": "/reference/cmaf-lite.eventmap/"
+          },
+          {
+            "label": "RegistryTypeMap",
+            "link": "/reference/cmaf-lite.registrytypemap/"
+          }
+        ],
+        "collapsed": true
+      },
+      {
+        "label": "TypeAlias",
+        "items": [
+          {
+            "label": "ByType",
+            "link": "/reference/cmaf-lite.bytype/"
+          },
+          {
+            "label": "InitSegment",
+            "link": "/reference/cmaf-lite.initsegment/"
+          },
+          {
+            "label": "Manifest",
+            "link": "/reference/cmaf-lite.manifest/"
+          },
+          {
+            "label": "NetworkRequest",
+            "link": "/reference/cmaf-lite.networkrequest/"
           },
           {
             "label": "NetworkResponsePromise",
@@ -146,10 +156,6 @@
           {
             "label": "StreamPreference",
             "link": "/reference/cmaf-lite.streampreference/"
-          },
-          {
-            "label": "StreamPreferenceChangedEvent",
-            "link": "/reference/cmaf-lite.streampreferencechangedevent/"
           },
           {
             "label": "SwitchingSet",

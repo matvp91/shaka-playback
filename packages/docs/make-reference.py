@@ -26,7 +26,11 @@ kind_groups = defaultdict(list)
 for member in pkg.get("members", []):
     name = member.get("name", "")
     link = f"/reference/{pkg_name}.{name}/".lower()
-    kind_groups[member["kind"]].append({"label": name, "link": link})
+    md_name = f"{pkg_name}.{name}".lower() + ".md"
+    if md_name.endswith("event.md"):
+        kind_groups["Event"].append({"label": name, "link": link})
+    else:
+        kind_groups[member["kind"]].append({"label": name, "link": link})
 
 sidebar = sorted(
     [

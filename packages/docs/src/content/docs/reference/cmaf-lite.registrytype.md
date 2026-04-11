@@ -42,7 +42,7 @@ MANIFEST\_PARSER
 
 </td><td>
 
-`0`
+`"manifestParser"`
 
 
 </td><td>

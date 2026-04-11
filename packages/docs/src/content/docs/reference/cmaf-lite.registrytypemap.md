@@ -42,7 +42,7 @@ Description
 </th></tr></thead>
 <tbody><tr><td>
 
-["0"](/reference/cmaf-lite.registrytypemap._0_)
+[manifestParser](/reference/cmaf-lite.registrytypemap.manifestparser)
 
 
 </td><td>
