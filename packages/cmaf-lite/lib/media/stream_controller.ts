@@ -23,6 +23,7 @@ import { ABORTED, NetworkRequestType } from "../types/net";
 import * as ArrayUtils from "../utils/array_utils";
 import * as asserts from "../utils/asserts";
 import * as BufferUtils from "../utils/buffer_utils";
+import * as ManifestUtils from "../utils/manifest_utils";
 import * as StreamUtils from "../utils/stream_utils";
 import { Timer } from "../utils/timer";
 
@@ -265,10 +266,8 @@ export class StreamController {
 
     if (segment.initSegment !== mediaState.lastInitSegment) {
       this.loadSegment_(mediaState, segment.initSegment);
-      mediaState.lastInitSegment = segment.initSegment;
     } else {
       this.loadSegment_(mediaState, segment);
-      mediaState.lastSegment = segment;
     }
   }
 
@@ -290,6 +289,15 @@ export class StreamController {
     const response = await mediaState.request.promise;
     if (response === ABORTED) {
       return;
+    }
+
+    // Update mediaState AFTER we fetched, it means that we
+    // sent this segment to the buffer controller.
+    if (ManifestUtils.isInitSegment(segment)) {
+      mediaState.lastInitSegment = segment;
+    }
+    if (ManifestUtils.isMediaSegment(segment)) {
+      mediaState.lastSegment = segment;
     }
 
     this.player_.emit(Events.BUFFER_APPENDING, {
