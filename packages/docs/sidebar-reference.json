@@ -14,12 +14,12 @@
                 "link": "/reference/cmaf-lite.aborted/"
               },
               {
-                "label": "defaultConfig",
-                "link": "/reference/cmaf-lite.defaultconfig/"
-              },
-              {
                 "label": "Events",
                 "link": "/reference/cmaf-lite.events/"
+              },
+              {
+                "label": "defaultConfig",
+                "link": "/reference/cmaf-lite.defaultconfig/"
               }
             ]
           },
@@ -28,12 +28,12 @@
             "collapsed": true,
             "items": [
               {
-                "label": "BufferAppendedEvent",
-                "link": "/reference/cmaf-lite.bufferappendedevent/"
-              },
-              {
                 "label": "BufferAppendErrorEvent",
                 "link": "/reference/cmaf-lite.bufferappenderrorevent/"
+              },
+              {
+                "label": "BufferAppendedEvent",
+                "link": "/reference/cmaf-lite.bufferappendedevent/"
               },
               {
                 "label": "BufferAppendingEvent",

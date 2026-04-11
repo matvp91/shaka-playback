@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "make:reference": "node --experimental-strip-types scripts/make-reference.ts",
+    "make:reference": "python3 make-reference.py",
     "build": "astro build",
     "dev": "astro dev"
   },
