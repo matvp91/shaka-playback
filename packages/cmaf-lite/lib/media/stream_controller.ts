@@ -41,23 +41,6 @@ type MediaState<T extends MediaType = MediaType> = {
   timer: Timer;
 };
 
-/**
- * Remap a segment to the equivalent position in a
- * different track. CMAF guarantees aligned segments
- * within a SwitchingSet.
- */
-function remapSegment(
-  oldTrack: Track,
-  newTrack: Track,
-  lastSegment: Segment,
-): Segment {
-  const index = oldTrack.segments.indexOf(lastSegment);
-  asserts.assert(index !== -1, "Segment not found in old track");
-  const segment = newTrack.segments[index];
-  asserts.assertExists(segment, "Segment index out of bounds in new track");
-  return segment;
-}
-
 export class StreamController {
   private manifest_: Manifest | null = null;
   private streams_: Stream[] | null = null;
@@ -157,7 +140,8 @@ export class StreamController {
 
     if (track !== oldTrack && mediaState.lastSegment) {
       if (switchingSet === mediaState.switchingSet) {
-        mediaState.lastSegment = remapSegment(
+        // Find the corresponding segment in our new track.
+        mediaState.lastSegment = StreamUtils.remapSegment(
           oldTrack,
           track,
           mediaState.lastSegment,
