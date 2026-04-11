@@ -150,7 +150,7 @@ export class StreamController {
     if (switchingSet !== mediaState.switchingSet) {
       this.player_.emit(Events.BUFFER_CODECS, {
         type: mediaState.type,
-        codec: stream.codec,
+        codec: switchingSet.codec,
         duration: this.manifest_.duration,
       });
     }
@@ -222,7 +222,7 @@ export class StreamController {
 
       this.player_.emit(Events.BUFFER_CODECS, {
         type,
-        codec: stream.codec,
+        codec: switchingSet.codec,
         duration: this.manifest_.duration,
       });
     }
