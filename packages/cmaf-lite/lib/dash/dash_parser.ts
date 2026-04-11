@@ -4,6 +4,7 @@ import type { Manifest, SwitchingSet, Track } from "../types/manifest";
 import { MediaType } from "../types/media";
 import * as asserts from "../utils/asserts";
 import * as Functional from "../utils/functional";
+import * as ManifestUtils from "../utils/manifest_utils";
 import * as UrlUtils from "../utils/url_utils";
 import * as XmlUtils from "../utils/xml_utils";
 import { parseSegments } from "./dash_segments";
@@ -46,38 +47,56 @@ export function parseManifest(text: string, sourceUrl: string): Manifest {
   };
 }
 
+/**
+ * Flatten multi-period MPD into switching sets using a
+ * single accumulation pass. Tracks are matched by identity
+ * (not position) so period order independence is guaranteed.
+ */
 function flattenPeriods(sourceUrl: string, mpd: MPD): SwitchingSet[] {
-  const result: SwitchingSet[] = [];
+  const switchingSetMap = new Map<string, SwitchingSet>();
+  const trackMap = new Map<string, Track>();
 
-  for (const period of mpd.Period) {
-    const index = mpd.Period.indexOf(period);
-    const duration = resolvePeriodDuration(mpd, period, index);
+  for (let i = 0; i < mpd.Period.length; i++) {
+    const period = mpd.Period[i];
+    asserts.assertExists(period, "Period not found");
+    const duration = resolvePeriodDuration(mpd, period, i);
 
-    for (const as of period.AdaptationSet) {
-      const type = inferMediaType(as);
-      const ss = parseSwitchingSet(sourceUrl, mpd, period, as, type, duration);
+    for (const adaptationSet of period.AdaptationSet) {
+      const type = inferMediaType(adaptationSet);
+      const codec = resolveCodec(adaptationSet);
+      const switchingSetId = ManifestUtils.getSwitchingSetId(type, codec);
 
-      const existing = result.find(
-        (r) => r.type === ss.type && r.codec === ss.codec,
-      );
+      for (const representation of adaptationSet.Representation) {
+        const track = parseTrack(
+          sourceUrl,
+          mpd,
+          period,
+          adaptationSet,
+          representation,
+          type,
+          duration,
+        );
+        const trackId = ManifestUtils.getTrackId(track);
+        const compositeKey = `${switchingSetId}:${trackId}`;
 
-      if (!existing) {
-        result.push(ss);
-      } else {
-        for (const track of ss.tracks) {
-          const trackIndex = ss.tracks.indexOf(track);
-          const existingTrack = existing.tracks.at(trackIndex);
-          asserts.assertExists(
-            existingTrack,
-            "Track count mismatch across periods",
-          );
+        const existingTrack = trackMap.get(compositeKey);
+        if (existingTrack) {
           existingTrack.segments.push(...track.segments);
+        } else {
+          trackMap.set(compositeKey, track);
+
+          let switchingSet = switchingSetMap.get(switchingSetId);
+          if (!switchingSet) {
+            switchingSet = { type, codec, tracks: [] };
+            switchingSetMap.set(switchingSetId, switchingSet);
+          }
+          switchingSet.tracks.push(track);
         }
       }
     }
   }
 
-  return result;
+  return [...switchingSetMap.values()];
 }
 
 function resolveDuration(mpd: MPD, switchingSets: SwitchingSet[]): number {
@@ -123,29 +142,6 @@ function resolvePeriodDuration(
   }
 
   return null;
-}
-
-function parseSwitchingSet(
-  sourceUrl: string,
-  mpd: MPD,
-  period: Period,
-  adaptationSet: AdaptationSet,
-  type: MediaType,
-  duration: number | null,
-): SwitchingSet {
-  const firstRep = adaptationSet.Representation[0];
-  asserts.assertExists(firstRep, "No Representation found");
-
-  const codec = Functional.findMap([firstRep, adaptationSet], (node) =>
-    node["@_codecs"]?.toLowerCase(),
-  );
-  asserts.assertExists(codec, "codecs is mandatory");
-
-  const tracks = adaptationSet.Representation.map((rep) =>
-    parseTrack(sourceUrl, mpd, period, adaptationSet, rep, type, duration),
-  );
-
-  return { type, codec, tracks };
 }
 
 function parseTrack(
