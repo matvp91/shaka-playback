@@ -8,3 +8,4 @@ export * from "./registry";
 export * from "./types/manifest";
 export * from "./types/media";
 export * from "./types/net";
+export * from "./utils/log";

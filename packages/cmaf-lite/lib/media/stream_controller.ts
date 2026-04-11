@@ -23,9 +23,12 @@ import { ABORTED, NetworkRequestType } from "../types/net";
 import * as ArrayUtils from "../utils/array_utils";
 import * as asserts from "../utils/asserts";
 import * as BufferUtils from "../utils/buffer_utils";
+import { Log } from "../utils/log";
 import * as ManifestUtils from "../utils/manifest_utils";
 import * as StreamUtils from "../utils/stream_utils";
 import { Timer } from "../utils/timer";
+
+const log = Log.create("StreamController");
 
 const TICK_INTERVAL = 0.1;
 
@@ -155,6 +158,7 @@ export class StreamController {
       }
     }
 
+    log.info("Switched stream", stream);
     mediaState.stream = stream;
     mediaState.switchingSet = switchingSet;
     mediaState.track = track;
@@ -201,6 +205,7 @@ export class StreamController {
         request: null,
         timer: new Timer(() => this.update_(mediaState)),
       };
+      log.info(`MediaState ${type}`, stream);
 
       this.mediaStates_.set(type, mediaState);
 
@@ -240,6 +245,9 @@ export class StreamController {
     if (!segment) {
       const lookupTime = bufferEnd ?? currentTime;
       segment = this.getSegmentForTime_(mediaState.track, lookupTime);
+      log.debug(`Segment by time at ${lookupTime}`, segment);
+    } else {
+      log.debug(`Segment by index`, segment);
     }
 
     if (!segment) {

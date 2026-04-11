@@ -4,6 +4,9 @@ import type { Player } from "../player";
 import { RegistryType } from "../registry";
 import type { NetworkRequest } from "../types/net";
 import { ABORTED, NetworkRequestType } from "../types/net";
+import { Log } from "../utils/log";
+
+const log = Log.create("ManifestController");
 
 export class ManifestController {
   private request_: NetworkRequest | null = null;
@@ -39,6 +42,7 @@ export class ManifestController {
 
     const parser = this.getParser_(contentType);
     const manifest = parser.parse(response);
+    log.info("Manifest", manifest, parser);
     this.player_.emit(Events.MANIFEST_PARSED, { manifest });
   };
 

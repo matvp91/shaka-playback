@@ -1,7 +1,16 @@
-import { Events, MediaType, Player, Registry, RegistryType } from "cmaf-lite";
+import {
+  Log,
+  LogLevel,
+  MediaType,
+  Player,
+  Registry,
+  RegistryType,
+} from "cmaf-lite";
 import { DashParser } from "cmaf-lite/dash";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.tsx";
+
+Log.setLevel(LogLevel.INFO);
 
 Registry.add(RegistryType.MANIFEST_PARSER, DashParser);
 
@@ -15,18 +24,6 @@ player.setConfig({
 player.setStreamPreference(MediaType.VIDEO, { width: 200 });
 
 const video = document.getElementById("videoElement") as HTMLVideoElement;
-
-player.on(Events.MANIFEST_PARSED, ({ manifest }) => {
-  console.log("Manifest parsed:", manifest);
-});
-
-player.on(Events.MEDIA_ATTACHED, () => {
-  console.log("Media attached, MediaSource open");
-});
-
-player.on(Events.BUFFER_APPENDED, ({ type }) => {
-  console.log(`Buffer appended: ${type}`);
-});
 
 player.attachMedia(video);
 

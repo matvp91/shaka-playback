@@ -2,7 +2,10 @@ import type { MediaAttachedEvent } from "../events";
 import { Events } from "../events";
 import type { Player } from "../player";
 import * as BufferUtils from "../utils/buffer_utils";
+import { Log } from "../utils/log";
 import { Timer } from "../utils/timer";
+
+const log = Log.create("GapController");
 
 const TICK_INTERVAL = 0.1;
 const MAX_GAP_JUMP = 2;
@@ -58,16 +61,11 @@ export class GapController {
       return;
     }
 
-    if (media.paused || media.ended) {
+    if (media.paused || media.ended || media.buffered.length === 0) {
       return;
     }
 
-    if (media.buffered.length === 0) {
-      return;
-    }
-
-    // Wait one tick before acting to let the browser
-    // self-resolve.
+    // Wait one tick before acting to let the browser self-resolve.
     if (!this.stalled_) {
       this.stalled_ = true;
       return;
@@ -81,9 +79,14 @@ export class GapController {
       return;
     }
 
-    const gap = nextStart - media.currentTime;
+    const from = media.currentTime;
+    const to = nextStart;
+    const gap = to - from;
     if (gap <= MAX_GAP_JUMP) {
-      media.currentTime = nextStart + GAP_PADDING;
+      log.info(
+        `Jumped gap (${gap.toFixed(3)}) from ${from.toFixed(3)} to ${to.toFixed(3)}`,
+      );
+      media.currentTime = to + GAP_PADDING;
     }
   }
 }
