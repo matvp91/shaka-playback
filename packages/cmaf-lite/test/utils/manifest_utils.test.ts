@@ -34,7 +34,7 @@ describe("isInitSegment", () => {
 });
 
 describe("getSwitchingSetId", () => {
-  it("joins type and codec", () => {
+  it("returns a colon-joined string of media type and codec", () => {
     expect(getSwitchingSetId(MediaType.VIDEO, "avc")).toBe(
       "video:avc",
     );

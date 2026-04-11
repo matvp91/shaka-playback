@@ -20,11 +20,11 @@ describe("isAbsoluteUrl", () => {
 });
 
 describe("resolveUrl", () => {
-  it("returns url when no base", () => {
+  it("returns the url unchanged when no base is provided", () => {
     expect(resolveUrl("seg.m4s")).toBe("seg.m4s");
   });
 
-  it("returns url when url is absolute", () => {
+  it("returns the url unchanged when url is already absolute", () => {
     expect(resolveUrl("https://a.test/seg.m4s", "https://b.test/")).toBe(
       "https://a.test/seg.m4s",
     );
@@ -46,7 +46,7 @@ describe("resolveUrl", () => {
 });
 
 describe("resolveUrls", () => {
-  it("chains multiple urls together", () => {
+  it("resolves each url against the previous to produce a final url", () => {
     const result = resolveUrls([
       "https://cdn.test/",
       "video/",

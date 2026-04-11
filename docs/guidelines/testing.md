@@ -8,7 +8,6 @@ Vitest with `happy-dom` environment. Configured in
 Scripts in `packages/cmaf-lite/package.json`:
 
 - `test` — `vitest run`
-- `test:watch` — `vitest`
 
 Root `pnpm test` delegates to the package.
 
@@ -19,8 +18,29 @@ Root `pnpm test` delegates to the package.
   set up state, perform an action, assert the outcome.
 - No mocking libraries. Use hand-written helpers and
   `vi.useFakeTimers()`.
-- Test behavior, not implementation. `it` blocks describe what
-  happens, not how.
+- Test behavior, not implementation.
+- Import types and enums from `lib/` — never duplicate
+  definitions in tests. Use `Partial<T>` for factory overrides.
+
+## Test Naming
+
+Test names answer: **"What behavior breaks if this test fails?"**
+
+Describe what is being tested and under what condition.
+Add "why" only when the intent isn't obvious from the name.
+
+```typescript
+// Good — behavior + condition
+it("returns null when position is outside all buffered ranges")
+it("merges adjacent ranges when gap is smaller than maxHole")
+it("selects the video stream closest to preferred height")
+it("throws on unsupported codec strings")
+
+// Bad — describes implementation, not behavior
+it("calls compare function")
+it("returns the correct value")
+it("works correctly")
+```
 
 ## What to Test
 
