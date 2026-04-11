@@ -2,9 +2,13 @@
 
 What would a media player look like if we started from scratch in 2026?
 
-I'm a [Shaka Player](https://github.com/shaka-project/shaka-player) maintainer. Shaka is built to be the player that works for everyone, and that's its strength. But I've spent years wondering what happens when you scope things down aggressively. Same learnings, way smaller scope. CMAF only. MSE/EME only. No legacy formats, no legacy key systems. That's it.
+I help maintain [Shaka Player](https://github.com/shaka-project/shaka-player) with a bunch of really smart people. Shaka is built to be the player that works for everyone, and that's its strength. But I've spent years wondering what happens when you scope things down aggressively. Same learnings, way smaller scope. CMAF only. MSE/EME only. No legacy formats, no legacy key systems. That's it.
 
-## The Idea
+## Documentation
+
+Head over to [matvp91.github.io/cmaf-lite](https://matvp91.github.io/cmaf-lite/) for guides and the full API reference.
+
+## Why?
 
 [Shaka Player](https://github.com/shaka-project/shaka-player) and [hls.js](https://github.com/video-dev/hls.js) have over a decade of learnings baked in. Some great, some painful. The thing is, they have to support everything. Every container format, every key system, every browser quirk. That's the deal when you're the player everyone depends on.
 
@@ -26,8 +30,8 @@ It's early. DASH VOD works. Buffering, seeking, gap recovery. ABR, live, HLS, DR
 ## Usage
 
 ```ts
-import { Events, Player, Registry, RegistryType } from "@bap/player";
-import { DashParser } from "@bap/player/dash";
+import { Events, Player, Registry, RegistryType } from "cmaf-lite";
+import { DashParser } from "cmaf-lite/dash";
 
 Registry.add(RegistryType.MANIFEST_PARSER, DashParser);
 
