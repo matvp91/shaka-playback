@@ -24,6 +24,7 @@
     "tsc": "tsc --noEmit"
   },
   "devDependencies": {
+    "@microsoft/api-extractor": "^7.58.2",
     "@types/node": "^25.5.2",
     "tsup": "^8.5.1"
   },

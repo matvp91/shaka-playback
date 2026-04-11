@@ -8,7 +8,7 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   format: "esm",
-  dts: true,
   treeshake: true,
   metafile: true,
+  experimentalDts: true,
 });
