@@ -30,6 +30,8 @@ jobs:
   build:
     needs: config
     runs-on: ubuntu-latest
+    environment:
+      name: default
     concurrency:
       group: build_build_${{ github.ref }}
       cancel-in-progress: true
@@ -56,16 +58,12 @@ jobs:
         run: pnpm --filter cmaf-lite check
 
       - name: build
+        env:
+          RELATIVE_CI_KEY: ${{ secrets.RELATIVE_CI_KEY }}
         run: pnpm --filter cmaf-lite build
 
       - name: build artifact
         run: pnpm deploy --filter cmaf-lite ./artifact
-
-      - name: stats
-        uses: relative-ci/agent-upload-artifact-action@v2
-        with:
-          webpackStatsFile: ./artifact/dist/webpack-stats.json
-          key: ${{ secrets.RELATIVE_CI_KEY }}
 
       - name: upload artifact
         uses: actions/upload-artifact@v4
