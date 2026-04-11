@@ -3,7 +3,7 @@ import { parseManifest } from "../../lib/dash/dash_parser";
 import { MediaType } from "../../lib/types/media";
 import { loadFixture } from "../fixtures";
 
-describe("parseManifest", () => {
+describe("DashParser", () => {
   const sourceUrl = "https://cdn.test/manifest.mpd";
 
   it("parses a basic MPD into a manifest with correct duration", () => {

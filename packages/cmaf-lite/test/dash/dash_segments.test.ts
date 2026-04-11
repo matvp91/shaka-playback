@@ -5,7 +5,7 @@ import { loadFixture } from "../fixtures";
 
 const sourceUrl = "https://cdn.test/manifest.mpd";
 
-describe("dash_segments", () => {
+describe("DashSegments", () => {
   describe("duration-based segments", () => {
     it("generates segments that cover the full presentation duration", () => {
       const manifest = parseManifest(loadFixture("basic.mpd"), sourceUrl);

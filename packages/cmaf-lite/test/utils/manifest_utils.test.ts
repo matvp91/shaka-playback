@@ -13,39 +13,41 @@ import {
   createVideoTrack,
 } from "../__framework__/factories";
 
-describe("isMediaSegment", () => {
-  it("returns true for a media segment", () => {
-    expect(isMediaSegment(createSegment())).toBe(true);
+describe("ManifestUtils", () => {
+  describe("isMediaSegment", () => {
+    it("returns true for a media segment", () => {
+      expect(isMediaSegment(createSegment())).toBe(true);
+    });
+
+    it("returns false for an init segment", () => {
+      expect(isMediaSegment(createInitSegment())).toBe(false);
+    });
   });
 
-  it("returns false for an init segment", () => {
-    expect(isMediaSegment(createInitSegment())).toBe(false);
-  });
-});
+  describe("isInitSegment", () => {
+    it("returns true for an init segment", () => {
+      expect(isInitSegment(createInitSegment())).toBe(true);
+    });
 
-describe("isInitSegment", () => {
-  it("returns true for an init segment", () => {
-    expect(isInitSegment(createInitSegment())).toBe(true);
-  });
-
-  it("returns false for a media segment", () => {
-    expect(isInitSegment(createSegment())).toBe(false);
-  });
-});
-
-describe("getSwitchingSetId", () => {
-  it("returns a colon-joined string of media type and codec", () => {
-    expect(getSwitchingSetId(MediaType.VIDEO, "avc")).toBe("video:avc");
-  });
-});
-
-describe("getTrackId", () => {
-  it("returns dimensions for video tracks", () => {
-    const track = createVideoTrack({ width: 1280, height: 720 });
-    expect(getTrackId(track)).toBe("video:1280:720");
+    it("returns false for a media segment", () => {
+      expect(isInitSegment(createSegment())).toBe(false);
+    });
   });
 
-  it("returns 'audio' for audio tracks", () => {
-    expect(getTrackId(createAudioTrack())).toBe("audio");
+  describe("getSwitchingSetId", () => {
+    it("returns a colon-joined string of media type and codec", () => {
+      expect(getSwitchingSetId(MediaType.VIDEO, "avc")).toBe("video:avc");
+    });
+  });
+
+  describe("getTrackId", () => {
+    it("returns dimensions for video tracks", () => {
+      const track = createVideoTrack({ width: 1280, height: 720 });
+      expect(getTrackId(track)).toBe("video:1280:720");
+    });
+
+    it("returns 'audio' for audio tracks", () => {
+      expect(getTrackId(createAudioTrack())).toBe("audio");
+    });
   });
 });
