@@ -3,3 +3,5 @@ dist
 .superpowers
 .DS_Store
 .tsup
+.astro
+.temp

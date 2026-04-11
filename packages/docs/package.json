@@ -1,0 +1,19 @@
+{
+  "name": "docs",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "make": "node --experimental-strip-types scripts/make.ts",
+    "build": "pnpm make && astro build",
+    "dev": "astro dev"
+  },
+  "devDependencies": {
+    "@microsoft/api-documenter": "^7.30.0",
+    "@microsoft/api-extractor": "^7.58.2"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.38.3",
+    "astro": "^6.1.5",
+    "sharp": "^0.34.5"
+  }
+}
