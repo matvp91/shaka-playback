@@ -3,7 +3,7 @@ import {
   getBufferedEnd,
   getNextBufferedStart,
 } from "../../lib/utils/buffer_utils";
-import { createTimeRanges } from "../utils/time_ranges";
+import { createTimeRanges } from "../__framework__/time_ranges";
 
 describe("getBufferedEnd", () => {
   it("returns end of range containing position", () => {

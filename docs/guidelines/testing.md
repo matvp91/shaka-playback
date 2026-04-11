@@ -106,7 +106,7 @@ packages/cmaf-lite/
       index.ts          # loadFixture(name) helper
       basic.mpd         # MPD fixture files
       ...
-    utils/
+    __framework__/
       time_ranges.ts    # createTimeRanges()
       media_source_mock.ts
       source_buffer_mock.ts
@@ -116,7 +116,7 @@ packages/cmaf-lite/
 
 ## Test Helpers
 
-All helpers live in `test/utils/` (except fixtures).
+All helpers live in `test/__framework__/` (except fixtures).
 
 ### `time_ranges.ts`
 

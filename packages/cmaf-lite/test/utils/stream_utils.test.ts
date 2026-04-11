@@ -12,7 +12,7 @@ import {
   createSegment,
   createSwitchingSet,
   createVideoTrack,
-} from "../utils/factories";
+} from "../__framework__/factories";
 
 describe("getStreams", () => {
   it("extracts one stream per unique type and resolution", () => {

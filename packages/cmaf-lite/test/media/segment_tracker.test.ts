@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SegmentTracker } from "../../lib/media/segment_tracker";
 import { MediaType } from "../../lib/types/media";
-import { createTimeRanges } from "../utils/time_ranges";
+import { createTimeRanges } from "../__framework__/time_ranges";
 
 describe("SegmentTracker", () => {
   describe("trackAppend", () => {

@@ -11,7 +11,7 @@ import {
   createSegment,
   createVideoTrack,
   createAudioTrack,
-} from "../utils/factories";
+} from "../__framework__/factories";
 
 describe("isMediaSegment", () => {
   it("returns true for a media segment", () => {
