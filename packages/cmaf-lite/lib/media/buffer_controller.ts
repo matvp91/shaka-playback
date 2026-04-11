@@ -9,6 +9,8 @@ import type { Player } from "../player";
 import type { InitSegment, Segment } from "../types/manifest";
 import type { MediaType } from "../types/media";
 import * as asserts from "../utils/asserts";
+import * as CodecUtils from "../utils/codec_utils";
+import * as ManifestUtils from "../utils/manifest_utils";
 import * as Mp4BoxParser from "../utils/mp4_box_parser";
 import type { Operation } from "./operation_queue";
 import { OperationQueue } from "./operation_queue";
@@ -87,16 +89,22 @@ export class BufferController {
       return;
     }
 
-    const { type, mimeType } = event;
-    if (this.sourceBuffers_.has(type)) {
+    const { type, codec } = event;
+    const sb = this.sourceBuffers_.get(type);
+    const mimeType = CodecUtils.getContentType(type, codec);
+
+    if (sb) {
+      this.opQueue_.enqueue(type, {
+        execute: () => sb.changeType(mimeType),
+      });
       return;
     }
 
-    const sb = this.mediaSource_.addSourceBuffer(mimeType);
-    this.sourceBuffers_.set(type, sb);
-    this.opQueue_.add(type, sb);
+    const newSb = this.mediaSource_.addSourceBuffer(mimeType);
+    this.sourceBuffers_.set(type, newSb);
+    this.opQueue_.add(type, newSb);
 
-    sb.addEventListener("updateend", () => {
+    newSb.addEventListener("updateend", () => {
       this.opQueue_.shiftAndExecuteNext(type);
     });
 
@@ -104,17 +112,20 @@ export class BufferController {
   };
 
   private onBufferAppending_ = (event: BufferAppendingEvent) => {
-    const { type, initSegment, data, segment } = event;
+    const { type, data, segment } = event;
 
-    if (!segment) {
-      this.initSegmentInfo_.set(initSegment, {
+    if (ManifestUtils.isInitSegment(segment)) {
+      // Handle init segment.
+      this.initSegmentInfo_.set(segment, {
         timescale: Mp4BoxParser.parseTimescale(data),
       });
     }
 
-    const timestampOffset = segment
-      ? this.computeTimestampOffset_(initSegment, segment, data)
-      : undefined;
+    let timestampOffset: number | undefined;
+    if (ManifestUtils.isMediaSegment(segment)) {
+      // Handle media segment.
+      timestampOffset = this.computeTimestampOffset_(segment, data);
+    }
 
     const operation = {
       execute: () => {
@@ -147,12 +158,8 @@ export class BufferController {
    * Derive timestampOffset from init segment timescale
    * and media segment baseMediaDecodeTime.
    */
-  private computeTimestampOffset_(
-    initSegment: InitSegment,
-    segment: Segment,
-    data: ArrayBuffer,
-  ): number {
-    const info = this.initSegmentInfo_.get(initSegment);
+  private computeTimestampOffset_(segment: Segment, data: ArrayBuffer): number {
+    const info = this.initSegmentInfo_.get(segment.initSegment);
     asserts.assertExists(info, "Init segment not parsed");
     const mediaTime =
       Mp4BoxParser.parseBaseMediaDecodeTime(data) / info.timescale;
@@ -163,7 +170,7 @@ export class BufferController {
     const { type, segment, data } = event;
 
     // Record byte size for quota-aware eviction decisions.
-    if (segment) {
+    if (ManifestUtils.isMediaSegment(segment)) {
       this.segmentTracker_.trackAppend(
         type,
         segment.start,

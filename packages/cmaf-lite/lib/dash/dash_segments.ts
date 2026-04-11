@@ -14,7 +14,7 @@ import type {
   SegmentTimeline,
 } from "./dash_types";
 
-export function parseSegmentData(
+export function parseSegments(
   _mpd: MPD,
   period: Period,
   adaptationSet: AdaptationSet,
@@ -58,6 +58,10 @@ export function parseSegmentData(
     baseUrl,
   );
 
+  const initSegment: InitSegment = {
+    url: initSegmentUrl,
+  };
+
   const segments = st.SegmentTimeline
     ? mapTemplateTimeline(
         st.SegmentTimeline,
@@ -68,6 +72,7 @@ export function parseSegmentData(
         bandwidth,
         pto,
         periodStart,
+        initSegment,
       )
     : mapTemplateDuration(
         st,
@@ -78,13 +83,10 @@ export function parseSegmentData(
         pto,
         periodStart,
         duration,
+        initSegment,
       );
 
-  const initSegment: InitSegment = {
-    url: initSegmentUrl,
-  };
-
-  return { initSegment, segments };
+  return segments;
 }
 
 function mapTemplateTimeline(
@@ -96,6 +98,7 @@ function mapTemplateTimeline(
   bandwidth: number,
   pto: number,
   periodStart: number,
+  initSegment: InitSegment,
 ): Segment[] {
   const timescale = XmlUtils.asNumber(st["@_timescale"]) ?? 1;
   const startNumber = XmlUtils.asNumber(st["@_startNumber"]) ?? 1;
@@ -127,6 +130,7 @@ function mapTemplateTimeline(
         url,
         start: (time - pto) / timescale + periodStart,
         end: (time - pto + d) / timescale + periodStart,
+        initSegment,
       });
       time += d;
       number++;
@@ -145,6 +149,7 @@ function mapTemplateDuration(
   pto: number,
   periodStart: number,
   presentationDuration: number | null,
+  initSegment: InitSegment,
 ): Segment[] {
   asserts.assertExists(
     presentationDuration,
@@ -180,6 +185,7 @@ function mapTemplateDuration(
       url,
       start: (time - pto) / timescale + periodStart,
       end: (time - pto + templateDuration) / timescale + periodStart,
+      initSegment,
     });
   }
 

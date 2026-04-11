@@ -2,15 +2,6 @@ import type { MediaType } from "./media";
 
 export type Manifest = {
   duration: number;
-  presentations: Presentation[];
-};
-
-/**
- * Time-bounded content period, maps to a DASH Period.
- */
-export type Presentation = {
-  start: number;
-  end: number;
   switchingSets: SwitchingSet[];
 };
 
@@ -30,7 +21,6 @@ export type SwitchingSet = {
  */
 export type Track = {
   bandwidth: number;
-  initSegment: InitSegment;
   segments: Segment[];
 } & (
   | {
@@ -51,4 +41,5 @@ export type Segment = {
   url: string;
   start: number;
   end: number;
+  initSegment: InitSegment;
 };

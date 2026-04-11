@@ -1,17 +1,13 @@
 import { decodeIso8601Duration } from "@svta/cml-iso-8601";
 import { XMLParser } from "fast-xml-parser";
-import type {
-  Manifest,
-  Presentation,
-  SwitchingSet,
-  Track,
-} from "../types/manifest";
+import type { Manifest, SwitchingSet, Track } from "../types/manifest";
 import { MediaType } from "../types/media";
 import * as asserts from "../utils/asserts";
 import * as Functional from "../utils/functional";
+import * as ManifestUtils from "../utils/manifest_utils";
 import * as UrlUtils from "../utils/url_utils";
 import * as XmlUtils from "../utils/xml_utils";
-import { parseSegmentData } from "./dash_presentation";
+import { parseSegments } from "./dash_segments";
 import type { AdaptationSet, MPD, Period, Representation } from "./dash_types";
 
 const DASH_ARRAY_NODES = [
@@ -30,7 +26,7 @@ const DASH_ARRAY_NODES = [
   "Event",
 ];
 
-export function parseManifest(text: string, sourceUrl: string) {
+export function parseManifest(text: string, sourceUrl: string): Manifest {
   const parser = new XMLParser({
     ignoreAttributes: false,
     alwaysCreateTextNode: true,
@@ -42,41 +38,76 @@ export function parseManifest(text: string, sourceUrl: string) {
     throw new Error("No Period found in manifest");
   }
 
-  const presentations = mpd.Period.map((period, periodIndex) =>
-    parsePeriod(sourceUrl, mpd, period, periodIndex),
-  );
+  const switchingSets = flattenPeriods(sourceUrl, mpd);
+  const duration = resolveDuration(mpd, switchingSets);
 
-  const lastPresentation = presentations.at(-1);
-  asserts.assertExists(lastPresentation, "No Presentation");
-
-  const manifest: Manifest = {
-    duration: lastPresentation.end,
-    presentations,
+  return {
+    duration,
+    switchingSets,
   };
-  return manifest;
 }
 
-function parsePeriod(
-  sourceUrl: string,
-  mpd: MPD,
-  period: Period,
-  periodIndex: number,
-): Presentation {
-  const start = period["@_start"]
-    ? decodeIso8601Duration(period["@_start"])
-    : 0;
+/**
+ * Flatten multi-period MPD into switching sets using a
+ * single accumulation pass. Tracks are matched by identity
+ * (not position) so period order independence is guaranteed.
+ */
+function flattenPeriods(sourceUrl: string, mpd: MPD): SwitchingSet[] {
+  const switchingSetMap = new Map<string, SwitchingSet>();
+  const trackMap = new Map<string, Track>();
 
-  const duration = resolvePresentationDuration(mpd, period, periodIndex, start);
+  for (let i = 0; i < mpd.Period.length; i++) {
+    const period = mpd.Period[i];
+    asserts.assertExists(period, "Period not found");
+    const duration = resolvePeriodDuration(mpd, period, i);
 
-  const switchingSets = period.AdaptationSet.map((as) => {
-    const type = inferMediaType(as);
-    asserts.assertExists(type, "Cannot infer media type");
-    return parseSwitchingSet(sourceUrl, mpd, period, as, type, duration);
-  });
+    for (const adaptationSet of period.AdaptationSet) {
+      const type = inferMediaType(adaptationSet);
+      const codec = resolveCodec(adaptationSet);
+      const switchingSetId = ManifestUtils.getSwitchingSetId(type, codec);
 
-  const end = resolvePresentationEnd(duration, start, switchingSets);
+      for (const representation of adaptationSet.Representation) {
+        const track = parseTrack(
+          sourceUrl,
+          mpd,
+          period,
+          adaptationSet,
+          representation,
+          type,
+          duration,
+        );
+        const trackId = ManifestUtils.getTrackId(track);
+        const compositeKey = `${switchingSetId}:${trackId}`;
 
-  return { start, end, switchingSets };
+        const existingTrack = trackMap.get(compositeKey);
+        if (existingTrack) {
+          existingTrack.segments.push(...track.segments);
+        } else {
+          trackMap.set(compositeKey, track);
+
+          let switchingSet = switchingSetMap.get(switchingSetId);
+          if (!switchingSet) {
+            switchingSet = { type, codec, tracks: [] };
+            switchingSetMap.set(switchingSetId, switchingSet);
+          }
+          switchingSet.tracks.push(track);
+        }
+      }
+    }
+  }
+
+  return [...switchingSetMap.values()];
+}
+
+function resolveDuration(mpd: MPD, switchingSets: SwitchingSet[]): number {
+  const mpdDuration = mpd["@_mediaPresentationDuration"];
+  if (mpdDuration != null) {
+    return decodeIso8601Duration(mpdDuration);
+  }
+
+  const lastSegmentEnd = switchingSets[0]?.tracks[0]?.segments.at(-1)?.end;
+  asserts.assertExists(lastSegmentEnd, "Cannot resolve duration");
+  return lastSegmentEnd;
 }
 
 /**
@@ -86,16 +117,19 @@ function parsePeriod(
  * metadata alone cannot determine the duration — callers must
  * fall back to parsed segment data instead.
  */
-function resolvePresentationDuration(
+function resolvePeriodDuration(
   mpd: MPD,
   period: Period,
   periodIndex: number,
-  start: number,
 ): number | null {
   const duration = period["@_duration"];
   if (duration != null) {
     return decodeIso8601Duration(duration);
   }
+
+  const start = period["@_start"]
+    ? decodeIso8601Duration(period["@_start"])
+    : 0;
 
   const nextStart = mpd.Period[periodIndex + 1]?.["@_start"];
   if (nextStart != null) {
@@ -108,49 +142,6 @@ function resolvePresentationDuration(
   }
 
   return null;
-}
-
-/**
- * Resolve the absolute end time for the Presentation. Unlike
- * resolvePresentationDuration, this runs after segment parsing
- * and can use segment data as a last resort when metadata is
- * incomplete (only valid for explicit addressing).
- */
-function resolvePresentationEnd(
-  duration: number | null,
-  start: number,
-  switchingSets: SwitchingSet[],
-): number {
-  if (duration != null) {
-    return start + duration;
-  }
-
-  const lastSegmentEnd = switchingSets[0]?.tracks[0]?.segments.at(-1)?.end;
-  asserts.assertExists(lastSegmentEnd, "Cannot resolve presentation end");
-  return lastSegmentEnd;
-}
-
-function parseSwitchingSet(
-  sourceUrl: string,
-  mpd: MPD,
-  period: Period,
-  adaptationSet: AdaptationSet,
-  type: MediaType,
-  duration: number | null,
-): SwitchingSet {
-  const firstRep = adaptationSet.Representation[0];
-  asserts.assertExists(firstRep, "No Representation found");
-
-  const codec = Functional.findMap([firstRep, adaptationSet], (node) =>
-    node["@_codecs"]?.toLowerCase(),
-  );
-  asserts.assertExists(codec, "codecs is mandatory");
-
-  const tracks = adaptationSet.Representation.map((rep) =>
-    parseTrack(sourceUrl, mpd, period, adaptationSet, rep, type, duration),
-  );
-
-  return { type, codec, tracks };
 }
 
 function parseTrack(
@@ -171,7 +162,7 @@ function parseTrack(
   const bandwidth = XmlUtils.asNumber(representation["@_bandwidth"]);
   asserts.assertExists(bandwidth, "bandwidth is mandatory");
 
-  const segmentData = parseSegmentData(
+  const segments = parseSegments(
     mpd,
     period,
     adaptationSet,
@@ -196,7 +187,7 @@ function parseTrack(
       width,
       height,
       bandwidth,
-      ...segmentData,
+      segments,
     };
   }
 
@@ -204,14 +195,14 @@ function parseTrack(
     return {
       type: MediaType.AUDIO,
       bandwidth,
-      ...segmentData,
+      segments,
     };
   }
 
   throw new Error("TODO: Map TEXT type");
 }
 
-function inferMediaType(adaptationSet: AdaptationSet): MediaType | null {
+function inferMediaType(adaptationSet: AdaptationSet): MediaType {
   const contentType = adaptationSet["@_contentType"];
   if (contentType === "video") {
     return MediaType.VIDEO;
@@ -234,5 +225,17 @@ function inferMediaType(adaptationSet: AdaptationSet): MediaType | null {
   if (mimeType?.startsWith("text/") || mimeType?.startsWith("application/")) {
     return MediaType.TEXT;
   }
-  return null;
+  throw new Error("Failed to infer media type");
+}
+
+function resolveCodec(adaptationSet: AdaptationSet): string {
+  const firstRep = adaptationSet.Representation[0];
+  asserts.assertExists(firstRep, "No Representation found");
+
+  const codec = Functional.findMap([firstRep, adaptationSet], (node) =>
+    node["@_codecs"]?.toLowerCase(),
+  );
+  asserts.assertExists(codec, "codecs is mandatory");
+
+  return codec;
 }

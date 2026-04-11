@@ -8,13 +8,11 @@ today) outputs this structure. Type definitions live in
 
 ```
 Manifest
-  └── Presentation[]
-        └── SwitchingSet[]
-              └── Track[]
-                    └── Segment[]
+  └── SwitchingSet[]
+        └── Track[]
+              └── Segment[]
 ```
 
-- **Presentation** — time-bounded content period.
 - **SwitchingSet** — CMAF switching set. Tracks with same
   type and codec, seamlessly switchable. Maps 1:1 to an
   MSE SourceBuffer.
@@ -36,12 +34,14 @@ rather than replacing the tree.
 | DASH | Internal |
 |------|----------|
 | MPD | Manifest |
-| Period | Presentation |
+| Period | (flattened — segments merged into SwitchingSets) |
 | AdaptationSet | SwitchingSet |
 | Representation | Track |
 | SegmentTemplate + Timeline | Segment[] + InitSegment |
 
-Segment times are resolved to the presentation timeline at
-parse time. URLs are fully resolved. Presentation end uses
-the DASH fallback chain: `@duration` → next `@start` →
+Multi-period manifests are flattened during parsing. Tracks
+are matched by identity across periods and their segments
+concatenated. Segment times are resolved to the presentation
+timeline at parse time. URLs are fully resolved. Duration
+uses the DASH fallback chain: `@duration` → next `@start` →
 `@mediaPresentationDuration` → last segment end.

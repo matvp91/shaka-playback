@@ -1,4 +1,4 @@
-# BAP
+# cmaf-lite
 
 pnpm monorepo for cmaf-lite.
 

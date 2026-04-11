@@ -44,22 +44,20 @@ export type MediaAttachedEvent = {
 
 export type BufferCodecsEvent = {
   type: MediaType;
-  mimeType: string;
+  codec: string;
   duration: number;
 };
 
 export type BufferAppendingEvent = {
   type: MediaType;
-  initSegment: InitSegment;
+  segment: InitSegment | Segment;
   data: ArrayBuffer;
-  segment: Segment | null;
 };
 
 export type BufferAppendedEvent = {
   type: MediaType;
-  initSegment: InitSegment;
+  segment: InitSegment | Segment;
   data: ArrayBuffer;
-  segment: Segment | null;
 };
 
 export type BufferAppendErrorEvent = {

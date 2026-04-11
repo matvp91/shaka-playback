@@ -16,6 +16,13 @@ So that's what this is. One manifest model any protocol maps onto. One pipeline 
 
 It's early. DASH VOD works. Buffering, seeking, gap recovery. ABR, live, HLS, DRM? Not yet. But the code stays small, the architecture stays clean, and adding stuff hasn't meant fighting what's already there. That's the whole point.
 
+## Key Principles
+
+- **Stable references, not copies.** One source of truth. Everything else points into it. No duplication, no drift.
+- **Single pass.** If you're scanning the same data twice, the structure is wrong.
+- **Hotpaths don't allocate.** Allocate at setup, reference at runtime. The playback loop produces no garbage.
+- **CMAF all the way down.** One container format means no abstraction layers. When every segment is fMP4 with a shared init, you can reason about the whole pipeline.
+
 ## Usage
 
 ```ts
@@ -36,5 +43,3 @@ player.load("https://example.com/manifest.mpd");
 ```
 
 Built on the shoulders of [Shaka Player](https://github.com/shaka-project/shaka-player), [hls.js](https://github.com/video-dev/hls.js), and [Common Media Library](https://github.com/streaming-video-technology-alliance/common-media-library).
-
-<img width="643" height="592" alt="image" src="https://github.com/user-attachments/assets/70585709-7f47-4422-a213-b07161d29278" />
