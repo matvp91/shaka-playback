@@ -2,25 +2,25 @@
   "name": "cmaf-lite",
   "version": "0.0.1",
   "type": "module",
-  "main": "./dist/main.js",
-  "module": "./dist/main.js",
-  "types": "./dist/main.d.ts",
+  "main": "./dist/main.mjs",
+  "module": "./dist/main.mjs",
+  "types": "./dist/main.d.mts",
   "exports": {
     ".": {
-      "import": "./dist/main.js",
-      "types": "./dist/main.d.ts"
+      "import": "./dist/main.mjs",
+      "types": "./dist/main.d.mts"
     },
     "./dash": {
-      "import": "./dist/dash.js",
-      "types": "./dist/dash.d.ts"
+      "import": "./dist/dash.mjs",
+      "types": "./dist/dash.d.mts"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsup --minify",
-    "dev": "tsup --watch",
+    "build": "tsdown --minify",
+    "dev": "tsdown --watch",
     "docs": "api-extractor run --local --config api-generator/config.json && api-documenter markdown -i api-generator/__generated__ -o api-generator/__generated__/markdown",
     "check": "biome check",
     "format": "biome check --write --unsafe .",
@@ -32,7 +32,7 @@
     "@microsoft/api-extractor": "^7.58.2",
     "@types/node": "^25.5.2",
     "happy-dom": "^20.8.9",
-    "tsup": "^8.5.1",
+    "tsdown": "^0.21.7",
     "vitest": "^4.1.4"
   },
   "dependencies": {
