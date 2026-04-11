@@ -3,9 +3,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "make:reference": "python3 make-reference.py",
-    "build": "astro build",
-    "dev": "astro dev"
+    "generate-reference": "pnpm -r generate-reference && python3 generate-reference.py",
+    "build": "pnpm generate-reference && astro build",
+    "dev": "pnpm generate-reference && astro dev"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.38.3",

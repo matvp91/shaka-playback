@@ -7,7 +7,7 @@ from collections import defaultdict
 from pathlib import Path
 
 DOCS_DIR = Path(__file__).resolve().parent
-GENERATED_DIR = DOCS_DIR / "../cmaf-lite/__generated_docs__"
+GENERATED_DIR = DOCS_DIR / "../cmaf-lite/api-generator/__generated__"
 MD_SOURCE_DIR = GENERATED_DIR / "markdown"
 API_JSON_PATH = GENERATED_DIR / "cmaf-lite.api.json"
 REF_DIR = DOCS_DIR / "src/content/docs/reference"

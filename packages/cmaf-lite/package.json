@@ -20,7 +20,7 @@
   "scripts": {
     "build": "tsup --minify",
     "dev": "tsup --watch",
-    "docs": "api-extractor run --local && api-documenter markdown -i __generated_docs__ -o __generated_docs__/markdown",
+    "generate-reference": "api-extractor run --local --config api-generator/config.json && api-documenter markdown -i api-generator/__generated__ -o api-generator/__generated__/markdown",
     "format": "biome check --write --unsafe .",
     "tsc": "tsc --noEmit"
   },
