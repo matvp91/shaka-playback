@@ -4,9 +4,9 @@ CMAF-compliant media player library extending the HTML `<video>` element with ad
 
 ## Docs
 
-- [Architecture & Technical Design](docs/DESIGN.md)
-- [Manifest Model](docs/MANIFEST.md)
-- [Buffer Quota Protection](docs/BUFFER.md)
+- [Architecture & Technical Design](docs/design.md)
+- [Manifest Model](docs/manifest.md)
+- [Buffer Quota Protection](docs/buffer.md)
 
 ## Structure
 
