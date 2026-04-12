@@ -85,16 +85,6 @@ export class OperationQueue {
     this.executeNext_(type);
   }
 
-  /** Debug string showing queue state per type. */
-  toString(): string {
-    return [
-      this.formatQueue_(MediaType.VIDEO),
-      this.formatQueue_(MediaType.AUDIO),
-    ]
-      .filter(Boolean)
-      .join("\n");
-  }
-
   private executeNext_(type: SourceBufferMediaType) {
     const queue = this.queues_[type];
     if (queue.length === 0) {
@@ -118,13 +108,5 @@ export class OperationQueue {
         this.shiftAndExecuteNext(type);
       }
     }
-  }
-
-  private formatQueue_(type: SourceBufferMediaType): string {
-    const queue = this.queues_[type];
-    if (queue.length === 0) {
-      return "";
-    }
-    return `${type}: ${queue.map((op) => op.kind).join(", ")}`;
   }
 }
