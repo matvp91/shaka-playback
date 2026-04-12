@@ -31,4 +31,4 @@ const appElement = document.getElementById("app")!;
 const root = createRoot(appElement);
 setInterval(() => {
   root.render(<App player={player} />);
-}, 10);
+}, 100);

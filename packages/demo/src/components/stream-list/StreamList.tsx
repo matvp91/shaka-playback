@@ -1,4 +1,4 @@
-import type { Player } from "cmaf-lite";
+import type { Player, Stream } from "cmaf-lite";
 import { MediaType } from "cmaf-lite";
 import { groupByType } from "../../utils/stream";
 import { StreamGroup } from "./StreamGroup";
@@ -8,7 +8,7 @@ type StreamListProps = {
 };
 
 export function StreamList({ player }: StreamListProps) {
-  let streams;
+  let streams: Stream[];
   try {
     streams = player.getStreams();
   } catch {

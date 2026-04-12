@@ -5,11 +5,12 @@ import { formatBandwidth } from "../../utils/stream";
 type StreamItemProps = {
   stream: Stream;
   active: boolean;
+  onClick: () => void;
 };
 
-export function StreamItem({ stream, active }: StreamItemProps) {
+export function StreamItem({ stream, active, onClick }: StreamItemProps) {
   return (
-    <div className="flex items-center gap-2">
+    <button className="flex cursor-pointer items-center gap-2" onClick={onClick} type="button">
       {active && <span>●</span>}
       {stream.type === MediaType.VIDEO ? (
         <span>
@@ -21,6 +22,6 @@ export function StreamItem({ stream, active }: StreamItemProps) {
           {formatBandwidth(stream.bandwidth)} · {stream.codec}
         </span>
       )}
-    </div>
+    </button>
   );
 }

@@ -1,7 +1,5 @@
-import { cn } from "../utils/cn";
-
 type TableProps = {
-  columns: { label: string; className?: string }[];
+  columns: { label: string }[];
   rows: { label: string; values: string[] }[];
 };
 
@@ -12,10 +10,7 @@ export function Table({ columns, rows }: TableProps) {
         <tr>
           <td className="pr-3" />
           {columns.map((col) => (
-            <td
-              key={col.label}
-              className={cn("px-3 text-right", col.className)}
-            >
+            <td key={col.label} className="px-3 text-right">
               {col.label}
             </td>
           ))}

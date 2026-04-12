@@ -1,6 +1,5 @@
 import type { BufferData } from "../../types";
 import { Bar } from "../Bar";
-import { Header } from "./Header";
 import { SeekableLabels } from "./SeekableLabels";
 import { Stats } from "./Stats";
 import { Track } from "./Track";
@@ -11,12 +10,11 @@ type BufferGraphProps = {
 
 export function BufferGraph({ data }: BufferGraphProps) {
   return (
-    <div className="bg-neutral-950 p-4 font-mono text-neutral-500">
-      <Header frontBufferLength={data.frontBufferLength} paused={data.paused} />
+    <div className="p-4">
       <SeekableLabels seekable={data.seekable} currentTime={data.currentTime} />
-
       <Bar label="buffered">
         <Track
+          rangeClassName="bg-muted-foreground"
           ranges={data.buffered}
           seekable={data.seekable}
           currentTime={data.currentTime}
@@ -35,22 +33,19 @@ export function BufferGraph({ data }: BufferGraphProps) {
           />
         </Bar>
       </div>
-
-      <hr className="mb-3" />
-
-      <Bar label="video">
-        <Track
-          rangeClassName="bg-indigo-500/30"
-          ranges={data.video}
-          seekable={data.seekable}
-          currentTime={data.currentTime}
-          frontBufferLength={data.frontBufferLength}
-        />
-      </Bar>
       <div className="mb-3">
+        <Bar label="video">
+          <Track
+            rangeClassName="bg-indigo-500"
+            ranges={data.video}
+            seekable={data.seekable}
+            currentTime={data.currentTime}
+            frontBufferLength={data.frontBufferLength}
+          />
+        </Bar>
         <Bar label="audio">
           <Track
-            rangeClassName="bg-emerald-400/30"
+            rangeClassName="bg-emerald-400"
             ranges={data.audio}
             seekable={data.seekable}
             currentTime={data.currentTime}
@@ -58,9 +53,6 @@ export function BufferGraph({ data }: BufferGraphProps) {
           />
         </Bar>
       </div>
-
-      <hr className="mb-3" />
-
       <Stats
         buffered={data.buffered}
         video={data.video}

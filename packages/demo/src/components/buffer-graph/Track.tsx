@@ -19,37 +19,34 @@ export function Track({
   seekable,
   currentTime,
   frontBufferLength,
-  showMarkers = true,
+  showMarkers,
 }: TrackProps) {
   return (
-    <div className={cn("relative flex-1 bg-neutral-800 h-4", className)}>
+    <div className={cn("relative h-4 flex-1 bg-black", className)}>
       {ranges.map((range) => {
         const style = toBarStyle(range, seekable);
         return (
           <div
             key={`${range.start}-${range.end}`}
-            className={cn(
-              "absolute top-0 h-full bg-neutral-600",
-              rangeClassName,
-            )}
+            className={cn("absolute top-0 h-full bg-muted", rangeClassName)}
             style={{ left: style.left, width: style.width }}
           />
         );
       })}
-      {showMarkers && (
+      {showMarkers ? (
         <>
           <div
             className="absolute top-0 h-full w-0.5 bg-white"
             style={{ left: toPosition(currentTime, seekable) }}
           />
           <div
-            className="absolute top-0 h-full border-l border-dashed border-neutral-600"
+            className="absolute top-0 h-full border-l border-dashed border-muted-foreground"
             style={{
               left: toPosition(currentTime + frontBufferLength, seekable),
             }}
           />
         </>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -37,6 +37,7 @@ export function StreamGroup({
             activeStream !== null &&
             formatStream(stream) === formatStream(activeStream)
           }
+          onClick={() => player.setStreamPreference(stream, true)}
         />
       ))}
     </div>

@@ -47,7 +47,6 @@ export function App({ player }: AppProps) {
 
   const data: BufferData = {
     currentTime: media.currentTime,
-    paused: media.paused,
     seekable: seekableRanges[0] ?? null,
     buffered: toTimeRanges(media.buffered),
     played: toTimeRanges(media.played),

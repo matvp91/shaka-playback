@@ -18,8 +18,8 @@ export function Stats({ buffered, video, audio, currentTime }: StatsProps) {
 
   const columns = [
     { label: "total" },
-    { label: "video", className: "text-indigo-500" },
-    { label: "audio", className: "text-emerald-400" },
+    { label: "video" },
+    { label: "audio" },
   ];
 
   const rows = [
