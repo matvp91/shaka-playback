@@ -123,7 +123,6 @@ export class StreamController {
       networkService.cancel(mediaState.request);
     }
 
-    const oldTrack = mediaState.track;
     const [switchingSet, track] = StreamUtils.resolveHierarchy(
       this.manifest_,
       stream,
@@ -141,27 +140,12 @@ export class StreamController {
       }
     }
 
-    if (track !== oldTrack && mediaState.lastSegment) {
-      if (switchingSet === mediaState.switchingSet) {
-        // Find the corresponding segment in our new track.
-        mediaState.lastSegment = StreamUtils.remapSegment(
-          oldTrack,
-          track,
-          mediaState.lastSegment,
-        );
-      } else {
-        // Codec switch: segments may not align across
-        // SwitchingSets, use time-based lookup to find
-        // position in new track.
-        const lookupTime = mediaState.lastSegment.end;
-        mediaState.lastSegment = this.getSegmentForTime_(track, lookupTime);
-      }
-    }
-
     log.info("Switched stream", stream);
     mediaState.stream = stream;
     mediaState.switchingSet = switchingSet;
     mediaState.track = track;
+    mediaState.lastSegment = null;
+    mediaState.lastInitSegment = null;
     this.update_(mediaState);
   };
 
