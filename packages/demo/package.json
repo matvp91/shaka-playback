@@ -17,8 +17,9 @@
     "vite": "^8.0.3"
   },
   "dependencies": {
-    "cmaf-lite": "workspace:*",
     "clsx": "^2.1.1",
+    "cmaf-lite": "workspace:*",
+    "pretty-bytes": "^7.1.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "tailwind-merge": "^3.5.0"
