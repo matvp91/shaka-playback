@@ -1,6 +1,7 @@
 import type { Player } from "cmaf-lite";
 import { MediaType } from "cmaf-lite";
 import { BufferGraph } from "./components/buffer-graph/BufferGraph";
+import { StreamSelector } from "./components/StreamSelector";
 import type { BufferData, TimeRange } from "./types";
 
 /**
@@ -62,5 +63,10 @@ export function App({ player }: AppProps) {
     return null;
   }
 
-  return <BufferGraph data={data} />;
+  return (
+    <>
+      <StreamSelector player={player} />
+      <BufferGraph data={data} />
+    </>
+  );
 }
