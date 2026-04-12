@@ -53,6 +53,7 @@ export class BufferController {
     this.player_.off(Events.BUFFER_APPENDING, this.onBufferAppending_);
     this.player_.off(Events.BUFFER_EOS, this.onBufferEos_);
     this.player_.off(Events.BUFFER_APPENDED, this.onBufferAppended_);
+    this.opQueue_.destroy();
     this.segmentTracker_.destroy();
     this.quotaEvictionPending_.clear();
     this.sourceBuffers_.clear();

@@ -29,6 +29,11 @@ export class OperationQueue {
 
   constructor(private delegate_: OperationQueueDelegate) {}
 
+  destroy() {
+    this.queues_[MediaType.VIDEO] = [];
+    this.queues_[MediaType.AUDIO] = [];
+  }
+
   /**
    * Push an operation onto the queue. Executes immediately
    * if the queue was empty.
