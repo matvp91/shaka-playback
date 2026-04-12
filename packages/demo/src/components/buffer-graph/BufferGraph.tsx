@@ -38,7 +38,7 @@ export function BufferGraph({ data }: BufferGraphProps) {
 
       <hr className="mb-3" />
 
-      <Bar label="video" labelClassName="text-indigo-500">
+      <Bar label="video">
         <Track
           rangeClassName="bg-indigo-500/30"
           ranges={data.video}
@@ -48,7 +48,7 @@ export function BufferGraph({ data }: BufferGraphProps) {
         />
       </Bar>
       <div className="mb-3">
-        <Bar label="audio" labelClassName="text-emerald-400">
+        <Bar label="audio">
           <Track
             rangeClassName="bg-emerald-400/30"
             ranges={data.audio}
