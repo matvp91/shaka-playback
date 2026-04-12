@@ -1,7 +1,6 @@
 import {
   Log,
   LogLevel,
-  MediaType,
   Player,
   Registry,
   RegistryType,
@@ -20,8 +19,6 @@ Object.assign(window, { player });
 player.setConfig({
   frontBufferLength: 30,
 });
-
-player.setStreamPreference(MediaType.VIDEO, { height: 720 });
 
 const video = document.getElementById("videoElement") as HTMLVideoElement;
 
