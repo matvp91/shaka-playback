@@ -10,7 +10,7 @@ import { StreamController } from "./media/stream_controller";
 import { NetworkService } from "./net/network_service";
 import type { RegistryType } from "./registry";
 import { Registry } from "./registry";
-import type { ByType, StreamPreference } from "./types/media";
+import type { StreamPreference } from "./types/media";
 import { MediaType } from "./types/media";
 
 /**
