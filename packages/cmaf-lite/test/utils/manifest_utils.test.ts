@@ -1,17 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { MediaType } from "../../lib/types/media";
 import {
-  getSwitchingSetId,
-  getTrackId,
+  getSwitchingSetKey,
   isInitSegment,
   isMediaSegment,
 } from "../../lib/utils/manifest_utils";
-import {
-  createAudioTrack,
-  createInitSegment,
-  createSegment,
-  createVideoTrack,
-} from "../__framework__/factories";
+import { createInitSegment, createSegment } from "../__framework__/factories";
 
 describe("ManifestUtils", () => {
   describe("isMediaSegment", () => {
@@ -34,20 +28,9 @@ describe("ManifestUtils", () => {
     });
   });
 
-  describe("getSwitchingSetId", () => {
+  describe("getSwitchingSetKey", () => {
     it("returns a colon-joined string of media type and codec", () => {
-      expect(getSwitchingSetId(MediaType.VIDEO, "avc")).toBe("video:avc");
-    });
-  });
-
-  describe("getTrackId", () => {
-    it("returns dimensions and bandwidth for video tracks", () => {
-      const track = createVideoTrack({ width: 1280, height: 720 });
-      expect(getTrackId(track)).toBe("video:1280:720:2000000");
-    });
-
-    it("returns bandwidth for audio tracks", () => {
-      expect(getTrackId(createAudioTrack())).toBe("audio:128000");
+      expect(getSwitchingSetKey(MediaType.VIDEO, "avc")).toBe("video:avc");
     });
   });
 });

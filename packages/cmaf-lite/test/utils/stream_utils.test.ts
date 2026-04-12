@@ -153,6 +153,7 @@ describe("StreamUtils", () => {
         resolveHierarchy(manifest, {
           type: MediaType.AUDIO,
           codec: "aac",
+          bandwidth: 128_000,
         }),
       ).toThrow("No matching hierarchy");
     });

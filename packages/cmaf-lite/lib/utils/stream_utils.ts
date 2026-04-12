@@ -61,7 +61,7 @@ export function selectStream(
 }
 
 function isSameStream(a: Stream, b: Stream): boolean {
-  if (a.type !== b.type || a.codec !== b.codec || a.bandwidth !== b.bandwidth) {
+  if (a.type !== b.type || a.codec !== b.codec) {
     return false;
   }
   if (a.type === MediaType.VIDEO && b.type === MediaType.VIDEO) {
