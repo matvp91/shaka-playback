@@ -8,13 +8,13 @@ import type {
 import { Events } from "../events";
 import type { Player } from "../player";
 import type { InitSegment, Manifest, Segment } from "../types/manifest";
-import type { MediaType } from "../types/media";
+import type { SourceBufferMediaType } from "../types/media";
 import * as asserts from "../utils/asserts";
 import * as CodecUtils from "../utils/codec_utils";
 import * as ManifestUtils from "../utils/manifest_utils";
 import * as Mp4BoxParser from "../utils/mp4_box_parser";
 import type { Operation } from "./operation_queue";
-import { OperationQueue } from "./operation_queue";
+import { OperationKind, OperationQueue } from "./operation_queue";
 import { SegmentTracker } from "./segment_tracker";
 
 type InitSegmentInfo = {
@@ -22,12 +22,12 @@ type InitSegmentInfo = {
 };
 
 export class BufferController {
-  private sourceBuffers_ = new Map<MediaType, SourceBuffer>();
-  private opQueue_ = new OperationQueue();
+  private sourceBuffers_ = new Map<SourceBufferMediaType, SourceBuffer>();
+  private opQueue_: OperationQueue;
   private mediaSource_: MediaSource | null = null;
   private initSegmentInfo_ = new Map<InitSegment, InitSegmentInfo>();
   private segmentTracker_ = new SegmentTracker();
-  private quotaEvictionPending_ = new Set<MediaType>();
+  private quotaEvictionPending_ = new Set<SourceBufferMediaType>();
   private manifest_: Manifest | null = null;
 
   constructor(private player_: Player) {
@@ -37,6 +37,13 @@ export class BufferController {
     this.player_.on(Events.BUFFER_APPENDING, this.onBufferAppending_);
     this.player_.on(Events.BUFFER_EOS, this.onBufferEos_);
     this.player_.on(Events.BUFFER_APPENDED, this.onBufferAppended_);
+    this.opQueue_ = new OperationQueue({
+      isUpdating: (type) => {
+        const sb = this.sourceBuffers_.get(type);
+        asserts.assertExists(sb, `No SourceBuffer for ${type}`);
+        return sb.updating;
+      },
+    });
   }
 
   destroy() {
@@ -54,17 +61,18 @@ export class BufferController {
     this.manifest_ = null;
   }
 
-  getBuffered(type: MediaType): TimeRanges {
+  getBuffered(type: SourceBufferMediaType): TimeRanges {
     const sb = this.sourceBuffers_.get(type);
     asserts.assertExists(sb, `No SourceBuffer for ${type}`);
     return sb.buffered;
   }
 
-  flush(type: MediaType) {
+  flush(type: SourceBufferMediaType) {
     const sb = this.sourceBuffers_.get(type);
     asserts.assertExists(sb, `No SourceBuffer for ${type}`);
     this.quotaEvictionPending_.delete(type);
     this.opQueue_.enqueue(type, {
+      kind: OperationKind.Flush,
       execute: () => {
         sb.remove(0, Infinity);
       },
@@ -106,6 +114,7 @@ export class BufferController {
 
     if (sb) {
       this.opQueue_.enqueue(type, {
+        kind: `${OperationKind.ChangeType}_${mimeType}`,
         execute: () => sb.changeType(mimeType),
       });
       return;
@@ -113,7 +122,6 @@ export class BufferController {
 
     const newSb = this.mediaSource_.addSourceBuffer(mimeType);
     this.sourceBuffers_.set(type, newSb);
-    this.opQueue_.add(type, newSb);
 
     newSb.addEventListener("updateend", () => {
       this.opQueue_.shiftAndExecuteNext(type);
@@ -136,7 +144,8 @@ export class BufferController {
       timestampOffset = this.computeTimestampOffset_(segment, data);
     }
 
-    const operation = {
+    const operation: Operation = {
+      kind: OperationKind.Append,
       execute: () => {
         const sb = this.sourceBuffers_.get(type);
         if (!sb) {
@@ -202,7 +211,10 @@ export class BufferController {
    * Evict back buffer that exceeds the configured
    * backBufferLength behind the playhead.
    */
-  private evictBackBuffer_(type: MediaType, backBufferLength: number) {
+  private evictBackBuffer_(
+    type: SourceBufferMediaType,
+    backBufferLength: number,
+  ) {
     const media = this.player_.getMedia();
     if (!media) {
       return;
@@ -231,7 +243,12 @@ export class BufferController {
   private blockUntil(callback: () => void) {
     const types = [...this.sourceBuffers_.keys()];
     const blockers = types.map((type) => this.opQueue_.block(type));
-    Promise.all(blockers).then(callback);
+    Promise.all(blockers).then(() => {
+      callback();
+      for (const type of types) {
+        this.opQueue_.shiftAndExecuteNext(type);
+      }
+    });
   }
 
   /**
@@ -263,7 +280,7 @@ export class BufferController {
   };
 
   private evictAndRetryAppend_(
-    type: MediaType,
+    type: SourceBufferMediaType,
     operation: Operation,
     byteLength: number,
     error: DOMException,
@@ -339,13 +356,14 @@ export class BufferController {
    * Create a remove operation for a SourceBuffer range.
    */
   private getFlushOperation_(
-    type: MediaType,
+    type: SourceBufferMediaType,
     start: number,
     end: number,
   ): Operation {
     const sb = this.sourceBuffers_.get(type);
     asserts.assertExists(sb, `No SourceBuffer for ${type}`);
     return {
+      kind: OperationKind.Flush,
       execute: () => {
         sb.remove(start, end);
       },
@@ -356,8 +374,9 @@ export class BufferController {
    * Create an operation that clears the quota eviction
    * pending flag for a given type.
    */
-  private getQuotaEvictedOperation_(type: MediaType): Operation {
+  private getQuotaEvictedOperation_(type: SourceBufferMediaType): Operation {
     return {
+      kind: OperationKind.QuotaCleanup,
       execute: () => {
         this.quotaEvictionPending_.delete(type);
       },

@@ -12,12 +12,8 @@ import type {
   SwitchingSet,
   Track,
 } from "../types/manifest";
-import type {
-  ByType,
-  MediaType,
-  Stream,
-  StreamPreference,
-} from "../types/media";
+import type { ByType, Stream, StreamPreference } from "../types/media";
+import { MediaType } from "../types/media";
 import type { NetworkRequest } from "../types/net";
 import { ABORTED, NetworkRequestType } from "../types/net";
 import * as ArrayUtils from "../utils/array_utils";
@@ -134,10 +130,15 @@ export class StreamController {
     );
 
     if (switchingSet !== mediaState.switchingSet) {
-      this.player_.emit(Events.BUFFER_CODECS, {
-        type: mediaState.type,
-        codec: switchingSet.codec,
-      });
+      if (isAV(mediaState.type)) {
+        this.player_.emit(Events.BUFFER_CODECS, {
+          type: mediaState.type,
+          codec: switchingSet.codec,
+        });
+      } else {
+        // TODO(matvp): We shall figure out what to do with types
+        // that do not rely on MSE. Such as text.
+      }
     }
 
     if (track !== oldTrack && mediaState.lastSegment) {
@@ -290,11 +291,14 @@ export class StreamController {
       mediaState.lastSegment = segment;
     }
 
-    this.player_.emit(Events.BUFFER_APPENDING, {
-      type: mediaState.type,
-      segment,
-      data: response.arrayBuffer,
-    });
+    if (isAV(mediaState.type)) {
+      // If audio or video, we can send it to the buffer controller.
+      this.player_.emit(Events.BUFFER_APPENDING, {
+        type: mediaState.type,
+        segment,
+        data: response.arrayBuffer,
+      });
+    }
   }
 
   private getBufferEnd_(type: MediaType, time: number): number | null {
@@ -354,4 +358,8 @@ export class StreamController {
       this.update_(mediaState);
     }
   };
+}
+
+function isAV(type: MediaType) {
+  return type === MediaType.AUDIO || type === MediaType.VIDEO;
 }

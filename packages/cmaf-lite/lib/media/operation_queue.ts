@@ -1,33 +1,45 @@
-import type { MediaType } from "../types/media";
-import * as asserts from "../utils/asserts";
+import type { SourceBufferMediaType } from "../types/media";
+import { MediaType } from "../types/media";
+
+export interface OperationQueueDelegate {
+  /** Whether the SourceBuffer for this type is currently updating. */
+  isUpdating: (type: SourceBufferMediaType) => boolean;
+}
+
+export const OperationKind = {
+  Append: "append",
+  Block: "block",
+  ChangeType: "changeType",
+  Flush: "flush",
+  QuotaCleanup: "quotaCleanup",
+} as const;
 
 export type Operation = {
+  kind: string;
   execute: () => void;
   onComplete?: () => void;
   onError?: (error: unknown) => void;
 };
 
 export class OperationQueue {
-  private queues_ = new Map<MediaType, Operation[]>();
-  private sourceBuffers_ = new Map<MediaType, SourceBuffer>();
+  private queues_: Record<SourceBufferMediaType, Operation[]> = {
+    [MediaType.VIDEO]: [],
+    [MediaType.AUDIO]: [],
+  };
 
-  /**
-   * Register a SourceBuffer for updating-state checks.
-   */
-  add(type: MediaType, sourceBuffer: SourceBuffer) {
-    this.queues_.set(type, []);
-    this.sourceBuffers_.set(type, sourceBuffer);
+  constructor(private delegate_: OperationQueueDelegate) {}
+
+  destroy() {
+    this.queues_[MediaType.VIDEO] = [];
+    this.queues_[MediaType.AUDIO] = [];
   }
 
   /**
    * Push an operation onto the queue. Executes immediately
    * if the queue was empty.
    */
-  enqueue(type: MediaType, operation: Operation) {
-    const queue = this.queues_.get(type);
-    if (!queue) {
-      return;
-    }
+  enqueue(type: SourceBufferMediaType, operation: Operation) {
+    const queue = this.queues_[type];
     queue.push(operation);
     if (queue.length === 1) {
       this.executeNext_(type);
@@ -35,86 +47,70 @@ export class OperationQueue {
   }
 
   /**
-   * Append a blocker that resolves when all prior
-   * operations complete.
-   * TODO: Add prepend support for codec switching.
+   * Append a blocker that resolves when all prior operations
+   * complete. The caller must call shiftAndExecuteNext to
+   * advance past the blocker.
    */
-  block(type: MediaType): Promise<void> {
+  block(type: SourceBufferMediaType): Promise<void> {
     return new Promise((resolve) => {
-      const operation: Operation = {
-        execute: () => {
-          resolve();
-          const queue = this.queues_.get(type);
-          asserts.assertExists(queue, "Queue missing for blocker");
-          queue.shift();
-          this.executeNext_(type);
-        },
-      };
-      const queue = this.queues_.get(type);
-      if (!queue) {
-        resolve();
-        return;
-      }
-      queue.push(operation);
-      if (queue.length === 1) {
-        this.executeNext_(type);
-      }
+      this.enqueue(type, {
+        kind: OperationKind.Block,
+        execute: resolve,
+      });
     });
   }
 
   /**
-   * Insert operations at the front of the queue, ahead
-   * of any pending operations. Executes the first
-   * inserted operation immediately.
+   * Insert operations after the currently-executing operation.
+   * If the queue is empty, executes the first inserted
+   * operation immediately.
    */
-  insertNext(type: MediaType, operations: Operation[]) {
-    const queue = this.queues_.get(type);
-    if (!queue) {
-      return;
+  insertNext(type: SourceBufferMediaType, operations: Operation[]) {
+    const queue = this.queues_[type];
+    queue.splice(1, 0, ...operations);
+    if (queue.length === operations.length) {
+      this.executeNext_(type);
     }
-    queue.unshift(...operations);
-    this.executeNext_(type);
   }
 
   /**
    * Complete the current operation and execute the next.
-   * Called on SourceBuffer updateend.
+   * Called on SourceBuffer updateend or by the caller after
+   * a blocker resolves.
    */
-  shiftAndExecuteNext(type: MediaType) {
-    const queue = this.queues_.get(type);
-    if (!queue || queue.length === 0) {
+  shiftAndExecuteNext(type: SourceBufferMediaType) {
+    const queue = this.queues_[type];
+    if (queue.length === 0) {
       return;
     }
     const operation = queue.shift();
-    asserts.assertExists(operation, "Queue not empty but no operation");
-    operation.onComplete?.();
+    if (operation) {
+      operation.onComplete?.();
+    }
     this.executeNext_(type);
   }
 
-  destroy() {
-    this.queues_.clear();
-    this.sourceBuffers_.clear();
-  }
-
-  private executeNext_(type: MediaType) {
-    const queue = this.queues_.get(type);
-    if (!queue || queue.length === 0) {
+  private executeNext_(type: SourceBufferMediaType) {
+    const queue = this.queues_[type];
+    if (queue.length === 0) {
       return;
     }
     const operation = queue[0];
-    asserts.assertExists(operation, "Queue not empty but no operation");
+    if (!operation) {
+      return;
+    }
     try {
       operation.execute();
+      if (
+        !this.delegate_.isUpdating(type) &&
+        operation.kind !== OperationKind.Block
+      ) {
+        this.shiftAndExecuteNext(type);
+      }
     } catch (error) {
-      if (operation.onError) {
-        queue.shift();
-        operation.onError(error);
-      } else {
-        const sb = this.sourceBuffers_.get(type);
-        if (!sb?.updating) {
-          queue.shift();
-          this.executeNext_(type);
-        }
+      operation.onError?.(error);
+      if (!this.delegate_.isUpdating(type)) {
+        this.shiftAndExecuteNext(type);
       }
     }
   }
