@@ -8,7 +8,6 @@ import {
 import {
   createAudioTrack,
   createManifest,
-  createSegment,
   createSwitchingSet,
   createVideoTrack,
 } from "../__framework__/factories";
