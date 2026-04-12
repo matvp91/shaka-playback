@@ -10,6 +10,11 @@ export enum MediaType {
 }
 
 /**
+ * Media types backed by a SourceBuffer.
+ */
+export type SourceBufferMediaType = MediaType.VIDEO | MediaType.AUDIO;
+
+/**
  * Set of compatible, switchable tracks sharing a codec
  * and media type. Discriminated by {@link MediaType}.
  *
