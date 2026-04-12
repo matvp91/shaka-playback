@@ -130,6 +130,13 @@ export class Player extends EventEmitter<EventMap> {
   }
 
   /**
+   * Returns the currently active stream preference for the given type.
+   */
+  getStreamPreference(type: MediaType) {
+    return this.streamController_.getActiveStreamPreference(type);
+  }
+
+  /**
    * Attaches a `<video>` or `<audio>` element. Required before playback
    * can begin.
    */
