@@ -1,11 +1,11 @@
 import type {
   InitSegment,
   Manifest,
-  MediaType,
   NetworkRequest,
   NetworkRequestType,
   NetworkResponse,
   Segment,
+  SourceBufferMediaType,
   StreamPreference,
 } from ".";
 
@@ -74,7 +74,7 @@ export type MediaAttachedEvent = {
  * @public
  */
 export type BufferCodecsEvent = {
-  type: MediaType;
+  type: SourceBufferMediaType;
   codec: string;
 };
 
@@ -84,7 +84,7 @@ export type BufferCodecsEvent = {
  * @public
  */
 export type BufferAppendingEvent = {
-  type: MediaType;
+  type: SourceBufferMediaType;
   segment: InitSegment | Segment;
   data: ArrayBuffer;
 };
@@ -95,7 +95,7 @@ export type BufferAppendingEvent = {
  * @public
  */
 export type BufferAppendedEvent = {
-  type: MediaType;
+  type: SourceBufferMediaType;
   segment: InitSegment | Segment;
   data: ArrayBuffer;
 };
@@ -106,7 +106,7 @@ export type BufferAppendedEvent = {
  * @public
  */
 export type BufferAppendErrorEvent = {
-  type: MediaType;
+  type: SourceBufferMediaType;
   error: DOMException;
 };
 

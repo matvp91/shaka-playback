@@ -108,11 +108,11 @@ export class BufferController {
     }
 
     const { type, codec } = event;
-    const sb = this.sourceBuffers_.get(type as SourceBufferMediaType);
+    const sb = this.sourceBuffers_.get(type);
     const mimeType = CodecUtils.getContentType(type, codec);
 
     if (sb) {
-      this.opQueue_.enqueue(type as SourceBufferMediaType, {
+      this.opQueue_.enqueue(type, {
         kind: `${OperationKind.ChangeType}_${mimeType}`,
         execute: () => sb.changeType(mimeType),
       });
@@ -120,10 +120,10 @@ export class BufferController {
     }
 
     const newSb = this.mediaSource_.addSourceBuffer(mimeType);
-    this.sourceBuffers_.set(type as SourceBufferMediaType, newSb);
+    this.sourceBuffers_.set(type, newSb);
 
     newSb.addEventListener("updateend", () => {
-      this.opQueue_.shiftAndExecuteNext(type as SourceBufferMediaType);
+      this.opQueue_.shiftAndExecuteNext(type);
     });
   };
 
@@ -146,7 +146,7 @@ export class BufferController {
     const operation: Operation = {
       kind: OperationKind.Append,
       execute: () => {
-        const sb = this.sourceBuffers_.get(type as SourceBufferMediaType);
+        const sb = this.sourceBuffers_.get(type);
         if (!sb) {
           return;
         }
@@ -163,17 +163,12 @@ export class BufferController {
       },
       onError: (error: unknown) => {
         if (isQuotaExceededError(error)) {
-          this.evictAndRetryAppend_(
-            type as SourceBufferMediaType,
-            operation,
-            data.byteLength,
-            error,
-          );
+          this.evictAndRetryAppend_(type, operation, data.byteLength, error);
         }
       },
     };
 
-    this.opQueue_.enqueue(type as SourceBufferMediaType, operation);
+    this.opQueue_.enqueue(type, operation);
   };
 
   /**
@@ -201,13 +196,13 @@ export class BufferController {
       );
     }
 
-    const sb = this.sourceBuffers_.get(type as SourceBufferMediaType);
+    const sb = this.sourceBuffers_.get(type);
     asserts.assertExists(sb, `No SourceBuffer for ${type}`);
     this.segmentTracker_.reconcile(type, sb.buffered);
 
     const { backBufferLength } = this.player_.getConfig();
     if (Number.isFinite(backBufferLength)) {
-      this.evictBackBuffer_(type as SourceBufferMediaType, backBufferLength);
+      this.evictBackBuffer_(type, backBufferLength);
     }
   };
 
