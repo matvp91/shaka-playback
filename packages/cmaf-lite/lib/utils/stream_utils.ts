@@ -18,10 +18,12 @@ export function getStreams(manifest: Manifest): Stream[] {
               codec: CodecUtils.getNormalizedCodec(ss.codec),
               width: track.width,
               height: track.height,
+              bandwidth: track.bandwidth,
             }
           : {
               type: track.type,
               codec: CodecUtils.getNormalizedCodec(ss.codec),
+              bandwidth: track.bandwidth,
             };
       if (!streams.some((s) => isSameStream(s, stream))) {
         streams.push(stream);
@@ -59,7 +61,7 @@ export function selectStream(
 }
 
 function isSameStream(a: Stream, b: Stream): boolean {
-  if (a.type !== b.type || a.codec !== b.codec) {
+  if (a.type !== b.type || a.codec !== b.codec || a.bandwidth !== b.bandwidth) {
     return false;
   }
   if (a.type === MediaType.VIDEO && b.type === MediaType.VIDEO) {
@@ -84,6 +86,9 @@ function matchVideoPreference(
     if (preference.width !== undefined) {
       dist += Math.abs(stream.width - preference.width);
     }
+    if (preference.bandwidth !== undefined) {
+      dist += Math.abs(stream.bandwidth - preference.bandwidth);
+    }
     if (preference.codec !== undefined && stream.codec !== preference.codec) {
       dist += 1_000_000;
     }
@@ -100,14 +105,25 @@ function matchAudioPreference(
   streams: ByType<Stream, MediaType.AUDIO>[],
   preference: ByType<StreamPreference, MediaType.AUDIO>,
 ): Stream {
-  if (preference.codec) {
-    const match = streams.find((s) => s.codec === preference.codec);
-    if (match) {
-      return match;
+  asserts.assertExists(streams[0], "No video streams to match against");
+  let best = streams[0];
+  let bestDist = Number.POSITIVE_INFINITY;
+
+  for (const stream of streams) {
+    let dist = 0;
+    if (preference.bandwidth !== undefined) {
+      dist += Math.abs(stream.bandwidth - preference.bandwidth);
+    }
+    if (preference.codec !== undefined && stream.codec !== preference.codec) {
+      dist += 1_000_000;
+    }
+    if (dist < bestDist) {
+      best = stream;
+      bestDist = dist;
     }
   }
-  asserts.assertExists(streams[0], "No audio streams to match against");
-  return streams[0];
+
+  return best;
 }
 
 /**

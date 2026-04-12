@@ -41,13 +41,13 @@ describe("ManifestUtils", () => {
   });
 
   describe("getTrackId", () => {
-    it("returns dimensions for video tracks", () => {
+    it("returns dimensions and bandwidth for video tracks", () => {
       const track = createVideoTrack({ width: 1280, height: 720 });
-      expect(getTrackId(track)).toBe("video:1280:720");
+      expect(getTrackId(track)).toBe("video:1280:720:2000000");
     });
 
-    it("returns 'audio' for audio tracks", () => {
-      expect(getTrackId(createAudioTrack())).toBe("audio");
+    it("returns bandwidth for audio tracks", () => {
+      expect(getTrackId(createAudioTrack())).toBe("audio:128000");
     });
   });
 });

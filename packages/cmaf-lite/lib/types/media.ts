@@ -23,6 +23,8 @@ export type SourceBufferMediaType = MediaType.VIDEO | MediaType.AUDIO;
 export type Stream = {
   /** Normalized codec */
   codec: string;
+  /** Bandwidth */
+  bandwidth: number;
 } & (
   | {
       /** Video type */

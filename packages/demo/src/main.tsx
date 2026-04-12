@@ -21,7 +21,7 @@ player.setConfig({
   frontBufferLength: 30,
 });
 
-player.setStreamPreference(MediaType.VIDEO, { width: 200 });
+player.setStreamPreference(MediaType.VIDEO, { height: 720 });
 
 const video = document.getElementById("videoElement") as HTMLVideoElement;
 

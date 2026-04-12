@@ -27,7 +27,7 @@ export function getSwitchingSetId(type: MediaType, codec: string): string {
  */
 export function getTrackId(track: Track): string {
   if (track.type === MediaType.VIDEO) {
-    return `video:${track.width}:${track.height}`;
+    return `video:${track.width}:${track.height}:${track.bandwidth}`;
   }
-  return "audio";
+  return `audio:${track.bandwidth}`;
 }
