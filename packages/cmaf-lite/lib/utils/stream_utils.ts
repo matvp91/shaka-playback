@@ -152,19 +152,3 @@ export function resolveHierarchy(
   }
   throw new Error("No matching hierarchy for stream");
 }
-
-/**
- * Remap a segment to the equivalent position in a different track.
- * CMAF guarantees aligned segments within a SwitchingSet.
- */
-export function remapSegment(
-  oldTrack: Track,
-  newTrack: Track,
-  lastSegment: Segment,
-): Segment {
-  const index = oldTrack.segments.indexOf(lastSegment);
-  asserts.assert(index !== -1, "Segment not found in old track");
-  const segment = newTrack.segments[index];
-  asserts.assertExists(segment, "Segment index out of bounds in new track");
-  return segment;
-}
