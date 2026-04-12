@@ -1,6 +1,6 @@
+import { zodResolver } from "@hookform/resolvers/zod";
 import type { Player } from "cmaf-lite";
 import { MediaType } from "cmaf-lite";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "../ui/button";
@@ -52,11 +52,7 @@ export function VideoPreferenceForm({ player }: VideoPreferenceFormProps) {
       </div>
       <div>
         <Label htmlFor="video-bandwidth">bandwidth</Label>
-        <Input
-          id="video-bandwidth"
-          type="number"
-          {...register("bandwidth")}
-        />
+        <Input id="video-bandwidth" type="number" {...register("bandwidth")} />
       </div>
       <div>
         <Label htmlFor="video-codec">codec</Label>

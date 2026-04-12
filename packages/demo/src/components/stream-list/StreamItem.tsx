@@ -13,8 +13,8 @@ export function StreamItem({ stream, active }: StreamItemProps) {
       {active && <span>●</span>}
       {stream.type === MediaType.VIDEO ? (
         <span>
-          {stream.width}x{stream.height} · {formatBandwidth(stream.bandwidth)}{" "}
-          · {stream.codec}
+          {stream.width}x{stream.height} · {formatBandwidth(stream.bandwidth)} ·{" "}
+          {stream.codec}
         </span>
       ) : (
         <span>

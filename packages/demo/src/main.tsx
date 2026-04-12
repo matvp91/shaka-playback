@@ -1,10 +1,4 @@
-import {
-  Log,
-  LogLevel,
-  Player,
-  Registry,
-  RegistryType,
-} from "cmaf-lite";
+import { Log, LogLevel, Player, Registry, RegistryType } from "cmaf-lite";
 import { DashParser } from "cmaf-lite/dash";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.tsx";

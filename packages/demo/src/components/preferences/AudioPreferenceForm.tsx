@@ -1,6 +1,6 @@
+import { zodResolver } from "@hookform/resolvers/zod";
 import type { Player } from "cmaf-lite";
 import { MediaType } from "cmaf-lite";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "../ui/button";
@@ -38,11 +38,7 @@ export function AudioPreferenceForm({ player }: AudioPreferenceFormProps) {
       <h3>audio</h3>
       <div>
         <Label htmlFor="audio-bandwidth">bandwidth</Label>
-        <Input
-          id="audio-bandwidth"
-          type="number"
-          {...register("bandwidth")}
-        />
+        <Input id="audio-bandwidth" type="number" {...register("bandwidth")} />
       </div>
       <div>
         <Label htmlFor="audio-codec">codec</Label>

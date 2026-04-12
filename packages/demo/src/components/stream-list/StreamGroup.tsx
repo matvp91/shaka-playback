@@ -1,7 +1,6 @@
-import type { Player, Stream } from "cmaf-lite";
-import type { MediaType } from "cmaf-lite";
-import { StreamItem } from "./StreamItem";
+import type { MediaType, Player, Stream } from "cmaf-lite";
 import { formatStream } from "../../utils/stream";
+import { StreamItem } from "./StreamItem";
 
 type StreamGroupProps = {
   label: string;
@@ -10,7 +9,12 @@ type StreamGroupProps = {
   type: MediaType;
 };
 
-export function StreamGroup({ label, streams, player, type }: StreamGroupProps) {
+export function StreamGroup({
+  label,
+  streams,
+  player,
+  type,
+}: StreamGroupProps) {
   if (streams.length === 0) {
     return null;
   }
