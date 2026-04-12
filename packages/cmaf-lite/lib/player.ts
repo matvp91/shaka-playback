@@ -114,15 +114,7 @@ export class Player extends EventEmitter<EventMap> {
    * Sets the preferred stream for a media type. Optionally flushes the
    * buffer to switch immediately.
    */
-  setStreamPreference<T extends MediaType>(
-    type: T,
-    params: Omit<ByType<StreamPreference, T>, "type">,
-    flushBuffer?: boolean,
-  ) {
-    const preference = {
-      type,
-      ...params,
-    } as ByType<StreamPreference, T>;
+  setStreamPreference(preference: StreamPreference, flushBuffer?: boolean) {
     this.emit(Events.STREAM_PREFERENCE_CHANGED, { preference });
     if (flushBuffer) {
       this.bufferController_.flush(preference.type);
