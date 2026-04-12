@@ -10,7 +10,8 @@ import { StreamController } from "./media/stream_controller";
 import { NetworkService } from "./net/network_service";
 import type { RegistryType } from "./registry";
 import { Registry } from "./registry";
-import type { ByType, MediaType, StreamPreference } from "./types/media";
+import type { ByType, StreamPreference } from "./types/media";
+import { MediaType } from "./types/media";
 
 /**
  * CMAF media player. Augments a `<video>` element with adaptive streaming
@@ -82,6 +83,9 @@ export class Player extends EventEmitter<EventMap> {
    * Returns buffered time ranges for the given type.
    */
   getBuffered(type: MediaType) {
+    if (type === MediaType.TEXT) {
+      throw new Error(`getBuffered is not supported for type "${type}"`);
+    }
     return this.bufferController_.getBuffered(type);
   }
 
