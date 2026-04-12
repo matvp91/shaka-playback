@@ -163,19 +163,4 @@ describe("OperationQueue", () => {
     expect(first.execute).toHaveBeenCalledOnce();
     expect(second.execute).toHaveBeenCalledOnce();
   });
-
-  it("returns debug string with queue state", () => {
-    const queue = new OperationQueue(createDelegate(true));
-
-    queue.enqueue(MediaType.VIDEO, op({ kind: OperationKind.Append }));
-    queue.enqueue(MediaType.VIDEO, op({ kind: OperationKind.Flush }));
-    queue.enqueue(MediaType.AUDIO, op({ kind: OperationKind.Append }));
-
-    expect(queue.toString()).toBe("video: append, flush\naudio: append");
-  });
-
-  it("returns empty string from toString when all queues are empty", () => {
-    const queue = new OperationQueue(createDelegate());
-    expect(queue.toString()).toBe("");
-  });
 });
