@@ -64,7 +64,7 @@ function flattenPeriods(sourceUrl: string, mpd: MPD): SwitchingSet[] {
     for (const adaptationSet of period.AdaptationSet) {
       const type = inferMediaType(adaptationSet);
       const codec = resolveCodec(adaptationSet);
-      const switchingSetId = ManifestUtils.getSwitchingSetId(type, codec);
+      const switchingSetKey = ManifestUtils.getSwitchingSetKey(type, codec);
 
       for (const representation of adaptationSet.Representation) {
         const track = parseTrack(
@@ -76,19 +76,18 @@ function flattenPeriods(sourceUrl: string, mpd: MPD): SwitchingSet[] {
           type,
           duration,
         );
-        const trackId = ManifestUtils.getTrackId(track);
-        const compositeKey = `${switchingSetId}:${trackId}`;
+        const trackKey = `${switchingSetKey}:${representation["@_id"]}`;
 
-        const existingTrack = trackMap.get(compositeKey);
+        const existingTrack = trackMap.get(trackKey);
         if (existingTrack) {
           existingTrack.segments.push(...track.segments);
         } else {
-          trackMap.set(compositeKey, track);
+          trackMap.set(trackKey, track);
 
-          let switchingSet = switchingSetMap.get(switchingSetId);
+          let switchingSet = switchingSetMap.get(switchingSetKey);
           if (!switchingSet) {
             switchingSet = { type, codec, tracks: [] };
-            switchingSetMap.set(switchingSetId, switchingSet);
+            switchingSetMap.set(switchingSetKey, switchingSet);
           }
           switchingSet.tracks.push(track);
         }
