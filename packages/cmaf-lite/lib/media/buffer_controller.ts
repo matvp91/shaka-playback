@@ -83,21 +83,23 @@ export class BufferController {
 
   private onMediaAttaching_ = (event: MediaAttachingEvent) => {
     this.mediaSource_ = new MediaSource();
-
-    this.mediaSource_.addEventListener(
-      "sourceopen",
-      () => {
-        asserts.assertExists(this.mediaSource_, "No MediaSource");
-        this.player_.emit(Events.MEDIA_ATTACHED, {
-          media: event.media,
-          mediaSource: this.mediaSource_,
-        });
-        this.updateDuration_();
-      },
-      { once: true },
-    );
-
+    this.mediaSource_.addEventListener("sourceopen", this.onMediaSourceOpen_);
     event.media.src = URL.createObjectURL(this.mediaSource_);
+  };
+
+  private onMediaSourceOpen_ = () => {
+    asserts.assertExists(this.mediaSource_, "No MediaSource");
+    this.mediaSource_.removeEventListener(
+      "sourceopen",
+      this.onMediaSourceOpen_,
+    );
+    const media = this.player_.getMedia();
+    asserts.assertExists(media, "No media element");
+    this.player_.emit(Events.MEDIA_ATTACHED, {
+      media,
+      mediaSource: this.mediaSource_,
+    });
+    this.updateDuration_();
   };
 
   private onBufferCodecs_ = (event: BufferCodecsEvent) => {
