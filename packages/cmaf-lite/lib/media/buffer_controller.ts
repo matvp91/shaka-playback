@@ -70,7 +70,7 @@ export class BufferController {
     return sb.buffered;
   }
 
-  flush(type: SourceBufferMediaType) {
+  private flush_(type: SourceBufferMediaType) {
     const sb = this.sourceBuffers_.get(type);
     asserts.assertExists(sb, `No SourceBuffer for ${type}`);
     this.quotaEvictionPending_.delete(type);
@@ -84,7 +84,7 @@ export class BufferController {
   }
 
   private onBufferFlushing_ = (event: BufferFlushingEvent) => {
-    this.flush(event.type);
+    this.flush_(event.type);
   };
 
   private onManifestParsed_ = (event: ManifestParsedEvent) => {
