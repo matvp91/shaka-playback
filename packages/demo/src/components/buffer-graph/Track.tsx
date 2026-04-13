@@ -1,5 +1,5 @@
 import type { TimeRange } from "../../types";
-import { cn } from "../../utils/cn";
+import { cn } from "../../utils/helpers";
 import { toBarStyle } from "./utils";
 
 type TrackProps = {

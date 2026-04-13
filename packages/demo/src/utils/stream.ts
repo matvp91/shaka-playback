@@ -1,29 +1,6 @@
-import type { ByType, Stream } from "cmaf-lite";
+import type { Stream } from "cmaf-lite";
 import { MediaType } from "cmaf-lite";
 import prettyBytes from "pretty-bytes";
-
-type GroupedStreams = {
-  video: ByType<Stream, MediaType.VIDEO>[];
-  audio: ByType<Stream, MediaType.AUDIO>[];
-};
-
-/**
- * Groups streams by media type.
- */
-export function groupByType(streams: Stream[]): GroupedStreams {
-  const video: ByType<Stream, MediaType.VIDEO>[] = [];
-  const audio: ByType<Stream, MediaType.AUDIO>[] = [];
-
-  for (const stream of streams) {
-    if (stream.type === MediaType.VIDEO) {
-      video.push(stream);
-    } else if (stream.type === MediaType.AUDIO) {
-      audio.push(stream);
-    }
-  }
-
-  return { video, audio };
-}
 
 /**
  * Formats bandwidth as a human-readable string.
