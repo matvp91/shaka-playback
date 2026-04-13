@@ -70,21 +70,10 @@ export class BufferController {
     return sb.buffered;
   }
 
-  private flush_(type: SourceBufferMediaType) {
-    const sb = this.sourceBuffers_.get(type);
-    asserts.assertExists(sb, `No SourceBuffer for ${type}`);
-    this.quotaEvictionPending_.delete(type);
-    this.opQueue_.enqueue(type, {
-      kind: OperationKind.Flush,
-      execute: () => {
-        sb.remove(0, Infinity);
-        this.player_.emit(Events.BUFFER_FLUSHED, { type });
-      },
-    });
-  }
-
   private onBufferFlushing_ = (event: BufferFlushingEvent) => {
-    this.flush_(event.type);
+    const { type } = event;
+    this.quotaEvictionPending_.delete(type);
+    this.opQueue_.enqueue(type, this.getFlushOperation_(type, 0, Infinity));
   };
 
   private onManifestParsed_ = (event: ManifestParsedEvent) => {
@@ -374,6 +363,9 @@ export class BufferController {
       kind: OperationKind.Flush,
       execute: () => {
         sb.remove(start, end);
+      },
+      onComplete: () => {
+        this.player_.emit(Events.BUFFER_FLUSHED, { type });
       },
     };
   }
