@@ -130,6 +130,9 @@ export class Player extends EventEmitter<EventMap> {
    * can begin.
    */
   attachMedia(media: HTMLMediaElement) {
+    if (this.media_) {
+      throw new Error("Already has a media element attached");
+    }
     this.media_ = media;
     this.emit(Events.MEDIA_ATTACHING, { media });
   }
@@ -138,9 +141,10 @@ export class Player extends EventEmitter<EventMap> {
    * Detaches the current media element.
    */
   detachMedia() {
-    if (this.media_) {
-      this.emit(Events.MEDIA_DETACHING, { media: this.media_ });
+    if (!this.media_) {
+      return;
     }
+    this.emit(Events.MEDIA_DETACHING, { media: this.media_ });
     this.media_ = null;
     this.emit(Events.MEDIA_DETACHED);
   }
