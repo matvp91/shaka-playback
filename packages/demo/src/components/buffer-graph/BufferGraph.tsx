@@ -14,42 +14,45 @@ export function BufferGraph({ data }: BufferGraphProps) {
       <SeekableLabels seekable={data.seekable} currentTime={data.currentTime} />
       <Bar label="buffered">
         <Track
-          rangeClassName="bg-muted-foreground"
+          classNames={{
+            base: "bg-muted",
+            range: "bg-black"
+          }}
           ranges={data.buffered}
           seekable={data.seekable}
-          currentTime={data.currentTime}
-          frontBufferLength={data.frontBufferLength}
         />
       </Bar>
       <div className="mb-3">
         <Bar label="played">
           <Track
-            className="h-1"
+            classNames={{
+              base: "h-1 bg-muted",
+              range: "bg-black"
+            }}
             ranges={data.played}
             seekable={data.seekable}
-            currentTime={data.currentTime}
-            frontBufferLength={data.frontBufferLength}
-            showMarkers={false}
           />
         </Bar>
       </div>
       <div className="mb-3">
         <Bar label="video">
           <Track
-            rangeClassName="bg-indigo-500"
+            classNames={{
+              base: "bg-muted",
+              range: "bg-indigo-500"
+            }}
             ranges={data.video}
             seekable={data.seekable}
-            currentTime={data.currentTime}
-            frontBufferLength={data.frontBufferLength}
           />
         </Bar>
         <Bar label="audio">
           <Track
-            rangeClassName="bg-emerald-400"
+            classNames={{
+              base: "bg-muted",
+              range: "bg-emerald-500"
+            }}
             ranges={data.audio}
             seekable={data.seekable}
-            currentTime={data.currentTime}
-            frontBufferLength={data.frontBufferLength}
           />
         </Bar>
       </div>
