@@ -114,8 +114,8 @@ export class Player extends EventEmitter<EventMap> {
    * Sets the preferred stream for a media type. Optionally flushes the
    * buffer to switch immediately.
    */
-  setStreamPreference(preference: StreamPreference, flushBuffer?: boolean) {
-    this.emit(Events.STREAM_PREFERENCE_CHANGED, { preference });
+  setStreamPreference(preference: StreamPreference, flushBuffer = false) {
+    this.emit(Events.STREAM_PREFERENCE_CHANGED, { preference, flushBuffer });
     if (flushBuffer && preference.type !== MediaType.TEXT) {
       this.bufferController_.flush(preference.type);
     }
