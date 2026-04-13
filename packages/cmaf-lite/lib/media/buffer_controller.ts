@@ -5,7 +5,6 @@ import type {
   BufferFlushingEvent,
   ManifestParsedEvent,
   MediaAttachingEvent,
-  MediaDetachingEvent,
 } from "../events";
 import { Events } from "../events";
 import type { Player } from "../player";
