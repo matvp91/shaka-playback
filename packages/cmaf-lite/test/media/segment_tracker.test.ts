@@ -77,7 +77,9 @@ describe("SegmentTracker", () => {
       tracker.trackAppend(MediaType.VIDEO, 0, 4, 500);
       tracker.trackAppend(MediaType.VIDEO, 4, 8, 500);
 
-      const segments = (tracker as unknown as { segments_: Map<MediaType, unknown[]> }).segments_;
+      const segments = (
+        tracker as unknown as { segments_: Map<MediaType, unknown[]> }
+      ).segments_;
       const listBefore = segments.get(MediaType.VIDEO);
 
       tracker.reconcile(MediaType.VIDEO, createTimeRanges([4, 8]));
