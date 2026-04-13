@@ -1,4 +1,3 @@
-import * as asserts from "../utils/asserts";
 import type { MediaType } from "../types/media";
 
 type TrackedSegment = {
@@ -79,8 +78,7 @@ export class SegmentTracker {
     }
     let write = 0;
     for (let read = 0; read < list.length; read++) {
-      const segment: TrackedSegment | undefined = list[read];
-      asserts.assertExists(segment, "segment should exist at valid index");
+      const segment = list[read] as TrackedSegment;
       if (isTimeBuffered(segment.start, segment.end, buffered)) {
         list[write++] = segment;
       }
