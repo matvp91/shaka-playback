@@ -1,4 +1,12 @@
-import { Log, LogLevel, Player, Registry, RegistryType } from "cmaf-lite";
+import {
+  Events,
+  Log,
+  LogLevel,
+  Player,
+  Registry,
+  RegistryType,
+  Timer,
+} from "cmaf-lite";
 import { DashParser } from "cmaf-lite/dash";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.tsx";
@@ -29,6 +37,10 @@ player.load(
 // biome-ignore lint/style/noNonNullAssertion: We definitely got this
 const appElement = document.getElementById("app")!;
 const root = createRoot(appElement);
-setInterval(() => {
+const timer = new Timer(() => {
   root.render(<App player={player} />);
-}, 100);
+});
+const tick = () => timer.tickNow().tickEvery(0.1);
+Object.values(Events).forEach((name) => {
+  player.addListener(name, tick);
+});

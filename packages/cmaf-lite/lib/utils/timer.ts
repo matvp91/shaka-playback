@@ -6,11 +6,8 @@ import * as asserts from "./asserts";
  */
 export class Timer {
   private id_: ReturnType<typeof setTimeout> | null = null;
-  private callback_: (() => void) | null;
 
-  constructor(callback: () => void) {
-    this.callback_ = callback;
-  }
+  constructor(private callback_: () => void) {}
 
   /**
    * Schedule callback after a delay in seconds. Cancels
@@ -20,7 +17,6 @@ export class Timer {
     this.stop();
     this.id_ = setTimeout(() => {
       this.id_ = null;
-      asserts.assertExists(this.callback_, "Timer fired after destroy");
       this.callback_();
     }, seconds * 1000);
     return this;
@@ -31,7 +27,8 @@ export class Timer {
    * Cancels any previously scheduled tick.
    */
   tickNow(): this {
-    return this.tickAfter(0);
+    this.callback_();
+    return this;
   }
 
   /**
@@ -57,7 +54,6 @@ export class Timer {
    */
   destroy() {
     this.stop();
-    this.callback_ = null;
   }
 
   /**
