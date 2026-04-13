@@ -1,3 +1,5 @@
+import type { OptionalExcept } from "./helpers";
+
 /**
  * Supported media types.
  *
@@ -46,9 +48,7 @@ export type Stream = {
  *
  * @public
  */
-export type StreamPreference = {
-  [K in Stream as K["type"]]: { type: K["type"] } & Partial<Omit<K, "type">>;
-}[Stream["type"]];
+export type StreamPreference = OptionalExcept<Stream, "type">;
 
 /**
  * Narrows a union to the given {@link MediaType}.

@@ -68,6 +68,12 @@ export class StreamController {
     return mediaState.stream;
   }
 
+  getActiveStreamPreference(type: MediaType) {
+    const preference = this.preferences_.get(type);
+    asserts.assertExists(preference, `No Preference for ${type}`);
+    return preference;
+  }
+
   destroy() {
     const networkService = this.player_.getNetworkService();
     for (const mediaState of this.mediaStates_.values()) {

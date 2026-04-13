@@ -10,7 +10,7 @@ import { StreamController } from "./media/stream_controller";
 import { NetworkService } from "./net/network_service";
 import type { RegistryType } from "./registry";
 import { Registry } from "./registry";
-import type { ByType, StreamPreference } from "./types/media";
+import type { StreamPreference } from "./types/media";
 import { MediaType } from "./types/media";
 
 /**
@@ -114,19 +114,18 @@ export class Player extends EventEmitter<EventMap> {
    * Sets the preferred stream for a media type. Optionally flushes the
    * buffer to switch immediately.
    */
-  setStreamPreference<T extends MediaType>(
-    type: T,
-    params: Omit<ByType<StreamPreference, T>, "type">,
-    flushBuffer?: boolean,
-  ) {
-    const preference = {
-      type,
-      ...params,
-    } as ByType<StreamPreference, T>;
+  setStreamPreference(preference: StreamPreference, flushBuffer?: boolean) {
     this.emit(Events.STREAM_PREFERENCE_CHANGED, { preference });
     if (flushBuffer) {
       this.bufferController_.flush(preference.type);
     }
+  }
+
+  /**
+   * Returns the currently active stream preference for the given type.
+   */
+  getStreamPreference(type: MediaType) {
+    return this.streamController_.getActiveStreamPreference(type);
   }
 
   /**

@@ -5,7 +5,6 @@ export type TimeRange = {
 
 export type BufferData = {
   currentTime: number;
-  paused: boolean;
   seekable: TimeRange | null;
   buffered: TimeRange[];
   played: TimeRange[];

@@ -1,16 +1,14 @@
 import type { ReactNode } from "react";
-import { cn } from "../utils";
 
 type BarProps = {
   label: string;
-  labelClassName?: string;
   children: ReactNode;
 };
 
-export function Bar({ label, labelClassName, children }: BarProps) {
+export function Bar({ label, children }: BarProps) {
   return (
     <div className="flex items-center gap-2">
-      <span className={cn("w-20 text-right", labelClassName)}>{label}</span>
+      <span className="w-20 text-right">{label}</span>
       {children}
     </div>
   );

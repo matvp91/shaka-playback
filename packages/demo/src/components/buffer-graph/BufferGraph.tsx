@@ -1,6 +1,5 @@
 import type { BufferData } from "../../types";
 import { Bar } from "../Bar";
-import { Header } from "./Header";
 import { SeekableLabels } from "./SeekableLabels";
 import { Stats } from "./Stats";
 import { Track } from "./Track";
@@ -11,56 +10,52 @@ type BufferGraphProps = {
 
 export function BufferGraph({ data }: BufferGraphProps) {
   return (
-    <div className="bg-neutral-950 p-4 font-mono text-neutral-500">
-      <Header frontBufferLength={data.frontBufferLength} paused={data.paused} />
+    <div className="p-4">
       <SeekableLabels seekable={data.seekable} currentTime={data.currentTime} />
-
       <Bar label="buffered">
         <Track
+          classNames={{
+            base: "bg-muted",
+            range: "bg-black"
+          }}
           ranges={data.buffered}
           seekable={data.seekable}
-          currentTime={data.currentTime}
-          frontBufferLength={data.frontBufferLength}
         />
       </Bar>
       <div className="mb-3">
         <Bar label="played">
           <Track
-            className="h-1"
+            classNames={{
+              base: "h-1 bg-muted",
+              range: "bg-black"
+            }}
             ranges={data.played}
             seekable={data.seekable}
-            currentTime={data.currentTime}
-            frontBufferLength={data.frontBufferLength}
-            showMarkers={false}
           />
         </Bar>
       </div>
-
-      <hr className="mb-3" />
-
-      <Bar label="video" labelClassName="text-indigo-500">
-        <Track
-          rangeClassName="bg-indigo-500/30"
-          ranges={data.video}
-          seekable={data.seekable}
-          currentTime={data.currentTime}
-          frontBufferLength={data.frontBufferLength}
-        />
-      </Bar>
       <div className="mb-3">
-        <Bar label="audio" labelClassName="text-emerald-400">
+        <Bar label="video">
           <Track
-            rangeClassName="bg-emerald-400/30"
+            classNames={{
+              base: "bg-muted",
+              range: "bg-indigo-500"
+            }}
+            ranges={data.video}
+            seekable={data.seekable}
+          />
+        </Bar>
+        <Bar label="audio">
+          <Track
+            classNames={{
+              base: "bg-muted",
+              range: "bg-emerald-500"
+            }}
             ranges={data.audio}
             seekable={data.seekable}
-            currentTime={data.currentTime}
-            frontBufferLength={data.frontBufferLength}
           />
         </Bar>
       </div>
-
-      <hr className="mb-3" />
-
       <Stats
         buffered={data.buffered}
         video={data.video}

@@ -1,4 +1,4 @@
-import type { Manifest, Segment, SwitchingSet, Track } from "../types/manifest";
+import type { Manifest, SwitchingSet, Track } from "../types/manifest";
 import type { ByType, Stream, StreamPreference } from "../types/media";
 import { MediaType } from "../types/media";
 import * as asserts from "./asserts";

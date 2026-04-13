@@ -1,11 +1,4 @@
-import {
-  Log,
-  LogLevel,
-  MediaType,
-  Player,
-  Registry,
-  RegistryType,
-} from "cmaf-lite";
+import { Log, LogLevel, Player, Registry, RegistryType } from "cmaf-lite";
 import { DashParser } from "cmaf-lite/dash";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.tsx";
@@ -20,8 +13,6 @@ Object.assign(window, { player });
 player.setConfig({
   frontBufferLength: 30,
 });
-
-player.setStreamPreference(MediaType.VIDEO, { height: 720 });
 
 const video = document.getElementById("videoElement") as HTMLVideoElement;
 
@@ -40,4 +31,4 @@ const appElement = document.getElementById("app")!;
 const root = createRoot(appElement);
 setInterval(() => {
   root.render(<App player={player} />);
-}, 10);
+}, 100);
