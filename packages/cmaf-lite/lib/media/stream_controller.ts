@@ -75,7 +75,7 @@ export class StreamController {
       if (mediaState.request) {
         networkService.cancel(mediaState.request);
       }
-      mediaState.timer.destroy();
+      mediaState.timer.stop();
     }
     this.player_.off(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
