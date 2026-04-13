@@ -21,8 +21,10 @@ established once.
 - Establish the `Stream ↔ (SwitchingSet, Track)` relationship exactly once,
   at manifest parse.
 - Preserve stable `Stream` object identity across the lifetime of a manifest,
-  so the public API (`player.getStreams()`, `player.getActiveStream()`,
+  so the public API (`player.getStreams(type)`, `player.getActiveStream()`,
   `player.setStreamPreference(stream)`) continues to return stable references.
+- Align the public `getStreams` API with the controller's per-type internal
+  model — streams are always requested by `MediaType`.
 - Preserve the load-bearing reference-equality check that drives MSE
   `changeType` via `BUFFER_CODECS`
   ([stream_controller.ts:148-158](../../packages/cmaf-lite/lib/media/stream_controller.ts#L148-L158)).
@@ -73,7 +75,7 @@ equality for the codec-change detection.
 ### Utilities — `packages/cmaf-lite/lib/utils/stream_utils.ts`
 
 ```ts
-export function buildStreams(manifest: Manifest): Stream[];
+export function buildStreams(manifest: Manifest): Map<MediaType, Stream[]>;
 export function selectStream(
   streams: Stream[],
   preference: StreamPreference,
@@ -82,11 +84,14 @@ export function selectStream(
 
 - `buildStreams` replaces `getStreams`. It walks the manifest once and
   produces `Stream` objects with `hierarchy` populated with references to the
-  manifest's own `SwitchingSet` and `Track` objects. Dedup logic
-  (`isSameStream`) is preserved, unchanged in behavior.
-- `selectStream` is unchanged in signature and matching logic. It returns a
-  `Stream` from the input list. No `.type` filtering is added at this level;
-  the existing `preference.type` dispatch remains.
+  manifest's own `SwitchingSet` and `Track` objects. It returns a per-type
+  `Map`, populated in manifest-walking order. Dedup logic (`isSameStream`) is
+  preserved, unchanged in behavior, applied within each type's list.
+- `selectStream` keeps its signature. Callers now pass the pre-filtered
+  per-type list (`streams_.get(type)!`), so the internal
+  `.filter(s => s.type === preference.type)` step is removed. The
+  `preference.type` dispatch to `matchVideoPreference` /
+  `matchAudioPreference` remains.
 - `resolveHierarchy` is **deleted**. No callers remain inside the package.
   Its tests are deleted.
 
@@ -95,7 +100,7 @@ export function selectStream(
 Fields:
 
 ```ts
-private streams_: Stream[] | null = null;
+private streams_: Map<MediaType, Stream[]> | null = null;
 private media_: HTMLMediaElement | null = null;
 private mediaStates_ = new Map<MediaType, MediaState>();
 private preferences_ = new Map<MediaType, StreamPreference>();
@@ -121,14 +126,16 @@ Call-site changes:
 - `onManifestParsed_`: `this.streams_ = buildStreams(event.manifest)`. The
   `manifest` reference is not retained on the controller.
 - `tryStart_`:
-  - `const types = new Set(this.streams_.map(s => s.type))` (unchanged).
-  - For each type: `const stream = selectStream(this.streams_, preference);`
+  - Iterate `this.streams_.keys()` (or `.entries()`) — no `Set` allocation.
+  - For each type: `const stream = selectStream(this.streams_.get(type)!, preference);`
   - `this.player_.emit(Events.BUFFER_CODECS, { type, codec: stream.hierarchy.switchingSet.codec });`
   - Construct `MediaState` with only `stream` as the selection field.
 - `onStreamPreferenceChanged_`:
-  - `const stream = selectStream(this.streams_, preference);`
+  - `const stream = selectStream(this.streams_.get(preference.type)!, preference);`
   - Codec-change check becomes
-    `stream.hierarchy.switchingSet !== mediaState.stream.hierarchy.switchingSet`.
+    `stream.hierarchy.switchingSet !== mediaState.stream.hierarchy.switchingSet`
+    and **must be evaluated before** `mediaState.stream = stream`, or the
+    comparison collapses to equality and MSE `changeType` is never driven.
   - On change: `mediaState.stream = stream; mediaState.lastSegment = null;
     mediaState.lastInitSegment = null; this.update_(mediaState);`
 - `update_` / `getNextSegment_`:
@@ -138,7 +145,9 @@ Call-site changes:
   `mediaState.stream.hierarchy.track`.
 - `destroy`: `this.streams_ = null` (no `manifest_` to null out).
 - `getActiveStream(type)`: returns `mediaState.stream` — unchanged.
-- `getStreams()`: returns `this.streams_` — unchanged.
+- `getStreams(type: MediaType)`: signature changes. Returns
+  `this.streams_.get(type)` with an `assertExists` guard. Stable array
+  identity per-type for the lifetime of the manifest.
 
 The controller no longer imports `SwitchingSet` or `Track` as identifiers it
 uses directly; they appear only through `Stream.hierarchy`.
@@ -169,22 +178,28 @@ uses directly; they appear only through `Stream.hierarchy`.
 
 - `getStreams(manifest)` utility → `buildStreams(manifest)`. The name change
   signals that this function produces the canonical catalog (including
-  hierarchy wiring), not just a flat projection. The public
-  `Player.getStreams()` / `StreamController.getStreams()` methods are
-  unchanged.
+  hierarchy wiring), not a flat projection.
+
+### Public API change
+
+- `Player.getStreams()` → `Player.getStreams(type: MediaType): Stream[]`.
+  `StreamController.getStreams()` signature changes in the same way. The
+  method still returns a `Stream[]`, now filtered by type at the source
+  (from the per-type Map). Demo UI updates are out of scope for this spec
+  and will be handled alongside the implementation.
 
 ## Test Plan
 
 - `test/utils/stream_utils.test.ts`:
-  - Rename `describe("getStreams")` → `describe("buildStreams")`; assertions
-    on shape stay the same except each stream now carries a `hierarchy`
-    property. Add a check that `hierarchy.switchingSet` and `hierarchy.track`
-    are references to the corresponding manifest objects (identity, not
-    equality).
-  - `describe("selectStream")`: unchanged — `selectStream` returns a
-    `Stream` from the list. Fixtures will need to produce streams with
-    `hierarchy` populated (via `buildStreams`, which is already how the
-    suite constructs test streams).
+  - Rename `describe("getStreams")` → `describe("buildStreams")`. Return
+    value is now `Map<MediaType, Stream[]>`; assertions adjust to
+    `streams.get(MediaType.VIDEO)!` etc. Each stream carries a `hierarchy`
+    property; add a check that `hierarchy.switchingSet` and
+    `hierarchy.track` are references to the corresponding manifest objects
+    (identity, not equality).
+  - `describe("selectStream")`: fixture setup passes the per-type list
+    (`buildStreams(manifest).get(MediaType.VIDEO)!`) into `selectStream`.
+    Matching behavior is unchanged.
   - `describe("resolveHierarchy")`: deleted.
 - `test/media/stream_controller.test.ts` (and any integration-flavored
   controller tests): any test that reaches into `mediaState.switchingSet`
