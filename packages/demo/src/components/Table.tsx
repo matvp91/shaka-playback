@@ -5,12 +5,12 @@ type TableProps = {
 
 export function Table({ columns, rows }: TableProps) {
   return (
-    <table>
+    <table className="table-fixed">
       <thead>
         <tr>
           <td className="pr-3" />
           {columns.map((col) => (
-            <td key={col.label} className="px-3 text-right">
+            <td key={col.label} className="px-3">
               {col.label}
             </td>
           ))}
@@ -21,7 +21,7 @@ export function Table({ columns, rows }: TableProps) {
           <tr key={row.label}>
             <td className="pr-3">{row.label}</td>
             {row.values.map((value, i) => (
-              <td key={columns[i]?.label ?? i} className="px-3 text-right">
+              <td key={columns[i]?.label ?? i} className="px-3">
                 {value}
               </td>
             ))}

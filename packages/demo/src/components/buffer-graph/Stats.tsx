@@ -16,23 +16,28 @@ export function Stats({ buffered, video, audio, currentTime }: StatsProps) {
 
   const fmt = (v: number | undefined) => (v || 0).toFixed(3);
 
-  const columns = [{ label: "total" }, { label: "video" }, { label: "audio" }];
+  const columns = [{ label: "behind" }, { label: "ahead" }];
 
   const rows = [
     {
-      label: "ahead",
+      label: "audio",
       values: [
-        fmt(totalStat?.ahead),
-        fmt(videoStat?.ahead),
+        fmt(audioStat?.behind),
         fmt(audioStat?.ahead),
       ],
     },
     {
-      label: "behind",
+      label: "video",
+      values: [
+        fmt(videoStat?.behind),
+        fmt(videoStat?.ahead),
+      ],
+    },
+    {
+      label: "total",
       values: [
         fmt(totalStat?.behind),
-        fmt(videoStat?.behind),
-        fmt(audioStat?.behind),
+        fmt(totalStat?.ahead),
       ],
     },
   ];

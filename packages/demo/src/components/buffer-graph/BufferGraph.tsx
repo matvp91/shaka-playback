@@ -10,7 +10,7 @@ type BufferGraphProps = {
 
 export function BufferGraph({ data }: BufferGraphProps) {
   return (
-    <div className="p-4">
+    <div className="p-4 font-mono">
       <SeekableLabels seekable={data.seekable} currentTime={data.currentTime} />
       <Bar label="buffered">
         <Track
