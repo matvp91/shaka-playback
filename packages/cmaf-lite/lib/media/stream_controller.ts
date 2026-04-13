@@ -156,6 +156,11 @@ export class StreamController {
     mediaState.stream = stream;
     mediaState.lastSegment = null;
     mediaState.lastInitSegment = null;
+
+    if (event.flushBuffer && isAV(mediaState.type)) {
+      this.player_.emit(Events.BUFFER_FLUSHING, { type: mediaState.type });
+    }
+
     this.update_(mediaState);
   };
 

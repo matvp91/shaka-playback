@@ -116,9 +116,6 @@ export class Player extends EventEmitter<EventMap> {
    */
   setStreamPreference(preference: StreamPreference, flushBuffer = false) {
     this.emit(Events.STREAM_PREFERENCE_CHANGED, { preference, flushBuffer });
-    if (flushBuffer && preference.type !== MediaType.TEXT) {
-      this.bufferController_.flush(preference.type);
-    }
   }
 
   /**
