@@ -22,13 +22,11 @@ describe("Timer", () => {
     expect(callback).toHaveBeenCalledOnce();
   });
 
-  it("fires callback asynchronously when tickNow is called", () => {
+  it("fires callback synchronously when tickNow is called", () => {
     const callback = vi.fn();
     const timer = new Timer(callback);
     timer.tickNow();
 
-    expect(callback).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(0);
     expect(callback).toHaveBeenCalledOnce();
   });
 
@@ -46,7 +44,7 @@ describe("Timer", () => {
     vi.advanceTimersByTime(1000);
     expect(callback).toHaveBeenCalledTimes(3);
 
-    timer.destroy();
+    timer.stop();
   });
 
   it("cancels pending tick when stop is called", () => {
@@ -69,17 +67,6 @@ describe("Timer", () => {
 
     vi.advanceTimersByTime(5000);
     expect(count).toBe(1);
-  });
-
-  it("throws when callback fires after destroy", () => {
-    const callback = vi.fn();
-    const timer = new Timer(callback);
-    timer.destroy();
-
-    expect(() => {
-      timer.tickAfter(1);
-      vi.advanceTimersByTime(1000);
-    }).toThrow("Timer fired after destroy");
   });
 
   it("replaces a pending tick when tickAfter is called again", () => {

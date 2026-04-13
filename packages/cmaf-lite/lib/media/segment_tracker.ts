@@ -69,18 +69,21 @@ export class SegmentTracker {
   /**
    * Reconcile tracked segments against SourceBuffer.buffered.
    * Discard entries whose time range is no longer in the buffer.
+   * Compacts in place to avoid per-call allocation.
    */
   reconcile(type: MediaType, buffered: TimeRanges) {
     const list = this.segments_.get(type);
     if (!list) {
       return;
     }
-    // TODO(matvp): We shall think about not alloc a new array each
-    // time we reconcile.
-    const filteredList = list.filter((segment) =>
-      isTimeBuffered(segment.start, segment.end, buffered),
-    );
-    this.segments_.set(type, filteredList);
+    let write = 0;
+    for (let read = 0; read < list.length; read++) {
+      const segment = list[read] as TrackedSegment;
+      if (isTimeBuffered(segment.start, segment.end, buffered)) {
+        list[write++] = segment;
+      }
+    }
+    list.length = write;
   }
 
   destroy() {

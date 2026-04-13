@@ -1,13 +1,11 @@
-import * as asserts from "./asserts";
-
 /**
  * Schedules a callback as single-shot or repeating interval.
  * Each new tick cancels any pending scheduled call.
  */
 export class Timer {
-  private id_: ReturnType<typeof setTimeout> | null = null;
+  private cancelPending_: (() => void) | null = null;
 
-  constructor(private callback_: () => void) {}
+  constructor(private onTick_: () => void) {}
 
   /**
    * Schedule callback after a delay in seconds. Cancels
@@ -15,19 +13,16 @@ export class Timer {
    */
   tickAfter(seconds: number): this {
     this.stop();
-    this.id_ = setTimeout(() => {
-      this.id_ = null;
-      this.callback_();
-    }, seconds * 1000);
+    this.schedule_(() => this.onTick_(), seconds);
     return this;
   }
 
   /**
-   * Schedule callback on the next event loop tick.
-   * Cancels any previously scheduled tick.
+   * Tick immediately
    */
   tickNow(): this {
-    this.callback_();
+    this.stop();
+    this.onTick_();
     return this;
   }
 
@@ -42,18 +37,25 @@ export class Timer {
   }
 
   stop(): this {
-    if (this.id_ !== null) {
-      clearTimeout(this.id_);
-      this.id_ = null;
-    }
+    this.cancelPending_?.();
+    this.cancelPending_ = null;
     return this;
   }
 
-  /**
-   * Stop the timer and release the callback.
-   */
-  destroy() {
-    this.stop();
+  private schedule_(callback: () => void, delayInSeconds: number) {
+    let alive = true;
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    this.cancelPending_ = () => {
+      clearTimeout(timeoutId);
+      alive = false;
+    };
+
+    timeoutId = setTimeout(() => {
+      if (alive) {
+        callback();
+      }
+    }, delayInSeconds * 1000);
   }
 
   /**
@@ -61,11 +63,9 @@ export class Timer {
    * callback calls stop(), the pending timeout clears.
    */
   private scheduleRepeating_(seconds: number) {
-    this.id_ = setTimeout(() => {
-      this.id_ = null;
-      asserts.assertExists(this.callback_, "Timer fired after destroy");
+    this.schedule_(() => {
       this.scheduleRepeating_(seconds);
-      this.callback_();
-    }, seconds * 1000);
+      this.onTick_();
+    }, seconds);
   }
 }

@@ -19,6 +19,7 @@ export const Events = {
   MANIFEST_PARSED: "manifestParsed",
   MEDIA_ATTACHING: "mediaAttaching",
   MEDIA_ATTACHED: "mediaAttached",
+  MEDIA_DETACHING: "mediaDetaching",
   MEDIA_DETACHED: "mediaDetached",
   BUFFER_CODECS: "bufferCodecs",
   BUFFER_APPENDING: "bufferAppending",
@@ -68,6 +69,17 @@ export type MediaAttachingEvent = {
 export type MediaAttachedEvent = {
   media: HTMLMediaElement;
   mediaSource: MediaSource;
+};
+
+/**
+ * Fired when {@link Player.detachMedia} is called, before the media element
+ * is detached. Listeners can perform detach-time cleanup that needs access
+ * to the media element.
+ *
+ * @public
+ */
+export type MediaDetachingEvent = {
+  media: HTMLMediaElement;
 };
 
 /**
@@ -173,6 +185,7 @@ export interface EventMap {
   [Events.MANIFEST_PARSED]: (event: ManifestParsedEvent) => void;
   [Events.MEDIA_ATTACHING]: (event: MediaAttachingEvent) => void;
   [Events.MEDIA_ATTACHED]: (event: MediaAttachedEvent) => void;
+  [Events.MEDIA_DETACHING]: (event: MediaDetachingEvent) => void;
   [Events.MEDIA_DETACHED]: undefined;
   [Events.BUFFER_CODECS]: (event: BufferCodecsEvent) => void;
   [Events.BUFFER_APPENDING]: (event: BufferAppendingEvent) => void;

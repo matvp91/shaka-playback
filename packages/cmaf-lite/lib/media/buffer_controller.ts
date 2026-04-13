@@ -30,9 +30,11 @@ export class BufferController {
   private segmentTracker_ = new SegmentTracker();
   private quotaEvictionPending_ = new Set<SourceBufferMediaType>();
   private manifest_: Manifest | null = null;
+  private objectUrl_: string | null = null;
 
   constructor(private player_: Player) {
     this.player_.on(Events.MEDIA_ATTACHING, this.onMediaAttaching_);
+    this.player_.on(Events.MEDIA_DETACHING, this.onMediaDetaching_);
     this.player_.on(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.on(Events.BUFFER_CODECS, this.onBufferCodecs_);
     this.player_.on(Events.BUFFER_APPENDING, this.onBufferAppending_);
@@ -50,6 +52,7 @@ export class BufferController {
 
   destroy() {
     this.player_.off(Events.MEDIA_ATTACHING, this.onMediaAttaching_);
+    this.player_.off(Events.MEDIA_DETACHING, this.onMediaDetaching_);
     this.player_.off(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.off(Events.BUFFER_CODECS, this.onBufferCodecs_);
     this.player_.off(Events.BUFFER_APPENDING, this.onBufferAppending_);
@@ -60,6 +63,10 @@ export class BufferController {
     this.segmentTracker_.destroy();
     this.quotaEvictionPending_.clear();
     this.sourceBuffers_.clear();
+    if (this.objectUrl_) {
+      URL.revokeObjectURL(this.objectUrl_);
+      this.objectUrl_ = null;
+    }
     this.mediaSource_ = null;
     this.manifest_ = null;
   }
@@ -83,21 +90,33 @@ export class BufferController {
 
   private onMediaAttaching_ = (event: MediaAttachingEvent) => {
     this.mediaSource_ = new MediaSource();
+    this.mediaSource_.addEventListener("sourceopen", this.onMediaSourceOpen_);
+    this.objectUrl_ = URL.createObjectURL(this.mediaSource_);
+    event.media.src = this.objectUrl_;
+  };
 
-    this.mediaSource_.addEventListener(
+  private onMediaSourceOpen_ = () => {
+    const media = this.player_.getMedia();
+    asserts.assertExists(media, "No media element");
+    asserts.assertExists(this.mediaSource_, "No MediaSource");
+
+    this.mediaSource_.removeEventListener(
       "sourceopen",
-      () => {
-        asserts.assertExists(this.mediaSource_, "No MediaSource");
-        this.player_.emit(Events.MEDIA_ATTACHED, {
-          media: event.media,
-          mediaSource: this.mediaSource_,
-        });
-        this.updateDuration_();
-      },
-      { once: true },
+      this.onMediaSourceOpen_,
     );
 
-    event.media.src = URL.createObjectURL(this.mediaSource_);
+    this.player_.emit(Events.MEDIA_ATTACHED, {
+      media,
+      mediaSource: this.mediaSource_,
+    });
+    this.updateDuration_();
+  };
+
+  private onMediaDetaching_ = () => {
+    if (this.objectUrl_) {
+      URL.revokeObjectURL(this.objectUrl_);
+      this.objectUrl_ = null;
+    }
   };
 
   private onBufferCodecs_ = (event: BufferCodecsEvent) => {

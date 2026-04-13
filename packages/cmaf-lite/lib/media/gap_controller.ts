@@ -24,7 +24,7 @@ export class GapController {
   }
 
   destroy() {
-    this.timer_.destroy();
+    this.timer_.stop();
     this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.off(Events.MEDIA_DETACHED, this.onMediaDetached_);
     this.media_ = null;
