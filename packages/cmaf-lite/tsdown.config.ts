@@ -7,6 +7,7 @@ export default defineConfig({
     dash: "lib/dash/index.ts",
   },
   format: "esm",
+  noExternal: ["txml"],
   // TODO(matvp): Create priority in dev, we currently
   // do not clean due to demo relying on dist
   clean: false,

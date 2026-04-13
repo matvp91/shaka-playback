@@ -42,6 +42,6 @@
     "@svta/cml-iso-8601": "^1.0.1",
     "@svta/cml-iso-bmff": "^1.0.1",
     "@svta/cml-utils": "^1.4.0",
-    "fast-xml-parser": "^5.4.1"
+    "txml": "file:./third-party/txml"
   }
 }
