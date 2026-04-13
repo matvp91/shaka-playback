@@ -21,24 +21,15 @@ export function Stats({ buffered, video, audio, currentTime }: StatsProps) {
   const rows = [
     {
       label: "audio",
-      values: [
-        fmt(audioStat?.behind),
-        fmt(audioStat?.ahead),
-      ],
+      values: [fmt(audioStat?.behind), fmt(audioStat?.ahead)],
     },
     {
       label: "video",
-      values: [
-        fmt(videoStat?.behind),
-        fmt(videoStat?.ahead),
-      ],
+      values: [fmt(videoStat?.behind), fmt(videoStat?.ahead)],
     },
     {
       label: "total",
-      values: [
-        fmt(totalStat?.behind),
-        fmt(totalStat?.ahead),
-      ],
+      values: [fmt(totalStat?.behind), fmt(totalStat?.ahead)],
     },
   ];
 
