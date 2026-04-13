@@ -1,125 +1,95 @@
 import { processUriTemplate } from "@svta/cml-dash";
-import { decodeIso8601Duration } from "@svta/cml-iso-8601";
+import type * as txml from "txml";
 import type { InitSegment, Segment } from "../types/manifest";
 import * as asserts from "../utils/asserts";
 import * as Functional from "../utils/functional";
 import * as UrlUtils from "../utils/url_utils";
 import * as XmlUtils from "../utils/xml_utils";
-import type {
-  AdaptationSet,
-  MPD,
-  Period,
-  Representation,
-  SegmentTemplate,
-  SegmentTimeline,
-} from "./dash_types";
 
 export function parseSegments(
-  _mpd: MPD,
-  period: Period,
-  adaptationSet: AdaptationSet,
-  representation: Representation,
+  period: txml.TNode,
+  adaptationSet: txml.TNode,
+  representation: txml.TNode,
   baseUrl: string,
+  bandwidth: number,
   duration: number | null,
-) {
-  const st = resolveSegmentTemplate(
-    period.SegmentTemplate,
-    adaptationSet.SegmentTemplate,
-    representation.SegmentTemplate,
-  );
+): Segment[] {
+  const st = resolveSegmentTemplate(period, adaptationSet, representation);
 
-  const initialization = st["@_initialization"];
+  const initialization = XmlUtils.attr(
+    st,
+    "initialization",
+    XmlUtils.parseString,
+  );
   asserts.assertExists(initialization, "initialization is mandatory");
 
-  const media = st["@_media"];
-  asserts.assertExists(media, "media is mandatory");
+  const periodStart =
+    XmlUtils.attr(period, "start", XmlUtils.parseDuration) ?? 0;
 
-  const timescale = XmlUtils.asNumber(st["@_timescale"]);
-  asserts.assertExists(timescale, "timescale is mandatory");
-
-  const bandwidth = XmlUtils.asNumber(representation["@_bandwidth"]);
-  asserts.assertExists(bandwidth, "bandwidth is mandatory");
-
-  const pto = XmlUtils.asNumber(st["@_presentationTimeOffset"]) ?? 0;
-
-  const periodStart = period["@_start"]
-    ? decodeIso8601Duration(period["@_start"])
-    : 0;
-
-  const initSegmentUrl = UrlUtils.resolveUrl(
-    processUriTemplate(
-      initialization,
-      representation["@_id"],
-      null,
-      null,
-      bandwidth,
-      null,
-    ),
-    baseUrl,
-  );
+  const id = XmlUtils.attr(representation, "id", XmlUtils.parseString);
 
   const initSegment: InitSegment = {
-    url: initSegmentUrl,
+    url: UrlUtils.resolveUrl(
+      processUriTemplate(initialization, id, null, null, bandwidth, null),
+      baseUrl,
+    ),
   };
 
-  const segments = st.SegmentTimeline
+  const timeline = XmlUtils.child(st, "SegmentTimeline");
+  return timeline
     ? mapTemplateTimeline(
-        st.SegmentTimeline,
-        media,
         st,
-        representation,
+        timeline,
+        id,
         baseUrl,
         bandwidth,
-        pto,
         periodStart,
         initSegment,
       )
     : mapTemplateDuration(
         st,
-        media,
-        representation,
+        id,
         baseUrl,
         bandwidth,
-        pto,
         periodStart,
         duration,
         initSegment,
       );
-
-  return segments;
 }
 
 function mapTemplateTimeline(
-  timeline: SegmentTimeline,
-  media: string,
-  st: SegmentTemplate,
-  representation: Representation,
+  st: txml.TNode,
+  timeline: txml.TNode,
+  id: string | undefined,
   baseUrl: string,
   bandwidth: number,
-  pto: number,
   periodStart: number,
   initSegment: InitSegment,
 ): Segment[] {
-  const timescale = XmlUtils.asNumber(st["@_timescale"]) ?? 1;
-  const startNumber = XmlUtils.asNumber(st["@_startNumber"]) ?? 1;
+  const media = XmlUtils.attr(st, "media", XmlUtils.parseString);
+  asserts.assertExists(media, "media is mandatory");
+
+  const timescale = XmlUtils.attr(st, "timescale", XmlUtils.parseNumber) ?? 1;
+  const startNumber =
+    XmlUtils.attr(st, "startNumber", XmlUtils.parseNumber) ?? 1;
+  const pto =
+    XmlUtils.attr(st, "presentationTimeOffset", XmlUtils.parseNumber) ?? 0;
+
   const segments: Segment[] = [];
   let time = 0;
   let number = startNumber;
 
-  for (const s of timeline.S) {
-    const d = XmlUtils.asNumber(s["@_d"]);
+  for (const s of XmlUtils.children(timeline, "S")) {
+    const d = XmlUtils.attr(s, "d", XmlUtils.parseNumber);
     asserts.assertExists(d, "segment duration is mandatory");
-    const r = XmlUtils.asNumber(s["@_r"]) ?? 0;
+    const r = XmlUtils.attr(s, "r", XmlUtils.parseNumber) ?? 0;
 
-    const t = XmlUtils.asNumber(s["@_t"]);
-    if (t != null) {
-      time = t;
-    }
+    time = XmlUtils.attr(s, "t", XmlUtils.parseNumber) ?? time;
 
     for (let i = 0; i <= r; i++) {
       const relativeUrl = processUriTemplate(
         media,
-        representation["@_id"],
+        id,
         number,
         null,
         bandwidth,
@@ -141,40 +111,43 @@ function mapTemplateTimeline(
 }
 
 function mapTemplateDuration(
-  st: SegmentTemplate,
-  media: string,
-  representation: Representation,
+  st: txml.TNode,
+  id: string | undefined,
   baseUrl: string,
   bandwidth: number,
-  pto: number,
   periodStart: number,
   presentationDuration: number | null,
   initSegment: InitSegment,
 ): Segment[] {
+  const media = XmlUtils.attr(st, "media", XmlUtils.parseString);
+  asserts.assertExists(media, "media is mandatory");
   asserts.assertExists(
     presentationDuration,
     "Duration-based addressing requires a resolvable presentation duration",
   );
 
-  const templateDuration = XmlUtils.asNumber(st["@_duration"]);
+  const templateDuration = XmlUtils.attr(st, "duration", XmlUtils.parseNumber);
   asserts.assertExists(
     templateDuration,
     "SegmentTemplate requires either SegmentTimeline or @duration",
   );
 
-  const timescale = XmlUtils.asNumber(st["@_timescale"]) ?? 1;
-  const startNumber = XmlUtils.asNumber(st["@_startNumber"]) ?? 1;
+  const timescale = XmlUtils.attr(st, "timescale", XmlUtils.parseNumber) ?? 1;
+  const startNumber =
+    XmlUtils.attr(st, "startNumber", XmlUtils.parseNumber) ?? 1;
+  const pto =
+    XmlUtils.attr(st, "presentationTimeOffset", XmlUtils.parseNumber) ?? 0;
+
   const segmentDuration = templateDuration / timescale;
   const segmentCount = Math.ceil(presentationDuration / segmentDuration);
 
   const segments: Segment[] = [];
-
   for (let i = 0; i < segmentCount; i++) {
     const number = startNumber + i;
     const time = i * templateDuration;
     const relativeUrl = processUriTemplate(
       media,
-      representation["@_id"],
+      id,
       number,
       null,
       bandwidth,
@@ -192,33 +165,40 @@ function mapTemplateDuration(
   return segments;
 }
 
+/**
+ * Resolve SegmentTemplate inheritance across Period, AdaptationSet, and
+ * Representation levels (child wins per DASH spec). Returns a synthetic
+ * SegmentTemplate TNode with merged attributes so downstream code reads
+ * it uniformly via XmlUtils.attr.
+ */
 function resolveSegmentTemplate(
-  periodSt?: SegmentTemplate,
-  asSt?: SegmentTemplate,
-  repSt?: SegmentTemplate,
-): SegmentTemplate {
-  if (!periodSt && !asSt && !repSt) {
+  period: txml.TNode,
+  adaptationSet: txml.TNode,
+  representation: txml.TNode,
+): txml.TNode {
+  const templates = [
+    XmlUtils.child(representation, "SegmentTemplate"),
+    XmlUtils.child(adaptationSet, "SegmentTemplate"),
+    XmlUtils.child(period, "SegmentTemplate"),
+  ].filter((t): t is txml.TNode => t !== undefined);
+
+  if (templates.length === 0) {
     throw new Error("We've got to have some sort of templating");
   }
 
-  // Child wins - rep overrides as overrides period
-  const templates = [repSt, asSt, periodSt];
-  const pick = <K extends keyof SegmentTemplate>(key: K) =>
-    Functional.findMap(templates, (st) => st?.[key]);
+  // Parent → child iteration so child attributes overwrite parent's.
+  const attributes: Record<string, string | null> = {};
+  for (const t of templates.slice().reverse()) {
+    Object.assign(attributes, t.attributes);
+  }
+
+  const segmentTimeline = Functional.findMap(templates, (t) =>
+    XmlUtils.child(t, "SegmentTimeline"),
+  );
 
   return {
-    "@_timescale": pick("@_timescale"),
-    "@_startNumber": pick("@_startNumber"),
-    "@_presentationTimeOffset": pick("@_presentationTimeOffset"),
-    "@_duration": pick("@_duration"),
-    "@_media": pick("@_media"),
-    "@_index": pick("@_index"),
-    "@_initialization": pick("@_initialization"),
-    "@_bitstreamSwitching": pick("@_bitstreamSwitching"),
-    "@_indexRange": pick("@_indexRange"),
-    "@_indexRangeExact": pick("@_indexRangeExact"),
-    "@_availabilityTimeOffset": pick("@_availabilityTimeOffset"),
-    "@_availabilityTimeComplete": pick("@_availabilityTimeComplete"),
-    SegmentTimeline: pick("SegmentTimeline"),
+    tagName: "SegmentTemplate",
+    attributes,
+    children: segmentTimeline ? [segmentTimeline] : [],
   };
 }

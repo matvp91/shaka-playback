@@ -1,0 +1,9 @@
+{
+  "name": "txml",
+  "version": "6.0.0",
+  "type": "module",
+  "main": "./tXml.js",
+  "types": "./tXml.d.ts",
+  "author": "Tobias Nickel",
+  "license": "MIT"
+}
