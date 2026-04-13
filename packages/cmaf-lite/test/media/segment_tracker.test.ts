@@ -71,6 +71,19 @@ describe("SegmentTracker", () => {
       expect(tracker.getEvictionEnd(MediaType.VIDEO, 20, 500)).toBe(12);
       expect(tracker.getLastSegmentDuration(MediaType.VIDEO)).toBe(4);
     });
+
+    it("mutates the tracked list in place rather than allocating a new array", () => {
+      const tracker = new SegmentTracker();
+      tracker.trackAppend(MediaType.VIDEO, 0, 4, 500);
+      tracker.trackAppend(MediaType.VIDEO, 4, 8, 500);
+
+      const segments = (tracker as unknown as { segments_: Map<MediaType, unknown[]> }).segments_;
+      const listBefore = segments.get(MediaType.VIDEO);
+
+      tracker.reconcile(MediaType.VIDEO, createTimeRanges([4, 8]));
+
+      expect(segments.get(MediaType.VIDEO)).toBe(listBefore);
+    });
   });
 
   describe("destroy", () => {
