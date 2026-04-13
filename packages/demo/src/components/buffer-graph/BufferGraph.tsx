@@ -16,7 +16,7 @@ export function BufferGraph({ data }: BufferGraphProps) {
         <Track
           classNames={{
             base: "bg-muted",
-            range: "bg-black"
+            range: "bg-black",
           }}
           ranges={data.buffered}
           seekable={data.seekable}
@@ -27,7 +27,7 @@ export function BufferGraph({ data }: BufferGraphProps) {
           <Track
             classNames={{
               base: "h-1 bg-muted",
-              range: "bg-black"
+              range: "bg-black",
             }}
             ranges={data.played}
             seekable={data.seekable}
@@ -39,7 +39,7 @@ export function BufferGraph({ data }: BufferGraphProps) {
           <Track
             classNames={{
               base: "bg-muted",
-              range: "bg-indigo-500"
+              range: "bg-indigo-500",
             }}
             ranges={data.video}
             seekable={data.seekable}
@@ -49,7 +49,7 @@ export function BufferGraph({ data }: BufferGraphProps) {
           <Track
             classNames={{
               base: "bg-muted",
-              range: "bg-emerald-500"
+              range: "bg-emerald-500",
             }}
             ranges={data.audio}
             seekable={data.seekable}

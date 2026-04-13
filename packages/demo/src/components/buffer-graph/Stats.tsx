@@ -14,13 +14,9 @@ export function Stats({ buffered, video, audio, currentTime }: StatsProps) {
   const videoStat = getBufferStat(video, currentTime);
   const audioStat = getBufferStat(audio, currentTime);
 
-  const fmt = (v: number | undefined) => ((v || 0).toFixed(3));
+  const fmt = (v: number | undefined) => (v || 0).toFixed(3);
 
-  const columns = [
-    { label: "total" },
-    { label: "video" },
-    { label: "audio" },
-  ];
+  const columns = [{ label: "total" }, { label: "video" }, { label: "audio" }];
 
   const rows = [
     {
