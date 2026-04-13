@@ -3,8 +3,8 @@ import type { Player } from "cmaf-lite";
 import { MediaType } from "cmaf-lite";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { OptionalInput } from "../form/OptionalInput";
 import { Button } from "../ui/button";
-import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 
 const schema = z.object({
@@ -27,36 +27,50 @@ export function VideoPreferenceForm({ player }: VideoPreferenceFormProps) {
     player.setStreamPreference(
       {
         type: MediaType.VIDEO,
-        ...(values.width !== undefined &&
-          values.width > 0 && { width: values.width }),
-        ...(values.height !== undefined &&
-          values.height > 0 && { height: values.height }),
-        ...(values.bandwidth !== undefined &&
-          values.bandwidth > 0 && { bandwidth: values.bandwidth }),
-        ...(values.codec && { codec: values.codec }),
+        ...values,
       },
       true,
     );
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
       <h3>video</h3>
       <div>
         <Label htmlFor="video-width">width</Label>
-        <Input id="video-width" type="number" {...register("width")} />
+        <OptionalInput
+          id="video-width"
+          type="number"
+          name="width"
+          register={register}
+        />
       </div>
       <div>
         <Label htmlFor="video-height">height</Label>
-        <Input id="video-height" type="number" {...register("height")} />
+        <OptionalInput
+          id="video-height"
+          type="number"
+          name="height"
+          register={register}
+        />
       </div>
       <div>
         <Label htmlFor="video-bandwidth">bandwidth</Label>
-        <Input id="video-bandwidth" type="number" {...register("bandwidth")} />
+        <OptionalInput
+          id="video-bandwidth"
+          type="number"
+          name="bandwidth"
+          register={register}
+        />
       </div>
       <div>
         <Label htmlFor="video-codec">codec</Label>
-        <Input id="video-codec" type="text" {...register("codec")} />
+        <OptionalInput
+          id="video-codec"
+          type="text"
+          name="codec"
+          register={register}
+        />
       </div>
       <Button type="submit">Set video preference</Button>
     </form>

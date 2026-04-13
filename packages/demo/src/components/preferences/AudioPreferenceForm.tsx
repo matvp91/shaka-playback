@@ -3,8 +3,8 @@ import type { Player } from "cmaf-lite";
 import { MediaType } from "cmaf-lite";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { OptionalInput } from "../form/OptionalInput";
 import { Button } from "../ui/button";
-import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 
 const schema = z.object({
@@ -25,24 +25,32 @@ export function AudioPreferenceForm({ player }: AudioPreferenceFormProps) {
     player.setStreamPreference(
       {
         type: MediaType.AUDIO,
-        ...(values.bandwidth !== undefined &&
-          values.bandwidth > 0 && { bandwidth: values.bandwidth }),
-        ...(values.codec && { codec: values.codec }),
+        ...values,
       },
       true,
     );
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
       <h3>audio</h3>
       <div>
         <Label htmlFor="audio-bandwidth">bandwidth</Label>
-        <Input id="audio-bandwidth" type="number" {...register("bandwidth")} />
+        <OptionalInput
+          id="audio-bandwidth"
+          type="number"
+          name="bandwidth"
+          register={register}
+        />
       </div>
       <div>
         <Label htmlFor="audio-codec">codec</Label>
-        <Input id="audio-codec" type="text" {...register("codec")} />
+        <OptionalInput
+          id="audio-codec"
+          type="number"
+          name="codec"
+          register={register}
+        />
       </div>
       <Button type="submit">Set audio preference</Button>
     </form>
