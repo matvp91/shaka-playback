@@ -5,59 +5,73 @@ import * as asserts from "./asserts";
 import * as CodecUtils from "./codec_utils";
 
 /**
- * Derive the set of available streams from the manifest.
+ * Walk the manifest once and produce per-type lists of `Stream`,
+ * each carrying a `hierarchy` back-reference to the manifest's own
+ * `SwitchingSet` and `Track` objects.
  */
-export function getStreams(manifest: Manifest): Stream[] {
-  const streams: Stream[] = [];
+export function buildStreams(manifest: Manifest): Map<MediaType, Stream[]> {
+  const result = new Map<MediaType, Stream[]>();
   for (const ss of manifest.switchingSets) {
     for (const track of ss.tracks) {
-      const stream: Stream =
-        track.type === MediaType.VIDEO
-          ? {
-              type: track.type,
-              codec: CodecUtils.getNormalizedCodec(ss.codec),
-              width: track.width,
-              height: track.height,
-              bandwidth: track.bandwidth,
-            }
-          : {
-              type: track.type,
-              codec: CodecUtils.getNormalizedCodec(ss.codec),
-              bandwidth: track.bandwidth,
-            };
-      if (!streams.some((s) => isSameStream(s, stream))) {
-        streams.push(stream);
+      const stream = projectStream(ss, track);
+      const list = result.get(stream.type);
+      if (!list) {
+        result.set(stream.type, [stream]);
+        continue;
+      }
+      if (!list.some((s) => isSameStream(s, stream))) {
+        list.push(stream);
       }
     }
   }
-  asserts.assert(streams.length > 0, "No streams found");
-  return streams;
+  asserts.assert(result.size > 0, "No streams found");
+  return result;
 }
 
 /**
- * Select the best stream for a media type.
+ * Select the best stream from a pre-filtered per-type list.
  */
 export function selectStream(
   streams: Stream[],
   preference: StreamPreference,
 ): Stream {
-  const filtered = streams.filter((s) => s.type === preference.type);
-  asserts.assertExists(filtered[0], `No streams for ${preference.type}`);
+  asserts.assertExists(streams[0], `No streams for ${preference.type}`);
 
   if (preference.type === MediaType.VIDEO) {
     return matchVideoPreference(
-      filtered as ByType<Stream, MediaType.VIDEO>[],
+      streams as ByType<Stream, MediaType.VIDEO>[],
       preference,
     );
   }
   if (preference.type === MediaType.AUDIO) {
     return matchAudioPreference(
-      filtered as ByType<Stream, MediaType.AUDIO>[],
+      streams as ByType<Stream, MediaType.AUDIO>[],
       preference,
     );
   }
 
   throw new Error("Could not lookup preference type");
+}
+
+function projectStream(ss: SwitchingSet, track: Track): Stream {
+  const codec = CodecUtils.getNormalizedCodec(ss.codec);
+  const hierarchy = { switchingSet: ss, track };
+  if (track.type === MediaType.VIDEO) {
+    return {
+      type: track.type,
+      codec,
+      bandwidth: track.bandwidth,
+      width: track.width,
+      height: track.height,
+      hierarchy,
+    };
+  }
+  return {
+    type: track.type,
+    codec,
+    bandwidth: track.bandwidth,
+    hierarchy,
+  };
 }
 
 function isSameStream(a: Stream, b: Stream): boolean {
@@ -73,7 +87,7 @@ function isSameStream(a: Stream, b: Stream): boolean {
 function matchVideoPreference(
   streams: ByType<Stream, MediaType.VIDEO>[],
   preference: ByType<StreamPreference, MediaType.VIDEO>,
-): Stream {
+): ByType<Stream, MediaType.VIDEO> {
   asserts.assertExists(streams[0], "No video streams to match against");
   let best = streams[0];
   let bestDist = Number.POSITIVE_INFINITY;
@@ -104,7 +118,7 @@ function matchVideoPreference(
 function matchAudioPreference(
   streams: ByType<Stream, MediaType.AUDIO>[],
   preference: ByType<StreamPreference, MediaType.AUDIO>,
-): Stream {
+): ByType<Stream, MediaType.AUDIO> {
   asserts.assertExists(streams[0], "No video streams to match against");
   let best = streams[0];
   let bestDist = Number.POSITIVE_INFINITY;
@@ -124,31 +138,4 @@ function matchAudioPreference(
   }
 
   return best;
-}
-
-/**
- * Find the SwitchingSet and Track matching a stream.
- */
-export function resolveHierarchy(
-  manifest: Manifest,
-  stream: Stream,
-): [SwitchingSet, Track] {
-  for (const switchingSet of manifest.switchingSets) {
-    if (
-      switchingSet.type !== stream.type ||
-      CodecUtils.getNormalizedCodec(switchingSet.codec) !== stream.codec
-    ) {
-      continue;
-    }
-    for (const track of switchingSet.tracks) {
-      if (
-        stream.type !== MediaType.VIDEO ||
-        track.type !== MediaType.VIDEO ||
-        (stream.width === track.width && stream.height === track.height)
-      ) {
-        return [switchingSet, track];
-      }
-    }
-  }
-  throw new Error("No matching hierarchy for stream");
 }
