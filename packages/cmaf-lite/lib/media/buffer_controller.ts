@@ -75,6 +75,7 @@ export class BufferController {
       kind: OperationKind.Flush,
       execute: () => {
         sb.remove(0, Infinity);
+        this.player_.emit(Events.BUFFER_FLUSHED, { type });
       },
     });
   }

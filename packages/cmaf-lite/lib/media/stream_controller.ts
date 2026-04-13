@@ -1,4 +1,5 @@
 import type {
+  BufferFlushedEvent,
   ManifestParsedEvent,
   MediaAttachedEvent,
   StreamPreferenceChangedEvent,
@@ -55,6 +56,7 @@ export class StreamController {
       Events.STREAM_PREFERENCE_CHANGED,
       this.onStreamPreferenceChanged_,
     );
+    this.player_.on(Events.BUFFER_FLUSHED, this.onBufferFlushed_);
   }
 
   getStreams() {
@@ -89,6 +91,7 @@ export class StreamController {
       Events.STREAM_PREFERENCE_CHANGED,
       this.onStreamPreferenceChanged_,
     );
+    this.player_.off(Events.BUFFER_FLUSHED, this.onBufferFlushed_);
     this.manifest_ = null;
     this.streams_ = null;
     this.mediaStates_.clear();
@@ -105,6 +108,14 @@ export class StreamController {
     this.media_ = event.media;
     this.media_.addEventListener("seeking", this.onSeeking_);
     this.tryStart_();
+  };
+
+  private onBufferFlushed_ = (event: BufferFlushedEvent) => {
+    const mediaState = this.mediaStates_.get(event.type);
+    if (mediaState) {
+      mediaState.lastSegment = null;
+      mediaState.lastInitSegment = null;
+    }
   };
 
   private onStreamPreferenceChanged_ = (
