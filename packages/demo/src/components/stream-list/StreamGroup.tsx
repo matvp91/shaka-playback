@@ -9,11 +9,7 @@ type StreamGroupProps = {
   type: MediaType;
 };
 
-export function StreamGroup({
-  label,
-  player,
-  type,
-}: StreamGroupProps) {
+export function StreamGroup({ label, player, type }: StreamGroupProps) {
   const streams = callSafe(() => player.getStreams(type), []);
   const activeStream = callSafe(() => player.getActiveStream(type));
 

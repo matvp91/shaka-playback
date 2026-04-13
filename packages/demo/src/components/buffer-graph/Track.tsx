@@ -6,16 +6,12 @@ type TrackProps = {
   classNames?: {
     base?: string;
     range?: string;
-  }
+  };
   ranges: TimeRange[];
   seekable: TimeRange | null;
 };
 
-export function Track({
-  classNames,
-  ranges,
-  seekable,
-}: TrackProps) {
+export function Track({ classNames, ranges, seekable }: TrackProps) {
   return (
     <div className={cn("relative h-4 flex-1", classNames?.base)}>
       {ranges.map((range) => {

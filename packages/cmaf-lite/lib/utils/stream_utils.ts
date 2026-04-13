@@ -66,12 +66,15 @@ function projectStream(ss: SwitchingSet, track: Track): Stream {
       hierarchy,
     };
   }
-  return {
-    type: track.type,
-    codec,
-    bandwidth: track.bandwidth,
-    hierarchy,
-  };
+  if (track.type === MediaType.AUDIO) {
+    return {
+      type: track.type,
+      codec,
+      bandwidth: track.bandwidth,
+      hierarchy,
+    };
+  }
+  throw new Error(`Failed to map track for type ${track.type}`);
 }
 
 function isSameStream(a: Stream, b: Stream): boolean {

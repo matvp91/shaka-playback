@@ -10,7 +10,11 @@ type StreamItemProps = {
 
 export function StreamItem({ stream, active, onClick }: StreamItemProps) {
   return (
-    <button className="flex cursor-pointer items-center gap-2" onClick={onClick} type="button">
+    <button
+      className="flex cursor-pointer items-center gap-2"
+      onClick={onClick}
+      type="button"
+    >
       {active && <span>●</span>}
       {stream.type === MediaType.VIDEO ? (
         <span>

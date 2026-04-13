@@ -17,7 +17,7 @@ export function OptionalInput<T extends FieldValues>({
   return (
     <Input
       {...register(name, {
-        setValueAs: (v) => v || undefined
+        setValueAs: (v) => v || undefined,
       })}
       type={type}
       id={id}
