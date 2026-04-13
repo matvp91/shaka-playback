@@ -90,10 +90,10 @@ export class Player extends EventEmitter<EventMap> {
   }
 
   /**
-   * Returns all resolved streams.
+   * Returns resolved streams for the given media type.
    */
-  getStreams() {
-    return this.streamController_.getStreams();
+  getStreams(type: MediaType) {
+    return this.streamController_.getStreams(type);
   }
 
   /**
@@ -114,11 +114,8 @@ export class Player extends EventEmitter<EventMap> {
    * Sets the preferred stream for a media type. Optionally flushes the
    * buffer to switch immediately.
    */
-  setStreamPreference(preference: StreamPreference, flushBuffer?: boolean) {
-    this.emit(Events.STREAM_PREFERENCE_CHANGED, { preference });
-    if (flushBuffer) {
-      this.bufferController_.flush(preference.type);
-    }
+  setStreamPreference(preference: StreamPreference, flushBuffer = false) {
+    this.emit(Events.STREAM_PREFERENCE_CHANGED, { preference, flushBuffer });
   }
 
   /**

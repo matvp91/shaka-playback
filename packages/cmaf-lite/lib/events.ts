@@ -24,6 +24,7 @@ export const Events = {
   BUFFER_APPENDING: "bufferAppending",
   BUFFER_APPENDED: "bufferAppended",
   BUFFER_EOS: "bufferEos",
+  BUFFER_FLUSHING: "bufferFlushing",
   BUFFER_FLUSHED: "bufferFlushed",
   BUFFER_APPEND_ERROR: "bufferAppendError",
   NETWORK_REQUEST: "networkRequest",
@@ -112,6 +113,16 @@ export type BufferAppendErrorEvent = {
 };
 
 /**
+ * Fired to request a SourceBuffer flush. Paired with
+ * {@link BufferFlushedEvent}, which fires after the flush completes.
+ *
+ * @public
+ */
+export type BufferFlushingEvent = {
+  type: SourceBufferMediaType;
+};
+
+/**
  * Fired when a SourceBuffer is flushed.
  *
  * @public
@@ -149,6 +160,7 @@ export type NetworkResponseEvent = {
  */
 export type StreamPreferenceChangedEvent = {
   preference: StreamPreference;
+  flushBuffer: boolean;
 };
 
 /**
@@ -166,6 +178,7 @@ export interface EventMap {
   [Events.BUFFER_APPENDING]: (event: BufferAppendingEvent) => void;
   [Events.BUFFER_APPENDED]: (event: BufferAppendedEvent) => void;
   [Events.BUFFER_EOS]: undefined;
+  [Events.BUFFER_FLUSHING]: (event: BufferFlushingEvent) => void;
   [Events.BUFFER_APPEND_ERROR]: (event: BufferAppendErrorEvent) => void;
   [Events.BUFFER_FLUSHED]: (event: BufferFlushedEvent) => void;
   [Events.NETWORK_REQUEST]: (event: NetworkRequestEvent) => void;

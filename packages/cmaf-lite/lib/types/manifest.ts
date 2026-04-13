@@ -51,6 +51,10 @@ export type Track = {
       /** Audio type */
       type: MediaType.AUDIO;
     }
+  | {
+      /** Text type */
+      type: MediaType.TEXT;
+    }
 );
 
 /**

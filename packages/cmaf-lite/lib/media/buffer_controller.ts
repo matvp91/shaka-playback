@@ -2,6 +2,7 @@ import type {
   BufferAppendedEvent,
   BufferAppendingEvent,
   BufferCodecsEvent,
+  BufferFlushingEvent,
   ManifestParsedEvent,
   MediaAttachingEvent,
 } from "../events";
@@ -37,6 +38,7 @@ export class BufferController {
     this.player_.on(Events.BUFFER_APPENDING, this.onBufferAppending_);
     this.player_.on(Events.BUFFER_EOS, this.onBufferEos_);
     this.player_.on(Events.BUFFER_APPENDED, this.onBufferAppended_);
+    this.player_.on(Events.BUFFER_FLUSHING, this.onBufferFlushing_);
     this.opQueue_ = new OperationQueue({
       isUpdating: (type) => {
         const sb = this.sourceBuffers_.get(type);
@@ -53,6 +55,7 @@ export class BufferController {
     this.player_.off(Events.BUFFER_APPENDING, this.onBufferAppending_);
     this.player_.off(Events.BUFFER_EOS, this.onBufferEos_);
     this.player_.off(Events.BUFFER_APPENDED, this.onBufferAppended_);
+    this.player_.off(Events.BUFFER_FLUSHING, this.onBufferFlushing_);
     this.opQueue_.destroy();
     this.segmentTracker_.destroy();
     this.quotaEvictionPending_.clear();
@@ -67,18 +70,11 @@ export class BufferController {
     return sb.buffered;
   }
 
-  flush(type: SourceBufferMediaType) {
-    const sb = this.sourceBuffers_.get(type);
-    asserts.assertExists(sb, `No SourceBuffer for ${type}`);
+  private onBufferFlushing_ = (event: BufferFlushingEvent) => {
+    const { type } = event;
     this.quotaEvictionPending_.delete(type);
-    this.opQueue_.enqueue(type, {
-      kind: OperationKind.Flush,
-      execute: () => {
-        sb.remove(0, Infinity);
-        this.player_.emit(Events.BUFFER_FLUSHED, { type });
-      },
-    });
-  }
+    this.opQueue_.enqueue(type, this.getFlushOperation_(type, 0, Infinity));
+  };
 
   private onManifestParsed_ = (event: ManifestParsedEvent) => {
     this.manifest_ = event.manifest;
@@ -367,6 +363,9 @@ export class BufferController {
       kind: OperationKind.Flush,
       execute: () => {
         sb.remove(start, end);
+      },
+      onComplete: () => {
+        this.player_.emit(Events.BUFFER_FLUSHED, { type });
       },
     };
   }
