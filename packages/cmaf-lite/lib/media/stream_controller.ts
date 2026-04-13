@@ -185,6 +185,7 @@ export class StreamController {
       const preference = this.preferences_.get(type) ?? { type };
       this.preferences_.set(type, preference);
       const stream = StreamUtils.selectStream(streams, preference);
+      log.info(`Initial Stream ${type}`, stream);
 
       const mediaState: MediaState = {
         type,
@@ -195,7 +196,6 @@ export class StreamController {
         request: null,
         timer: new Timer(() => this.update_(mediaState)),
       };
-      log.info(`MediaState ${type}`, stream);
 
       this.mediaStates_.set(type, mediaState);
 
@@ -234,6 +234,11 @@ export class StreamController {
 
     let segment = this.getNextSegment_(mediaState);
     if (!segment) {
+      if (this.isEnded_(mediaState)) {
+        mediaState.ended = true;
+        this.checkEndOfStream_();
+        return;
+      }
       const { maxSegmentLookupTolerance } = this.player_.getConfig();
       const lookupTime =
         bufferEnd ?? Math.max(0, currentTime - maxSegmentLookupTolerance);
@@ -336,6 +341,19 @@ export class StreamController {
       }
       return 1;
     });
+  }
+
+  /**
+   * Returns true when the track is exhausted: the last
+   * emitted segment is the final entry in the track.
+   * Live manifests (once supported) should bail out here.
+   */
+  private isEnded_(mediaState: MediaState): boolean {
+    if (!mediaState.lastSegment) {
+      return false;
+    }
+    const { segments } = mediaState.stream.hierarchy.track;
+    return segments.indexOf(mediaState.lastSegment) === segments.length - 1;
   }
 
   private checkEndOfStream_() {

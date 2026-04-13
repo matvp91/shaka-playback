@@ -12,11 +12,14 @@ import type { InitSegment, Manifest, Segment } from "../types/manifest";
 import type { SourceBufferMediaType } from "../types/media";
 import * as asserts from "../utils/asserts";
 import * as CodecUtils from "../utils/codec_utils";
+import { Log } from "../utils/log";
 import * as ManifestUtils from "../utils/manifest_utils";
 import * as Mp4BoxParser from "../utils/mp4_box_parser";
 import type { Operation } from "./operation_queue";
 import { OperationKind, OperationQueue } from "./operation_queue";
 import { SegmentTracker } from "./segment_tracker";
+
+const log = Log.create("BufferController");
 
 type InitSegmentInfo = {
   timescale: number;
@@ -283,6 +286,7 @@ export class BufferController {
     this.blockUntil(() => {
       if (this.mediaSource_?.readyState === "open") {
         this.mediaSource_.duration = duration;
+        log.info("Duration updated", duration);
       }
     });
   }
@@ -291,6 +295,7 @@ export class BufferController {
     this.blockUntil(() => {
       if (this.mediaSource_?.readyState === "open") {
         this.mediaSource_.endOfStream();
+        log.info("End of stream");
       }
     });
   };
