@@ -8,7 +8,7 @@ type PreferencesProps = {
 
 export function Preferences({ player }: PreferencesProps) {
   return (
-    <div>
+    <div className="flex flex-col md:flex-row space-x-2">
       <VideoPreferenceForm player={player} />
       <AudioPreferenceForm player={player} />
     </div>

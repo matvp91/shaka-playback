@@ -32,7 +32,7 @@ export function AudioPreferenceForm({ player }: AudioPreferenceFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-2 w-full">
       <h3>audio</h3>
       <div>
         <Label htmlFor="audio-bandwidth">bandwidth</Label>

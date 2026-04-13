@@ -34,7 +34,7 @@ export function VideoPreferenceForm({ player }: VideoPreferenceFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-2 w-full">
       <h3>video</h3>
       <div>
         <Label htmlFor="video-width">width</Label>
