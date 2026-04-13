@@ -239,13 +239,12 @@ export class StreamController {
         this.checkEndOfStream_();
         return;
       }
-      const { maxSegmentLookupTolerance } = this.player_.getConfig();
+
       const lookupTime =
-        bufferEnd ?? Math.max(0, currentTime - maxSegmentLookupTolerance);
+        bufferEnd ?? Math.max(0, currentTime - /* maybeSegmentSize= */ 4);
       segment = this.getSegmentForTime_(
         mediaState.stream.hierarchy.track,
         lookupTime,
-        maxSegmentLookupTolerance,
       );
       log.debug(`Segment by time at ${lookupTime}`, segment);
     } else {
@@ -323,17 +322,17 @@ export class StreamController {
    * Binary search for the segment containing the given
    * time.
    */
-  private getSegmentForTime_(
-    track: Track,
-    time: number,
-    maxTolerance: number,
-  ): Segment | null {
+  private getSegmentForTime_(track: Track, time: number): Segment | null {
+    const { maxSegmentLookupTolerance } = this.player_.getConfig();
     return ArrayUtils.binarySearch(track.segments, (seg) => {
       if (time >= seg.start && time < seg.end) {
         return 0;
       }
       if (time < seg.start) {
-        const tolerance = Math.min(maxTolerance, seg.end - seg.start);
+        const tolerance = Math.min(
+          maxSegmentLookupTolerance,
+          seg.end - seg.start,
+        );
         if (seg.start - tolerance > time && seg.start > 0) {
           return -1;
         }
