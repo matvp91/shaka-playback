@@ -138,6 +138,9 @@ export class Player extends EventEmitter<EventMap> {
    * Detaches the current media element.
    */
   detachMedia() {
+    if (this.media_) {
+      this.emit(Events.MEDIA_DETACHING, { media: this.media_ });
+    }
     this.media_ = null;
     this.emit(Events.MEDIA_DETACHED);
   }
