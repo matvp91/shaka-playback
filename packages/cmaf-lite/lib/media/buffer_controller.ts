@@ -96,13 +96,15 @@ export class BufferController {
   };
 
   private onMediaSourceOpen_ = () => {
+    const media = this.player_.getMedia();
+    asserts.assertExists(media, "No media element");
     asserts.assertExists(this.mediaSource_, "No MediaSource");
+
     this.mediaSource_.removeEventListener(
       "sourceopen",
       this.onMediaSourceOpen_,
     );
-    const media = this.player_.getMedia();
-    asserts.assertExists(media, "No media element");
+
     this.player_.emit(Events.MEDIA_ATTACHED, {
       media,
       mediaSource: this.mediaSource_,
