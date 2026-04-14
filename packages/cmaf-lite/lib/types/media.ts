@@ -14,6 +14,8 @@ export enum MediaType {
 
 /**
  * Media types backed by a SourceBuffer.
+ *
+ * @public
  */
 export type SourceBufferMediaType = MediaType.VIDEO | MediaType.AUDIO;
 

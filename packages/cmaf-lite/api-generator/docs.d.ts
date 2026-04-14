@@ -1,2 +1,2 @@
-export * from "../dist/dash.js";
-export * from "../dist/main.js";
+export * from "../dist/dash.mjs";
+export * from "../dist/main.mjs";

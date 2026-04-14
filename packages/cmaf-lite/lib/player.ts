@@ -46,8 +46,11 @@ export class Player extends EventEmitter<EventMap> {
   }
 
   /**
-   * Starts loading and parsing the manifest at the given URL, then begins
-   * segment fetching.
+   * Starts loading and parsing the manifest at the given URL,
+   * then begins segment fetching. A media element must be
+   * attached via {@link Player.attachMedia} before calling this.
+   *
+   * @param url - Manifest URL (e.g. a DASH `.mpd`).
    */
   load(url: string) {
     this.emit(Events.MANIFEST_LOADING, { url });
@@ -93,7 +96,8 @@ export class Player extends EventEmitter<EventMap> {
   }
 
   /**
-   * Returns buffered time ranges for the given type.
+   * Returns buffered time ranges for the given media type.
+   * Not supported for {@link MediaType.TEXT}.
    */
   getBuffered(type: MediaType) {
     if (type === MediaType.TEXT) {
@@ -124,8 +128,14 @@ export class Player extends EventEmitter<EventMap> {
   }
 
   /**
-   * Sets the preferred stream for a media type. Optionally flushes the
-   * buffer to switch immediately.
+   * Sets the preferred stream for a media type. When
+   * `flushBuffer` is `true`, the existing buffer is flushed
+   * to apply the switch immediately rather than at the next
+   * segment boundary.
+   *
+   * @param preference - Stream constraints (type is required,
+   *   all other fields are optional filters).
+   * @param flushBuffer - Flush the buffer to switch immediately.
    */
   setStreamPreference(preference: StreamPreference, flushBuffer = false) {
     this.streamController_.setPreference(preference, flushBuffer);

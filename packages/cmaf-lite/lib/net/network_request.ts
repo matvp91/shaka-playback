@@ -11,18 +11,31 @@ import type {
 export const ABORT_CONTROLLER = Symbol("abortController");
 
 /**
- * Mutable request descriptor. Listeners can modify `url`, `method`,
- * and `headers` before each fetch attempt.
+ * Mutable request descriptor. Listeners on
+ * `NETWORK_REQUEST` can modify {@link NetworkRequest.url},
+ * {@link NetworkRequest.method}, and {@link NetworkRequest.headers}
+ * before each fetch attempt.
  *
  * @public
  */
 export class NetworkRequest {
+  /** HTTP method. Mutable before each attempt. */
   method: "GET" | "POST" = "GET";
+  /** HTTP headers. Mutable before each attempt. */
   headers = new Headers();
+  /** `true` while the request has not completed or been cancelled. */
   inFlight = true;
+  /** Current attempt number (1-based after first fetch). */
   attempt = 0;
+  /** @internal */
   [ABORT_CONTROLLER] = new AbortController();
 
+  /**
+   * @param url - Target URL. Mutable before each attempt.
+   * @param promise - Resolves with the response or
+   *   {@link ABORTED} if cancelled.
+   * @param options - Retry and delay settings.
+   */
   constructor(
     public url: string,
     public readonly promise: Promise<AbortableNetworkResponse>,

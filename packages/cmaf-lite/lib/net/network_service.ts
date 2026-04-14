@@ -21,8 +21,10 @@ export class NetworkService {
   constructor(private player_: Player) {}
 
   /**
-   * Creates and starts an HTTP request. Emits |NETWORK_REQUEST|
-   * before each attempt, allowing listeners to mutate the request.
+   * Creates and starts an HTTP request. Emits
+   * `NETWORK_REQUEST` before each attempt,
+   * allowing listeners to mutate the request URL, headers,
+   * and method.
    */
   request(
     type: NetworkRequestType,

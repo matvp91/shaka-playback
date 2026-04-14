@@ -146,11 +146,13 @@ export type BufferFlushedEvent = {
 };
 
 /**
- * Fired when the streams updated.
+ * Fired when the available streams change after a manifest
+ * parse or refresh.
  *
  * @public
  */
 export type StreamsUpdatedEvent = {
+  /** All streams grouped by media type. */
   streamsMap: Map<MediaType, Stream[]>;
 };
 

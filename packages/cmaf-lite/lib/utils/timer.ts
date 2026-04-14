@@ -1,6 +1,10 @@
 /**
- * Schedules a callback as single-shot or repeating interval.
- * Each new tick cancels any pending scheduled call.
+ * Chainable timer that schedules a callback as a single-shot
+ * delay or repeating interval. Each new call to
+ * {@link Timer.tickAfter}, {@link Timer.tickNow}, or {@link Timer.tickEvery}
+ * cancels any pending scheduled invocation.
+ *
+ * @public
  */
 export class Timer {
   private cancelPending_: (() => void) | null = null;
@@ -18,7 +22,8 @@ export class Timer {
   }
 
   /**
-   * Tick immediately
+   * Fires the callback synchronously and cancels any
+   * pending tick.
    */
   tickNow(): this {
     this.stop();
@@ -36,6 +41,7 @@ export class Timer {
     return this;
   }
 
+  /** Cancels any pending or repeating tick. */
   stop(): this {
     this.cancelPending_?.();
     this.cancelPending_ = null;

@@ -16,7 +16,14 @@ export enum LogLevel {
 export type LogArgs = unknown[];
 
 /**
- * Namespaced console logger with colored prefixes.
+ * Namespaced console logger with colored prefixes. Logging is
+ * disabled by default — call {@link Log.setLevel} to enable.
+ *
+ * @example
+ * ```ts
+ * import { Log, LogLevel } from "cmaf-lite";
+ * Log.setLevel(LogLevel.DEBUG);
+ * ```
  *
  * @public
  */
@@ -24,14 +31,16 @@ export class Log {
   private static level: LogLevel | null = null;
 
   /**
-   * Set the active log level, or `null` to disable logging.
+   * Sets the minimum severity to log, or `null` to disable
+   * all output.
    */
   static setLevel(level: LogLevel | null): void {
     Log.level = level;
   }
 
   /**
-   * Create a color-prefixed logger for the given namespace.
+   * Creates a color-prefixed logger scoped to the given
+   * namespace. Each namespace gets a deterministic HSL color.
    */
   static create(ns: string) {
     const prefix = `%c${ns}`;
