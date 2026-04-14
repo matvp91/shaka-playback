@@ -6,7 +6,6 @@ import type {
   NetworkResponse,
   Segment,
   SourceBufferMediaType,
-  StreamPreference,
 } from ".";
 
 /**
@@ -30,7 +29,6 @@ export const Events = {
   BUFFER_APPEND_ERROR: "bufferAppendError",
   NETWORK_REQUEST: "networkRequest",
   NETWORK_RESPONSE: "networkResponse",
-  STREAM_PREFERENCE_CHANGED: "streamPreferenceChanged",
 } as const;
 
 /**
@@ -165,17 +163,6 @@ export type NetworkResponseEvent = {
 };
 
 /**
- * Fired when {@link Player.setStreamPreference} changed the active stream
- * preference.
- *
- * @public
- */
-export type StreamPreferenceChangedEvent = {
-  preference: StreamPreference;
-  flushBuffer: boolean;
-};
-
-/**
  * Maps each event name to its listener signature.
  *
  * @public
@@ -196,7 +183,4 @@ export interface EventMap {
   [Events.BUFFER_FLUSHED]: (event: BufferFlushedEvent) => void;
   [Events.NETWORK_REQUEST]: (event: NetworkRequestEvent) => void;
   [Events.NETWORK_RESPONSE]: (event: NetworkResponseEvent) => void;
-  [Events.STREAM_PREFERENCE_CHANGED]: (
-    event: StreamPreferenceChangedEvent,
-  ) => void;
 }

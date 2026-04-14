@@ -115,7 +115,7 @@ export class Player extends EventEmitter<EventMap> {
    * buffer to switch immediately.
    */
   setStreamPreference(preference: StreamPreference, flushBuffer = false) {
-    this.emit(Events.STREAM_PREFERENCE_CHANGED, { preference, flushBuffer });
+    this.streamController_.setPreference(preference, flushBuffer);
   }
 
   /**

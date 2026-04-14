@@ -2,7 +2,6 @@ import type {
   BufferFlushedEvent,
   ManifestParsedEvent,
   MediaAttachedEvent,
-  StreamPreferenceChangedEvent,
 } from "../events";
 import { Events } from "../events";
 import type { Player } from "../player";
@@ -43,10 +42,6 @@ export class StreamController {
     this.player_.on(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.on(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.on(Events.MEDIA_DETACHED, this.onMediaDetached_);
-    this.player_.on(
-      Events.STREAM_PREFERENCE_CHANGED,
-      this.onStreamPreferenceChanged_,
-    );
     this.player_.on(Events.BUFFER_FLUSHED, this.onBufferFlushed_);
   }
 
@@ -80,10 +75,6 @@ export class StreamController {
     this.player_.off(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.off(Events.MEDIA_DETACHED, this.onMediaDetached_);
-    this.player_.off(
-      Events.STREAM_PREFERENCE_CHANGED,
-      this.onStreamPreferenceChanged_,
-    );
     this.player_.off(Events.BUFFER_FLUSHED, this.onBufferFlushed_);
     this.streams_ = null;
     this.mediaStates_.clear();
@@ -109,10 +100,7 @@ export class StreamController {
     }
   };
 
-  private onStreamPreferenceChanged_ = (
-    event: StreamPreferenceChangedEvent,
-  ) => {
-    const { preference } = event;
+  setPreference(preference: StreamPreference, flushBuffer: boolean) {
     // We can set preferences before we load.
     this.preferences_.set(preference.type, preference);
 
@@ -157,12 +145,12 @@ export class StreamController {
     mediaState.lastSegment = null;
     mediaState.lastInitSegment = null;
 
-    if (event.flushBuffer && isAV(mediaState.type)) {
+    if (flushBuffer && isAV(mediaState.type)) {
       this.player_.emit(Events.BUFFER_FLUSHING, { type: mediaState.type });
     }
 
     this.update_(mediaState);
-  };
+  }
 
   private onMediaDetached_ = () => {
     const networkService = this.player_.getNetworkService();
