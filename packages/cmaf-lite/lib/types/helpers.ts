@@ -40,10 +40,20 @@ export type DeepPartial<T> = {
  */
 
 /** @public */
-export type Primitive = null | undefined | string | number | boolean | symbol | bigint;
+export type Primitive =
+  | null
+  | undefined
+  | string
+  | number
+  | boolean
+  | symbol
+  | bigint;
 
 /** @public */
-export type PathConcat<TKey extends string | number, TValue> = TValue extends Primitive
+export type PathConcat<
+  TKey extends string | number,
+  TValue,
+> = TValue extends Primitive
   ? `${TKey}`
   : `${TKey}` | `${TKey}.${Path<TValue>}`;
 
