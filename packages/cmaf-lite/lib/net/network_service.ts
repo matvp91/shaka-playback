@@ -1,6 +1,9 @@
 import { Events } from "../events";
 import type { Player } from "../player";
-import type { NetworkRequestType, NetworkResponsePromise } from "../types/net";
+import type {
+  AbortableNetworkResponse,
+  NetworkRequestType,
+} from "../types/net";
 import { ABORTED } from "../types/net";
 import type { NetworkRequestOptions } from "./network_request";
 import { ABORT_CONTROLLER, NetworkRequest } from "./network_request";
@@ -26,17 +29,11 @@ export class NetworkService {
     url: string,
     options?: NetworkRequestOptions,
   ): NetworkRequest {
-    const promiseWithResolvers =
-      Promise.withResolvers<Awaited<NetworkResponsePromise>>();
-
-    const request = new NetworkRequest(
-      url,
-      promiseWithResolvers.promise,
-      options,
-    );
+    const promise = Promise.withResolvers<AbortableNetworkResponse>();
+    const request = new NetworkRequest(url, promise.promise, options);
 
     this.requests_.add(request);
-    this.doFetch_(type, request, promiseWithResolvers);
+    this.doFetch_(type, request, promise);
 
     return request;
   }
@@ -54,7 +51,7 @@ export class NetworkService {
   private async doFetch_(
     type: NetworkRequestType,
     request: NetworkRequest,
-    promiseWithResolvers: PromiseWithResolvers<Awaited<NetworkResponsePromise>>,
+    promise: PromiseWithResolvers<AbortableNetworkResponse>,
   ) {
     try {
       while (request.attempt < request.options.maxAttempts) {
@@ -73,16 +70,16 @@ export class NetworkService {
             response,
           });
 
-          promiseWithResolvers.resolve(response);
+          promise.resolve(response);
           return;
         } catch (error) {
           if (isAbortError(error)) {
-            promiseWithResolvers.resolve(ABORTED);
+            promise.resolve(ABORTED);
             return;
           }
 
           if (request.attempt >= request.options.maxAttempts) {
-            promiseWithResolvers.reject(error);
+            promise.reject(error);
             return;
           }
 

@@ -22,9 +22,9 @@ export enum NetworkRequestType {
 export const ABORTED: unique symbol = Symbol("ABORTED");
 
 /**
- * Promise that resolves to a {@link NetworkResponse} or {@link ABORTED}
+ * A network response, either {@link NetworkResponse} or {@link ABORTED}
  * if the request was cancelled.
  *
  * @public
  */
-export type NetworkResponsePromise = Promise<NetworkResponse | typeof ABORTED>;
+export type AbortableNetworkResponse = NetworkResponse | typeof ABORTED;
