@@ -258,7 +258,7 @@ function resolveCodec(
   asserts.assertExists(firstRep, "No Representation found");
 
   const codec = Functional.findMap([firstRep, adaptationSet], (n) =>
-    XmlUtils.attr(n, "codecs", XmlUtils.parseString)?.toLowerCase(),
+    XmlUtils.attr(n, "codecs", XmlUtils.parseString),
   );
   asserts.assertExists(codec, "codecs is mandatory");
 

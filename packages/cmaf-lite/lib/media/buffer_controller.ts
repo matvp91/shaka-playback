@@ -134,12 +134,16 @@ export class BufferController {
     if (sb) {
       this.opQueue_.enqueue(type, {
         kind: `${OperationKind.ChangeType}_${mimeType}`,
-        execute: () => sb.changeType(mimeType),
+        execute: () => {
+          sb.changeType(mimeType);
+          log.info("changeType", mimeType);
+        },
       });
       return;
     }
 
     const newSb = this.mediaSource_.addSourceBuffer(mimeType);
+    log.info("Initial type", mimeType);
     this.sourceBuffers_.set(type, newSb);
 
     newSb.addEventListener("updateend", () => {

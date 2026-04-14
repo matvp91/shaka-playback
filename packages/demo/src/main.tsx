@@ -2,6 +2,7 @@ import {
   Events,
   Log,
   LogLevel,
+  MediaType,
   Player,
   Registry,
   RegistryType,
@@ -18,6 +19,11 @@ Registry.add(RegistryType.MANIFEST_PARSER, DashParser);
 const player = new Player();
 Object.assign(window, { player });
 
+player.setStreamPreference({
+  type: MediaType.VIDEO,
+  codec: "av1",
+});
+
 player.setConfig({
   frontBufferLength: 30,
 });
@@ -28,10 +34,11 @@ player.attachMedia(video);
 
 player.load(
   // "https://ue-video-vtmgo.dpgmedia.net/out/v1/df5b9943928b4c60ab9a86cef9a399c7/89f639bc23ee4456b296e61523441025/0f1c129bf59346c99c27dfa3e1f0dd18/index.mpd?aws.manifestfilter=subtitle_language%3Azzz%3Btrickplay_type%3Anone%3Baudio_codec%3AAACL",
-  "https://d305rncpy6ne2q.cloudfront.net/v1/dash/94063eadf7d8c56e9e2edd84fdf897826a70d0df/SFP-MediaTailor-VOD-HLS-DASH/out/v1/b94f3611978f419985a18335bac9d9cb/ddb73bf548a44551a0059c346226445a/eaa5485198bf497284559efb8172425e/index.mpd?aws.sessionId=21567779-c8a8-4be9-9f18-d628dea03826",
+  // "https://d305rncpy6ne2q.cloudfront.net/v1/dash/94063eadf7d8c56e9e2edd84fdf897826a70d0df/SFP-MediaTailor-VOD-HLS-DASH/out/v1/b94f3611978f419985a18335bac9d9cb/ddb73bf548a44551a0059c346226445a/eaa5485198bf497284559efb8172425e/index.mpd?aws.sessionId=21567779-c8a8-4be9-9f18-d628dea03826",
   // "https://livesim2.dashif.org/livesim2/segtimeline_1/testpic_2s/Manifest.mpd",
   // "https://dash.akamaized.net/dash264/TestCasesIOP33/adapatationSetSwitching/1/manifest.mpd",
   // "https://dash.akamaized.net/dash264/TestCasesHEVC/2a/12/tos_ondemand_multires_10bit_hev.mpd"
+  "https://divudqsyr5kmn.cloudfront.net/cmaf/bbb-avc-av1/bbb_sunflower_2160p_30fps.mpd"
 );
 
 // biome-ignore lint/style/noNonNullAssertion: We definitely got this
