@@ -1,5 +1,5 @@
 import { EventEmitter } from "@matvp91/eventemitter3";
-import type { PlayerConfig } from "./config";
+import type { ConfigPath, ConfigPathValue, PlayerConfig } from "./config";
 import { DEFAULT_CONFIG } from "./config";
 import type { EventMap } from "./events";
 import { Events } from "./events";
@@ -10,8 +10,10 @@ import { StreamController } from "./media/stream_controller";
 import { NetworkService } from "./net/network_service";
 import type { RegistryType } from "./registry";
 import { Registry } from "./registry";
+import type { DeepPartial } from "./types/helpers";
 import type { StreamPreference } from "./types/media";
 import { MediaType } from "./types/media";
+import * as ObjectUtils from "./utils/object_utils";
 
 /**
  * CMAF media player. Augments a `<video>` element with adaptive streaming
@@ -66,10 +68,20 @@ export class Player extends EventEmitter<EventMap> {
   }
 
   /**
-   * Merges the given config into the current config.
+   * Merges the given config into the current config. Accepts either a
+   * deep-partial object or a dot-notation path with a value.
    */
-  setConfig(config: Partial<PlayerConfig>) {
-    this.config_ = { ...this.config_, ...config };
+  setConfig(config: DeepPartial<PlayerConfig>): void;
+  setConfig<P extends ConfigPath>(path: P, value: ConfigPathValue<P>): void;
+  setConfig(
+    pathOrConfig: string | DeepPartial<PlayerConfig>,
+    value?: unknown,
+  ): void {
+    const partial =
+      typeof pathOrConfig === "string"
+        ? ObjectUtils.unflattenPath(pathOrConfig, value)
+        : pathOrConfig;
+    this.config_ = ObjectUtils.deepMerge(this.config_, partial);
   }
 
   /**

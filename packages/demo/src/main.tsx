@@ -24,10 +24,6 @@ player.setStreamPreference({
   codec: "av1",
 });
 
-player.setConfig({
-  frontBufferLength: 30,
-});
-
 const video = document.getElementById("videoElement") as HTMLVideoElement;
 
 player.attachMedia(video);

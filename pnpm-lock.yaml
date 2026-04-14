@@ -53,7 +53,7 @@ importers:
         version: 20.8.9
       tsdown:
         specifier: ^0.21.7
-        version: 0.21.7(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(typescript@5.9.3)
+        version: 0.21.7(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       vitest:
         specifier: ^4.1.4
         version: 4.1.4(@types/node@25.5.2)(happy-dom@20.8.9)(vite@8.0.3)
@@ -6355,7 +6355,7 @@ packages:
     engines: {iojs: '>=1.0.0', node: '>=0.10.0'}
     dev: false
 
-  /rolldown-plugin-dts@0.23.2(rolldown@1.0.0-rc.12)(typescript@5.9.3):
+  /rolldown-plugin-dts@0.23.2(rolldown@1.0.0-rc.12):
     resolution: {integrity: sha512-PbSqLawLgZBGcOGT3yqWBGn4cX+wh2nt5FuBGdcMHyOhoukmjbhYAl8NT9sE4U38Cm9tqLOIQeOrvzeayM0DLQ==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
@@ -6385,7 +6385,6 @@ packages:
       obug: 2.1.1
       picomatch: 4.0.4
       rolldown: 1.0.0-rc.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
-      typescript: 5.9.3
     transitivePeerDependencies:
       - oxc-resolver
     dev: true
@@ -7065,7 +7064,7 @@ packages:
       strip-bom: 3.0.0
     dev: false
 
-  /tsdown@0.21.7(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(typescript@5.9.3):
+  /tsdown@0.21.7(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2):
     resolution: {integrity: sha512-ukKIxKQzngkWvOYJAyptudclkm4VQqbjq+9HF5K5qDO8GJsYtMh8gIRwicbnZEnvFPr6mquFwYAVZ8JKt3rY2g==}
     engines: {node: '>=20.19.0'}
     hasBin: true
@@ -7102,12 +7101,11 @@ packages:
       obug: 2.1.1
       picomatch: 4.0.4
       rolldown: 1.0.0-rc.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
-      rolldown-plugin-dts: 0.23.2(rolldown@1.0.0-rc.12)(typescript@5.9.3)
+      rolldown-plugin-dts: 0.23.2(rolldown@1.0.0-rc.12)
       semver: 7.7.4
       tinyexec: 1.1.1
       tinyglobby: 0.2.15
       tree-kill: 1.2.2
-      typescript: 5.9.3
       unconfig-core: 7.5.0
       unrun: 0.2.34(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
     transitivePeerDependencies:

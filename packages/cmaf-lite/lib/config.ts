@@ -1,4 +1,11 @@
+import type { Path, PathValue } from "./types/helpers";
 import type { NetworkRequestOptions } from "./types/net";
+
+/** Dot-notation paths for PlayerConfig. */
+export type ConfigPath = Path<PlayerConfig>;
+
+/** Value at a given config path. */
+export type ConfigPathValue<P extends ConfigPath> = PathValue<PlayerConfig, P>;
 
 /**
  * Player configuration.
