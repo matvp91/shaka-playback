@@ -34,8 +34,7 @@ export class NetworkService {
     const promise = Promise.withResolvers<AbortableNetworkResponse>();
     const request = new NetworkRequest(url, promise.promise, options);
 
-    this.requests_.add(request);
-    this.doFetch_(type, request, promise);
+    this.fetchWithRetry_(type, request, promise);
 
     return request;
   }
@@ -50,35 +49,57 @@ export class NetworkService {
     this.requests_.delete(request);
   }
 
-  private async doFetch_(
+  private async fetchWithRetry_(
     type: NetworkRequestType,
     request: NetworkRequest,
     promise: PromiseWithResolvers<AbortableNetworkResponse>,
   ) {
+    this.requests_.add(request);
+
+    const { maxAttempts } = request.options;
     try {
-      while (request.attempt < request.options.maxAttempts) {
-        this.nextAttempt_(request);
+      while (request.attempt < maxAttempts) {
+        // Prepare the request for the next attempt.
+        request.attempt += 1;
+        request[ABORT_CONTROLLER] = new AbortController();
 
-        try {
-          promise.resolve(await this.attempt_(type, request));
-          return;
-        } catch (error) {
-          if (this.handleFetchError_(error, request, promise)) {
-            // We handled the fetch error, there's nothing to do.
-            // This is an abort.
-            return;
-          }
-
-          // TODO(matvp): Make this a helper, or maybe migrate to
-          // new Timer?
-          await new Promise((resolve) =>
-            setTimeout(resolve, request.options.delay),
-          );
+        const done = await this.fetchAttempt_(type, request, promise);
+        if (done) {
+          // If we're done, break out of the while loop.
+          break;
         }
       }
     } finally {
       request.inFlight = false;
       this.requests_.delete(request);
+    }
+  }
+
+  /**
+   * Executes a single fetch attempt with error handling.
+   * Returns `true` when the promise has been settled (success
+   * or terminal error), `false` to retry.
+   */
+  private async fetchAttempt_(
+    type: NetworkRequestType,
+    request: NetworkRequest,
+    promise: PromiseWithResolvers<AbortableNetworkResponse>,
+  ): Promise<boolean> {
+    try {
+      const data = await this.fetchRequest_(type, request);
+      promise.resolve(data);
+      return true;
+    } catch (error) {
+      if (this.handleFetchError_(error, request, promise)) {
+        return true;
+      }
+
+      // TODO(matvp): Make this a helper, or maybe migrate to
+      // new Timer?
+      await new Promise((resolve) =>
+        setTimeout(resolve, request.options.delay),
+      );
+      return false;
     }
   }
 
@@ -109,7 +130,7 @@ export class NetworkService {
   /**
    * Executes a single fetch attempt. Emits request/response events.
    */
-  private async attempt_(
+  private async fetchRequest_(
     type: NetworkRequestType,
     request: NetworkRequest,
   ): Promise<NetworkResponse> {
@@ -134,13 +155,9 @@ export class NetworkService {
   }
 
   /**
-   * Prepares the request for its next attempt.
+   * Native fetch, throws when not 2xx.
+   * TODO(matvp): Once we have custom errors, throw a NetworkError.
    */
-  private nextAttempt_(request: NetworkRequest) {
-    request.attempt += 1;
-    request[ABORT_CONTROLLER] = new AbortController();
-  }
-
   private async fetch_(request: NetworkRequest): Promise<Response> {
     const res = await fetch(request.url, {
       method: request.method,
