@@ -1,3 +1,5 @@
+import type { NetworkRequestOptions } from "./types/net";
+
 /**
  * Player configuration.
  *
@@ -9,6 +11,8 @@ export type PlayerConfig = {
   backBufferQuotaPadding: number;
   maxBufferHole: number;
   maxSegmentLookupTolerance: number;
+  manifestRequestOptions: NetworkRequestOptions;
+  segmentRequestOptions: NetworkRequestOptions;
 };
 
 /**
@@ -22,4 +26,12 @@ export const DEFAULT_CONFIG: PlayerConfig = {
   backBufferQuotaPadding: 2,
   maxBufferHole: 0.1,
   maxSegmentLookupTolerance: 0.25,
+  manifestRequestOptions: {
+    maxAttempts: 3,
+    delay: 1000,
+  },
+  segmentRequestOptions: {
+    maxAttempts: 3,
+    delay: 500,
+  },
 };

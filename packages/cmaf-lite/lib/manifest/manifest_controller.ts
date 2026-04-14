@@ -1,8 +1,8 @@
 import type { ManifestLoadingEvent } from "../events";
 import { Events } from "../events";
+import type { NetworkRequest } from "../net/network_request";
 import type { Player } from "../player";
 import { RegistryType } from "../registry";
-import type { NetworkRequest } from "../types/net";
 import { ABORTED, NetworkRequestType } from "../types/net";
 import { Log } from "../utils/log";
 
@@ -25,9 +25,11 @@ export class ManifestController {
 
   private onManifestLoading_ = async (event: ManifestLoadingEvent) => {
     const networkService = this.player_.getNetworkService();
+    const config = this.player_.getConfig();
     this.request_ = networkService.request(
       NetworkRequestType.MANIFEST,
       event.url,
+      config.manifestRequestOptions,
     );
 
     const response = await this.request_.promise;

@@ -1,44 +1,39 @@
 import { Events } from "../events";
 import type { Player } from "../player";
-import type { NetworkRequest, NetworkRequestType } from "../types/net";
+import type {
+  AbortableNetworkResponse,
+  NetworkRequestOptions,
+  NetworkRequestType,
+} from "../types/net";
 import { ABORTED } from "../types/net";
+import { ABORT_CONTROLLER, NetworkRequest } from "./network_request";
 import { NetworkResponse } from "./network_response";
 
 /**
- * Central service for all network requests. Owns request construction,
- * fetch execution, and cancellation.
+ * Central service for all network requests. Owns fetch execution,
+ * retry logic, and cancellation.
  *
  * @public
  */
 export class NetworkService {
-  private controllers_ = new Map<NetworkRequest, AbortController>();
+  private requests_ = new Set<NetworkRequest>();
 
   constructor(private player_: Player) {}
 
   /**
-   * Creates and starts an HTTP request. Emits |NETWORK_REQUEST| before
-   * fetch, allowing listeners to mutate the request (URL, headers,
-   * method).
+   * Creates and starts an HTTP request. Emits |NETWORK_REQUEST|
+   * before each attempt, allowing listeners to mutate the request.
    */
-  request(type: NetworkRequestType, url: string): NetworkRequest {
-    const controller = new AbortController();
+  request(
+    type: NetworkRequestType,
+    url: string,
+    options?: NetworkRequestOptions,
+  ): NetworkRequest {
+    const promise = Promise.withResolvers<AbortableNetworkResponse>();
+    const request = new NetworkRequest(url, promise.promise, options);
 
-    const request = {
-      url,
-      method: "GET",
-      headers: new Headers(),
-      inFlight: true,
-      cancelled: false,
-    } as NetworkRequest;
-
-    this.controllers_.set(request, controller);
-
-    this.player_.emit(Events.NETWORK_REQUEST, {
-      type,
-      request,
-    });
-
-    request.promise = this.doFetch_(type, request, controller.signal);
+    this.requests_.add(request);
+    this.doFetch_(type, request, promise);
 
     return request;
   }
@@ -48,71 +43,113 @@ export class NetworkService {
    * cancelled.
    */
   cancel(request: NetworkRequest) {
-    const controller = this.controllers_.get(request);
-    if (!controller) {
-      return;
-    }
-
-    request.cancelled = true;
     request.inFlight = false;
-    controller.abort();
-    this.controllers_.delete(request);
+    request[ABORT_CONTROLLER].abort();
+    this.requests_.delete(request);
   }
 
   private async doFetch_(
     type: NetworkRequestType,
     request: NetworkRequest,
-    signal: AbortSignal,
-  ): Promise<NetworkResponse | typeof ABORTED> {
+    promise: PromiseWithResolvers<AbortableNetworkResponse>,
+  ) {
     try {
-      const response = await this.fetch_(request, signal);
+      while (request.attempt < request.options.maxAttempts) {
+        this.nextAttempt_(request);
 
-      this.player_.emit(Events.NETWORK_RESPONSE, {
-        type,
-        response,
-      });
+        try {
+          promise.resolve(await this.attempt_(type, request));
+          return;
+        } catch (error) {
+          if (this.handleFetchError_(error, request, promise)) {
+            // We handled the fetch error, there's nothing to do.
+            // This is an abort.
+            return;
+          }
 
-      return response;
-    } catch (error) {
-      if (isAbortError(error)) {
-        return ABORTED;
+          // TODO(matvp): Make this a helper, or maybe migrate to
+          // new Timer?
+          await new Promise((resolve) =>
+            setTimeout(resolve, request.options.delay),
+          );
+        }
       }
-      throw error;
     } finally {
       request.inFlight = false;
-      this.controllers_.delete(request);
+      this.requests_.delete(request);
     }
   }
 
-  private async fetch_(
+  /**
+   * Handles a fetch error. Returns true if the error was terminal
+   * (abort or final attempt), false if the caller should retry.
+   */
+  private handleFetchError_(
+    error: unknown,
     request: NetworkRequest,
-    signal: AbortSignal,
-  ): Promise<NetworkResponse> {
-    const start = performance.now();
-
-    const res = await fetch(request.url, {
-      method: request.method,
-      headers: request.headers,
-      signal,
-    });
-
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    promise: PromiseWithResolvers<AbortableNetworkResponse>,
+  ): boolean {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      // Resolve with the sentinel so callers know that the request
+      // got aborted and can bail out.
+      promise.resolve(ABORTED);
+      return true;
     }
 
+    if (request.attempt >= request.options.maxAttempts) {
+      promise.reject(error);
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Executes a single fetch attempt. Emits request/response events.
+   */
+  private async attempt_(
+    type: NetworkRequestType,
+    request: NetworkRequest,
+  ): Promise<NetworkResponse> {
+    this.player_.emit(Events.NETWORK_REQUEST, { type, request });
+
+    const start = performance.now();
+    const res = await this.fetch_(request);
     const data = await res.arrayBuffer();
     const timeElapsed = performance.now() - start;
 
-    return new NetworkResponse(
+    const response = new NetworkResponse(
       request,
       res.status,
       res.headers,
       timeElapsed,
       data,
     );
-  }
-}
 
-function isAbortError(error: unknown) {
-  return error instanceof DOMException && error.name === "AbortError";
+    this.player_.emit(Events.NETWORK_RESPONSE, { type, response });
+
+    return response;
+  }
+
+  /**
+   * Prepares the request for its next attempt.
+   */
+  private nextAttempt_(request: NetworkRequest) {
+    request.attempt += 1;
+    request[ABORT_CONTROLLER] = new AbortController();
+  }
+
+  private async fetch_(request: NetworkRequest): Promise<Response> {
+    const res = await fetch(request.url, {
+      method: request.method,
+      headers: request.headers,
+      signal: request[ABORT_CONTROLLER].signal,
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    }
+
+    return res;
+  }
 }

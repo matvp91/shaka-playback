@@ -2,7 +2,16 @@
 
 Error system — design how network errors surface to consumers (error types, fatality, error events). Replaces the removed errors.ts.
 
-Retry logic — exponential backoff with jitter, per-RequestType configuration, managed by NetworkService.
+Retry logic — exponential backoff with jitter. Base retry mechanism is in place (NetworkRequestOptions with maxAttempts/delay). Next: exponential backoff, per-status-code retry decisions.
+
+NetworkService tests — test/net/network_service.test.ts:
+- Returns a NetworkRequest instance with attempt 0
+- Resolves with NetworkResponse on successful fetch
+- Retries on HTTP error and resolves on subsequent success
+- Rejects after exhausting all retry attempts
+- Emits NETWORK_REQUEST before each attempt
+- Resolves with ABORTED when cancelled
+- Waits the configured delay between retry attempts
 
 Caching — segment prefetch cache, lives outside NetworkService in a higher-level component.
 

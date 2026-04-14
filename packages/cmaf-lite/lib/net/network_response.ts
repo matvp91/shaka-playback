@@ -1,4 +1,4 @@
-import type { NetworkRequest } from "../types/net";
+import type { NetworkRequest } from "./network_request";
 
 /**
  * Completed network response with access to the response body as raw
