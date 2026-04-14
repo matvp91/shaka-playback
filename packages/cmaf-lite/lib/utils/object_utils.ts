@@ -1,13 +1,22 @@
-import type { DeepPartial } from "../types/helpers";
+import type { UnknownRecord } from "../types/helpers";
 
 /** Deep-merges `source` into `target`, returning a new object. */
-export function deepMerge<T extends Record<string, unknown>>(
+export function deepMerge<T extends UnknownRecord>(
   target: T,
-  source: DeepPartial<T>,
+  source: unknown,
 ): T {
-  const result = { ...target };
-  for (const key in source) {
-    const val = source[key];
+  if (
+    source === null ||
+    source === undefined ||
+    typeof source !== "object" ||
+    Array.isArray(source)
+  ) {
+    return target;
+  }
+  const src = source as UnknownRecord;
+  const result: UnknownRecord = { ...target };
+  for (const key in src) {
+    const val = src[key];
     if (
       val !== null &&
       typeof val === "object" &&
@@ -15,28 +24,17 @@ export function deepMerge<T extends Record<string, unknown>>(
       typeof result[key] === "object" &&
       result[key] !== null
     ) {
-      result[key] = deepMerge(
-        result[key] as Record<string, unknown>,
-        val as DeepPartial<Record<string, unknown>>,
-      ) as T[typeof key];
+      result[key] = deepMerge(result[key] as UnknownRecord, val);
     } else {
-      result[key] = val as T[typeof key];
+      result[key] = val;
     }
   }
-  return result;
+  return result as T;
 }
 
 /**
  * Expands a dot-notation path and value into a nested object.
  */
-export function unflattenPath(
-  path: string,
-  value: unknown,
-): Record<string, unknown> {
-  return path
-    .split(".")
-    .reduceRight<Record<string, unknown>>(
-      (acc, key) => ({ [key]: acc }),
-      value as Record<string, unknown>,
-    );
+export function unflattenPath(path: string, value: unknown) {
+  return path.split(".").reduceRight((acc, key) => ({ [key]: acc }), value);
 }

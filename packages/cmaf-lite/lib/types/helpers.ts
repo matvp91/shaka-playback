@@ -1,3 +1,5 @@
+export type UnknownRecord = Record<string, unknown>;
+
 export type OptionalExcept<T, K extends keyof T> = Partial<T> &
   Required<Pick<T, K>>;
 

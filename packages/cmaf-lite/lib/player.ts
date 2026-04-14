@@ -77,11 +77,12 @@ export class Player extends EventEmitter<EventMap> {
     pathOrConfig: string | DeepPartial<PlayerConfig>,
     value?: unknown,
   ): void {
-    const partial =
+    this.config_ = ObjectUtils.deepMerge(
+      this.config_,
       typeof pathOrConfig === "string"
         ? ObjectUtils.unflattenPath(pathOrConfig, value)
-        : pathOrConfig;
-    this.config_ = ObjectUtils.deepMerge(this.config_, partial);
+        : pathOrConfig,
+    );
   }
 
   /**
