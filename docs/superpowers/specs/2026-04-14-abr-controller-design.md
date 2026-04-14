@@ -4,11 +4,8 @@
 
 A rule-based Adaptive Bitrate controller for cmaf-lite. Four independent rules
 each propose a video stream. The controller takes the most conservative result
-(lowest bandwidth). Inspired by dash.js's rule architecture and Netflix
-Cadmium's throughput estimation, simplified for cmaf-lite's event-driven
-design.
-
-Throughput estimation uses `@svta/cml-throughput`'s EwmaEstimator.
+(lowest bandwidth). Throughput estimation uses `@svta/cml-throughput`'s
+EwmaEstimator.
 
 ## File Structure
 
@@ -124,10 +121,14 @@ context object.
 - Creates and owns an `EwmaEstimator` from `@svta/cml-throughput`.
 - Listens to `NETWORK_RESPONSE` on the player, feeds segment download samples
   to the estimator (filters on `NetworkRequestType.SEGMENT`).
+- Event handler typed as `NetworkResponseEvent`, not inline.
 - Exposes `getEstimate()` for AbrController to delegate via
-  `getThroughputEstimate()`.
-- Config: `fastHalfLife`, `slowHalfLife`, `defaultBandwidthEstimate`,
-  `bandwidthUpgradeTarget`, `bandwidthDowngradeTarget`.
+  `getThroughputEstimate()`. Converts from bytes/s to bits/s (* 8).
+- Config destructured: `fastHalfLife`, `slowHalfLife`,
+  `defaultBandwidthEstimate`, `bandwidthUpgradeTarget`,
+  `bandwidthDowngradeTarget`.
+- Upgrade/downgrade check via `private static isUpgrade_()` — no inline
+  functions.
 - `getDecision()`:
   1. Gets throughput estimate from EWMA (falls back to
      `defaultBandwidthEstimate` before samples arrive).
@@ -142,7 +143,9 @@ context object.
 
 - No config. Derives decisions from buffer level and the stream ladder.
 - Utility per stream: `log(bandwidth)` normalized so lowest stream = 1.
-- Vp and gp derived from buffer target and number of streams (not hardcoded).
+- `utilityScale` and `utilityOffset` derived from buffer target and number
+  of streams (not hardcoded).
+- Zero array allocations — utilities computed inline in the scoring loop.
 - `getDecision()`:
   1. If buffer level < `maxSegmentDuration` from current track, returns
      `null` (abstains during startup — lets ThroughputRule drive initial
@@ -157,7 +160,7 @@ context object.
 
 **Purpose:** Are we about to rebuffer?
 
-- Uses proportional formula from dash.js:
+- Uses proportional formula:
   `bitrate = throughput * 0.7 * (bufferLevel / maxSegmentDuration)`.
 - Reads throughput via `controller.getThroughputEstimate()`.
 - Reads `maxSegmentDuration` from current video track.
@@ -172,7 +175,7 @@ context object.
 
 **Purpose:** Can the device keep up?
 
-- Config: `droppedFramesThreshold` (default 0.15).
+- Config destructured: `droppedFramesThreshold` (default 0.15).
 - `getDecision()`:
   1. Reads `video.getVideoPlaybackQuality()` via `player.getMedia()`.
   2. If dropped frame ratio > `droppedFramesThreshold`, returns one stream
@@ -205,25 +208,38 @@ stream indices directly.
 ### Track maxSegmentDuration
 
 Add `maxSegmentDuration` field to `Track` in `lib/types/manifest.ts`.
-Computed during DASH parsing as `Math.max(segment.end - segment.start)`
-across all segments in the track. Used by BolaRule (startup threshold) and
-InsufficientBufferRule (proportional formula).
+Computed during DASH parsing inside `parseSegments` as it builds segments
+(no extra iteration). `parseSegments` returns `{ segments, maxSegmentDuration }`,
+spread into the track object via `parseRepresentation`. Used by BolaRule
+(startup threshold) and InsufficientBufferRule (proportional formula).
 
 ## Teardown
 
 AbrController exposes a `destroy()` method that stops the timer and removes
 event listeners from the player. Called by Player on destroy.
 
+## Code Quality
+
+- **No `!` assertions in production code** — use `?? null` or proper
+  assertions. Direct access is fine in test code where data is known.
+- **No inline functions** — use `private static` methods.
+- **Use typed event parameters** — `NetworkResponseEvent`, not inline objects.
+- **Destructure config** — `const { maxBufferHole } = this.player_.getConfig()`.
+- **No `as any`** — test mocks use `as unknown as Player` via
+  `createMockPlayer` and `createMockAbrController` helpers.
+- **Guard with `!streams.length`** — not `!streams?.length` (always an array).
+
 ## Implementation Notes
 
 - **Buffer level computation:** Rules use `getBufferedEnd()` from
   `buffer_utils` to compute seconds ahead of playhead:
-  `getBufferedEnd(buffered, currentTime, maxHole) - currentTime`.
+  `getBufferedEnd(buffered, currentTime, maxBufferHole) - currentTime`.
 - **Video element access:** DroppedFramesRule accesses the video element via
   `player.getMedia()` to call `getVideoPlaybackQuality()`.
-- **EWMA sample mapping:** `NetworkResponse.data_.arrayBuffer.byteLength`
+- **EWMA sample mapping:** `NetworkResponse.arrayBuffer.byteLength`
   for size, `NetworkResponse.timeElapsed` for duration, mapped to
-  `@svta/cml-throughput`'s `ResourceTiming` format.
+  `@svta/cml-throughput`'s `ResourceTiming` format. Returns bytes/s,
+  converted to bits/s via `* 8` in `getEstimate()`.
 
 ## Dependencies
 
