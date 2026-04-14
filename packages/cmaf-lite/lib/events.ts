@@ -6,6 +6,7 @@ import type {
   NetworkResponse,
   Segment,
   SourceBufferMediaType,
+  Stream,
 } from ".";
 
 /**
@@ -26,6 +27,7 @@ export const Events = {
   BUFFER_EOS: "bufferEos",
   BUFFER_FLUSHING: "bufferFlushing",
   BUFFER_FLUSHED: "bufferFlushed",
+  STREAM_CHANGED: "streamChanged",
   BUFFER_APPEND_ERROR: "bufferAppendError",
   NETWORK_REQUEST: "networkRequest",
   NETWORK_RESPONSE: "networkResponse",
@@ -142,6 +144,17 @@ export type BufferFlushedEvent = {
 };
 
 /**
+ * Fired when the active stream changes for a media type.
+ * `oldStream` is `null` on initial stream selection.
+ *
+ * @public
+ */
+export type StreamChangedEvent = {
+  oldStream: Stream | null;
+  stream: Stream;
+};
+
+/**
  * Fired before a network request is sent. Listeners can mutate the request
  * URL, headers, and method.
  *
@@ -181,6 +194,7 @@ export interface EventMap {
   [Events.BUFFER_FLUSHING]: (event: BufferFlushingEvent) => void;
   [Events.BUFFER_APPEND_ERROR]: (event: BufferAppendErrorEvent) => void;
   [Events.BUFFER_FLUSHED]: (event: BufferFlushedEvent) => void;
+  [Events.STREAM_CHANGED]: (event: StreamChangedEvent) => void;
   [Events.NETWORK_REQUEST]: (event: NetworkRequestEvent) => void;
   [Events.NETWORK_RESPONSE]: (event: NetworkResponseEvent) => void;
 }
