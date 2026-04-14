@@ -4,11 +4,11 @@ import type {
   MediaAttachedEvent,
 } from "../events";
 import { Events } from "../events";
+import type { NetworkRequest } from "../net/network_request";
 import type { Player } from "../player";
 import type { InitSegment, Segment, Track } from "../types/manifest";
 import type { Stream, StreamPreference } from "../types/media";
 import { MediaType } from "../types/media";
-import type { NetworkRequest } from "../types/net";
 import { ABORTED, NetworkRequestType } from "../types/net";
 import * as ArrayUtils from "../utils/array_utils";
 import * as asserts from "../utils/asserts";

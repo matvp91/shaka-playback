@@ -1,6 +1,3 @@
-export type { NetworkRequestOptions } from "../net/network_request";
-export { NetworkRequest } from "../net/network_request";
-
 import type { NetworkResponse } from "../net/network_response";
 
 /**
@@ -12,6 +9,18 @@ export enum NetworkRequestType {
   MANIFEST = "manifest",
   SEGMENT = "segment",
 }
+
+/**
+ * Options for a network request.
+ *
+ * @public
+ */
+export type NetworkRequestOptions = {
+  /** Total number of attempts (1 = no retry). */
+  maxAttempts: number;
+  /** Delay in milliseconds between retry attempts. */
+  delay: number;
+};
 
 /**
  * Sentinel returned when a request is cancelled via

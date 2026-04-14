@@ -1,8 +1,8 @@
 import type { ManifestLoadingEvent } from "../events";
 import { Events } from "../events";
+import type { NetworkRequest } from "../net/network_request";
 import type { Player } from "../player";
 import { RegistryType } from "../registry";
-import type { NetworkRequest } from "../types/net";
 import { ABORTED, NetworkRequestType } from "../types/net";
 import { Log } from "../utils/log";
 

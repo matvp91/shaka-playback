@@ -1,4 +1,7 @@
-import type { AbortableNetworkResponse } from "../types/net";
+import type {
+  AbortableNetworkResponse,
+  NetworkRequestOptions,
+} from "../types/net";
 
 /**
  * Symbol-keyed abort controller, hidden from external callers.
@@ -6,18 +9,6 @@ import type { AbortableNetworkResponse } from "../types/net";
  * @internal
  */
 export const ABORT_CONTROLLER = Symbol("abortController");
-
-/**
- * Options for a network request.
- *
- * @public
- */
-export type NetworkRequestOptions = {
-  /** Total number of attempts (1 = no retry). */
-  maxAttempts: number;
-  /** Delay in milliseconds between retry attempts. */
-  delay: number;
-};
 
 /**
  * Mutable request descriptor. Listeners can modify `url`, `method`,

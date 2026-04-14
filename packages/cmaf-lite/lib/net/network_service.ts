@@ -2,10 +2,10 @@ import { Events } from "../events";
 import type { Player } from "../player";
 import type {
   AbortableNetworkResponse,
+  NetworkRequestOptions,
   NetworkRequestType,
 } from "../types/net";
 import { ABORTED } from "../types/net";
-import type { NetworkRequestOptions } from "./network_request";
 import { ABORT_CONTROLLER, NetworkRequest } from "./network_request";
 import { NetworkResponse } from "./network_response";
 
