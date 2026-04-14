@@ -27,8 +27,8 @@ export const Events = {
   BUFFER_EOS: "bufferEos",
   BUFFER_FLUSHING: "bufferFlushing",
   BUFFER_FLUSHED: "bufferFlushed",
-  STREAM_CHANGED: "streamChanged",
   BUFFER_APPEND_ERROR: "bufferAppendError",
+  STREAM_CHANGED: "streamChanged",
   NETWORK_REQUEST: "networkRequest",
   NETWORK_RESPONSE: "networkResponse",
 } as const;
