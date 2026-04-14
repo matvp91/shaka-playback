@@ -1,4 +1,4 @@
-import type { NetworkResponsePromise } from "../types/net";
+import type { AbortableNetworkResponse } from "../types/net";
 
 /**
  * Symbol-keyed abort controller, hidden from external callers.
@@ -34,7 +34,7 @@ export class NetworkRequest {
 
   constructor(
     public url: string,
-    public readonly promise: NetworkResponsePromise,
+    public readonly promise: Promise<AbortableNetworkResponse>,
     public readonly options: NetworkRequestOptions = {
       maxAttempts: 1,
       delay: 0,

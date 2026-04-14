@@ -57,39 +57,78 @@ export class NetworkService {
       while (request.attempt < request.options.maxAttempts) {
         this.nextAttempt_(request);
 
-        this.player_.emit(Events.NETWORK_REQUEST, {
-          type,
-          request,
-        });
-
         try {
-          const response = await this.fetch_(request);
-
-          this.player_.emit(Events.NETWORK_RESPONSE, {
-            type,
-            response,
-          });
-
-          promise.resolve(response);
+          promise.resolve(await this.attempt_(type, request));
           return;
         } catch (error) {
-          if (isAbortError(error)) {
-            promise.resolve(ABORTED);
+          if (this.handleFetchError_(error, request, promise)) {
+            // We handled the fetch error, there's nothing to do.
+            // This is an abort.
             return;
           }
 
-          if (request.attempt >= request.options.maxAttempts) {
-            promise.reject(error);
-            return;
-          }
-
-          await delay(request.options.delay);
+          // TODO(matvp): Make this a helper, or maybe migrate to
+          // new Timer?
+          await new Promise((resolve) =>
+            setTimeout(resolve, request.options.delay),
+          );
         }
       }
     } finally {
       request.inFlight = false;
       this.requests_.delete(request);
     }
+  }
+
+  /**
+   * Handles a fetch error. Returns true if the error was terminal
+   * (abort or final attempt), false if the caller should retry.
+   */
+  private handleFetchError_(
+    error: unknown,
+    request: NetworkRequest,
+    promise: PromiseWithResolvers<AbortableNetworkResponse>,
+  ): boolean {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      // Resolve with the sentinel so callers know that the request
+      // got aborted and can bail out.
+      promise.resolve(ABORTED);
+      return true;
+    }
+
+    if (request.attempt >= request.options.maxAttempts) {
+      promise.reject(error);
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Executes a single fetch attempt. Emits request/response events.
+   */
+  private async attempt_(
+    type: NetworkRequestType,
+    request: NetworkRequest,
+  ): Promise<NetworkResponse> {
+    this.player_.emit(Events.NETWORK_REQUEST, { type, request });
+
+    const start = performance.now();
+    const res = await this.fetch_(request);
+    const data = await res.arrayBuffer();
+    const timeElapsed = performance.now() - start;
+
+    const response = new NetworkResponse(
+      request,
+      res.status,
+      res.headers,
+      timeElapsed,
+      data,
+    );
+
+    this.player_.emit(Events.NETWORK_RESPONSE, { type, response });
+
+    return response;
   }
 
   /**
@@ -100,9 +139,7 @@ export class NetworkService {
     request[ABORT_CONTROLLER] = new AbortController();
   }
 
-  private async fetch_(request: NetworkRequest): Promise<NetworkResponse> {
-    const start = performance.now();
-
+  private async fetch_(request: NetworkRequest): Promise<Response> {
     const res = await fetch(request.url, {
       method: request.method,
       headers: request.headers,
@@ -113,23 +150,6 @@ export class NetworkService {
       throw new Error(`HTTP ${res.status} ${res.statusText}`);
     }
 
-    const data = await res.arrayBuffer();
-    const timeElapsed = performance.now() - start;
-
-    return new NetworkResponse(
-      request,
-      res.status,
-      res.headers,
-      timeElapsed,
-      data,
-    );
+    return res;
   }
-}
-
-function isAbortError(error: unknown) {
-  return error instanceof DOMException && error.name === "AbortError";
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
