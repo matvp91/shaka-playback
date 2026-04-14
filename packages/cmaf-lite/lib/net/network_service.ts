@@ -1,34 +1,42 @@
 import { Events } from "../events";
 import type { Player } from "../player";
-import type { NetworkRequestType } from "../types/net";
+import type { NetworkRequestType, NetworkResponsePromise } from "../types/net";
 import { ABORTED } from "../types/net";
+import type { NetworkRequestOptions } from "./network_request";
 import { ABORT_CONTROLLER, NetworkRequest } from "./network_request";
 import { NetworkResponse } from "./network_response";
 
 /**
- * Central service for all network requests. Owns request construction,
- * fetch execution, and cancellation.
+ * Central service for all network requests. Owns fetch execution,
+ * retry logic, and cancellation.
  *
  * @public
  */
 export class NetworkService {
+  private requests_ = new Set<NetworkRequest>();
+
   constructor(private player_: Player) {}
 
   /**
-   * Creates and starts an HTTP request. Emits |NETWORK_REQUEST| before
-   * fetch, allowing listeners to mutate the request (URL, headers,
-   * method).
+   * Creates and starts an HTTP request. Emits |NETWORK_REQUEST|
+   * before each attempt, allowing listeners to mutate the request.
    */
-  request(type: NetworkRequestType, url: string): NetworkRequest {
-    const promise = Promise.withResolvers<NetworkResponse | typeof ABORTED>();
-    const request = new NetworkRequest(url, promise.promise);
+  request(
+    type: NetworkRequestType,
+    url: string,
+    options?: NetworkRequestOptions,
+  ): NetworkRequest {
+    const promiseWithResolvers =
+      Promise.withResolvers<Awaited<NetworkResponsePromise>>();
 
-    this.player_.emit(Events.NETWORK_REQUEST, {
-      type,
-      request,
-    });
+    const request = new NetworkRequest(
+      url,
+      promiseWithResolvers.promise,
+      options,
+    );
 
-    this.doFetch_(type, request).then(promise.resolve, promise.reject);
+    this.requests_.add(request);
+    this.doFetch_(type, request, promiseWithResolvers);
 
     return request;
   }
@@ -38,48 +46,70 @@ export class NetworkService {
    * cancelled.
    */
   cancel(request: NetworkRequest) {
-    if (!request.inFlight) {
-      return;
-    }
-
     request.inFlight = false;
     request[ABORT_CONTROLLER].abort();
+    this.requests_.delete(request);
   }
 
   private async doFetch_(
     type: NetworkRequestType,
     request: NetworkRequest,
-  ): Promise<NetworkResponse | typeof ABORTED> {
-    const signal = request[ABORT_CONTROLLER].signal;
+    promiseWithResolvers: PromiseWithResolvers<Awaited<NetworkResponsePromise>>,
+  ) {
     try {
-      const response = await this.fetch_(request, signal);
+      while (request.attempt < request.options.maxAttempts) {
+        this.nextAttempt_(request);
 
-      this.player_.emit(Events.NETWORK_RESPONSE, {
-        type,
-        response,
-      });
+        this.player_.emit(Events.NETWORK_REQUEST, {
+          type,
+          request,
+        });
 
-      return response;
-    } catch (error) {
-      if (isAbortError(error)) {
-        return ABORTED;
+        try {
+          const response = await this.fetch_(request);
+
+          this.player_.emit(Events.NETWORK_RESPONSE, {
+            type,
+            response,
+          });
+
+          promiseWithResolvers.resolve(response);
+          return;
+        } catch (error) {
+          if (isAbortError(error)) {
+            promiseWithResolvers.resolve(ABORTED);
+            return;
+          }
+
+          if (request.attempt >= request.options.maxAttempts) {
+            promiseWithResolvers.reject(error);
+            return;
+          }
+
+          await delay(request.options.delay);
+        }
       }
-      throw error;
     } finally {
       request.inFlight = false;
+      this.requests_.delete(request);
     }
   }
 
-  private async fetch_(
-    request: NetworkRequest,
-    signal: AbortSignal,
-  ): Promise<NetworkResponse> {
+  /**
+   * Prepares the request for its next attempt.
+   */
+  private nextAttempt_(request: NetworkRequest) {
+    request.attempt += 1;
+    request[ABORT_CONTROLLER] = new AbortController();
+  }
+
+  private async fetch_(request: NetworkRequest): Promise<NetworkResponse> {
     const start = performance.now();
 
     const res = await fetch(request.url, {
       method: request.method,
       headers: request.headers,
-      signal,
+      signal: request[ABORT_CONTROLLER].signal,
     });
 
     if (!res.ok) {
@@ -101,4 +131,8 @@ export class NetworkService {
 
 function isAbortError(error: unknown) {
   return error instanceof DOMException && error.name === "AbortError";
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
