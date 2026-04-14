@@ -1,4 +1,4 @@
-import type { OptionalExcept } from "./helpers";
+import type { OptionalExcept, Prettify } from "./helpers";
 import type { SwitchingSet, Track } from "./manifest";
 
 /**
@@ -36,33 +36,35 @@ export type StreamHierarchy = {
  *
  * @public
  */
-export type Stream = {
-  /** Normalized codec */
-  codec: string;
-  /** Bandwidth */
-  bandwidth: number;
-  /** Manifest entry this stream is a view of. */
-  hierarchy: StreamHierarchy;
-} & (
-  | {
-      /** Video type */
-      type: MediaType.VIDEO;
-      /** Video width */
-      width: number;
-      /** Video height */
-      height: number;
-    }
-  | {
-      /** Audio type */
-      type: MediaType.AUDIO;
-    }
-  | {
-      /** Text type. No additional fields today; text streams are part
-       * of the stream model but not yet wired through the stream
-       * controller. */
-      type: MediaType.TEXT;
-    }
-);
+export type Stream = Prettify<
+  {
+    /** Normalized codec */
+    codec: string;
+    /** Bandwidth */
+    bandwidth: number;
+    /** Manifest entry this stream is a view of. */
+    hierarchy: StreamHierarchy;
+  } & (
+    | {
+        /** Video type */
+        type: MediaType.VIDEO;
+        /** Video width */
+        width: number;
+        /** Video height */
+        height: number;
+      }
+    | {
+        /** Audio type */
+        type: MediaType.AUDIO;
+      }
+    | {
+        /** Text type. No additional fields today; text streams are part
+         * of the stream model but not yet wired through the stream
+         * controller. */
+        type: MediaType.TEXT;
+      }
+  )
+>;
 
 /**
  * User preference for stream selection. Properties are
@@ -70,7 +72,7 @@ export type Stream = {
  *
  * @public
  */
-export type StreamPreference = OptionalExcept<Stream, "type">;
+export type StreamPreference = Prettify<OptionalExcept<Stream, "type">>;
 
 /**
  * Narrows a union to the given {@link MediaType}.

@@ -1,3 +1,7 @@
+export type Prettify<T> = {
+  [K in keyof T]: T[K];
+} & {};
+
 export type UnknownRecord = Record<string, unknown>;
 
 export type OptionalExcept<T, K extends keyof T> = Partial<T> &

@@ -1,11 +1,13 @@
-import type { Path, PathValue } from "./types/helpers";
+import type { Path, PathValue, Prettify } from "./types/helpers";
 import type { NetworkRequestOptions } from "./types/net";
 
 /** Dot-notation paths for PlayerConfig. */
-export type ConfigPath = Path<PlayerConfig>;
+export type ConfigPath = Prettify<Path<PlayerConfig>>;
 
 /** Value at a given config path. */
-export type ConfigPathValue<P extends ConfigPath> = PathValue<PlayerConfig, P>;
+export type ConfigPathValue<P extends ConfigPath> = Prettify<
+  PathValue<PlayerConfig, P>
+>;
 
 /**
  * Player configuration.

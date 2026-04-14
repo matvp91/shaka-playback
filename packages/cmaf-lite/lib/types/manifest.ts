@@ -1,3 +1,4 @@
+import type { Prettify } from "./helpers";
 import type { MediaType } from "./media";
 
 /**
@@ -33,29 +34,31 @@ export type SwitchingSet = {
  *
  * @public
  */
-export type Track = {
-  /** Bitrate in bits per second. */
-  bandwidth: number;
-  /** Ordered chunks on the presentation timeline. */
-  segments: Segment[];
-} & (
-  | {
-      /** Video type */
-      type: MediaType.VIDEO;
-      /** Video width */
-      width: number;
-      /** Video height */
-      height: number;
-    }
-  | {
-      /** Audio type */
-      type: MediaType.AUDIO;
-    }
-  | {
-      /** Text type */
-      type: MediaType.TEXT;
-    }
-);
+export type Track = Prettify<
+  {
+    /** Bitrate in bits per second. */
+    bandwidth: number;
+    /** Ordered chunks on the presentation timeline. */
+    segments: Segment[];
+  } & (
+    | {
+        /** Video type */
+        type: MediaType.VIDEO;
+        /** Video width */
+        width: number;
+        /** Video height */
+        height: number;
+      }
+    | {
+        /** Audio type */
+        type: MediaType.AUDIO;
+      }
+    | {
+        /** Text type */
+        type: MediaType.TEXT;
+      }
+  )
+>;
 
 /**
  * CMAF initialization segment (moov box).
