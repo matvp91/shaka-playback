@@ -1,3 +1,6 @@
+export type { NetworkRequestOptions } from "../net/network_request";
+export { NetworkRequest } from "../net/network_request";
+
 import type { NetworkResponse } from "../net/network_response";
 
 /**
@@ -25,24 +28,3 @@ export const ABORTED: unique symbol = Symbol("ABORTED");
  * @public
  */
 export type NetworkResponsePromise = Promise<NetworkResponse | typeof ABORTED>;
-
-/**
- * Mutable request descriptor. Listeners can modify `url`, `method`, and
- * `headers` before the fetch is sent.
- *
- * @public
- */
-export type NetworkRequest = {
-  /** Fully resolved request URL. Mutable before fetch. */
-  url: string;
-  /** HTTP method. Mutable before fetch. */
-  method: "GET" | "POST";
-  /** HTTP headers. Mutable before fetch. */
-  headers: Headers;
-  /** Whether the request is currently in flight. */
-  inFlight: boolean;
-  /** Whether the request was cancelled. */
-  cancelled: boolean;
-  /** Resolves when the request completes or is cancelled. */
-  promise: NetworkResponsePromise;
-};

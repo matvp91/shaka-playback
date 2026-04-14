@@ -1,7 +1,8 @@
 import { Events } from "../events";
 import type { Player } from "../player";
-import type { NetworkRequest, NetworkRequestType } from "../types/net";
+import type { NetworkRequestType } from "../types/net";
 import { ABORTED } from "../types/net";
+import { ABORT_CONTROLLER, NetworkRequest } from "./network_request";
 import { NetworkResponse } from "./network_response";
 
 /**
@@ -11,8 +12,6 @@ import { NetworkResponse } from "./network_response";
  * @public
  */
 export class NetworkService {
-  private controllers_ = new Map<NetworkRequest, AbortController>();
-
   constructor(private player_: Player) {}
 
   /**
@@ -21,24 +20,15 @@ export class NetworkService {
    * method).
    */
   request(type: NetworkRequestType, url: string): NetworkRequest {
-    const controller = new AbortController();
-
-    const request = {
-      url,
-      method: "GET",
-      headers: new Headers(),
-      inFlight: true,
-      cancelled: false,
-    } as NetworkRequest;
-
-    this.controllers_.set(request, controller);
+    const promise = Promise.withResolvers<NetworkResponse | typeof ABORTED>();
+    const request = new NetworkRequest(url, promise.promise);
 
     this.player_.emit(Events.NETWORK_REQUEST, {
       type,
       request,
     });
 
-    request.promise = this.doFetch_(type, request, controller.signal);
+    this.doFetch_(type, request).then(promise.resolve, promise.reject);
 
     return request;
   }
@@ -48,22 +38,19 @@ export class NetworkService {
    * cancelled.
    */
   cancel(request: NetworkRequest) {
-    const controller = this.controllers_.get(request);
-    if (!controller) {
+    if (!request.inFlight) {
       return;
     }
 
-    request.cancelled = true;
     request.inFlight = false;
-    controller.abort();
-    this.controllers_.delete(request);
+    request[ABORT_CONTROLLER].abort();
   }
 
   private async doFetch_(
     type: NetworkRequestType,
     request: NetworkRequest,
-    signal: AbortSignal,
   ): Promise<NetworkResponse | typeof ABORTED> {
+    const signal = request[ABORT_CONTROLLER].signal;
     try {
       const response = await this.fetch_(request, signal);
 
@@ -80,7 +67,6 @@ export class NetworkService {
       throw error;
     } finally {
       request.inFlight = false;
-      this.controllers_.delete(request);
     }
   }
 

@@ -1,6 +1,8 @@
 export * from "./config";
 export * from "./events";
 export * from "./manifest/manifest_parser";
+export type { NetworkRequestOptions } from "./net/network_request";
+export { NetworkRequest } from "./net/network_request";
 export * from "./net/network_response";
 export * from "./net/network_service";
 export { Player } from "./player";
