@@ -278,9 +278,12 @@ export class StreamController {
     segment: Segment | InitSegment,
   ) {
     const networkService = this.player_.getNetworkService();
+    const config = this.player_.getConfig();
+
     mediaState.request = networkService.request(
       NetworkRequestType.SEGMENT,
       segment.url,
+      config.segmentRequestOptions,
     );
 
     const response = await mediaState.request.promise;

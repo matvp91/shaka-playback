@@ -25,9 +25,11 @@ export class ManifestController {
 
   private onManifestLoading_ = async (event: ManifestLoadingEvent) => {
     const networkService = this.player_.getNetworkService();
+    const config = this.player_.getConfig();
     this.request_ = networkService.request(
       NetworkRequestType.MANIFEST,
       event.url,
+      config.manifestRequestOptions,
     );
 
     const response = await this.request_.promise;
