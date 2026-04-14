@@ -17,7 +17,7 @@ lib/abr/
   abr_controller.ts           — orchestrates rules, runs evaluation timer
   rule_throughput.ts           — bandwidth-based stream selection
   rule_bola.ts                 — buffer-level-based utility scoring
-  rule_insufficient_buffer.ts  — emergency lowest-quality fallback
+  rule_insufficient_buffer.ts  — proportional downshift on low buffer
   rule_dropped_frames.ts       — device capability detection
 
 lib/types/abr.ts               — AbrRule interface
@@ -33,7 +33,6 @@ abr: {
   bandwidthUpgradeTarget: 0.7,            // upgrade when bw >= 70% of stream
   bandwidthDowngradeTarget: 0.95,         // downgrade when bw < 95% of stream
   evaluationInterval: 8,                  // seconds between evaluations
-  insufficientBufferThreshold: 0.5,       // seconds, force lowest below this
   fastHalfLife: 3,                        // EWMA fast half-life in seconds
   slowHalfLife: 9,                        // EWMA slow half-life in seconds
   droppedFramesThreshold: 0.15,           // ratio, force downgrade above this
@@ -59,7 +58,9 @@ no decision objects. Zero allocations per evaluation tick.
 
 ### Responsibility
 
-Owns the evaluation timer, runs rules, applies the result.
+Owns the evaluation timer, runs rules, applies the result. Exposes
+`getThroughputEstimate()` which delegates to ThroughputRule's estimator,
+allowing other rules (InsufficientBufferRule) to access throughput data.
 
 ### Construction
 
@@ -67,8 +68,8 @@ Owns the evaluation timer, runs rules, applies the result.
 new AbrController(player)
 ```
 
-Creates the four rules internally, passing each the player reference and
-relevant config values.
+Creates the four rules internally as private properties, passing each the
+player reference, the controller reference, and relevant config values.
 
 ### Lifecycle
 
@@ -112,8 +113,9 @@ in ThroughputRule.
 
 ## Rules
 
-All rules receive the Player reference at construction and read what they need
-directly. No shared context object.
+All rules receive the Player and AbrController references at construction.
+Each rule reads what it needs directly from these references. No shared
+context object.
 
 ### ThroughputRule
 
@@ -121,7 +123,9 @@ directly. No shared context object.
 
 - Creates and owns an `EwmaEstimator` from `@svta/cml-throughput`.
 - Listens to `NETWORK_RESPONSE` on the player, feeds segment download samples
-  to the estimator (filters out non-segment responses).
+  to the estimator (filters on `NetworkRequestType.SEGMENT`).
+- Exposes `getEstimate()` for AbrController to delegate via
+  `getThroughputEstimate()`.
 - Config: `fastHalfLife`, `slowHalfLife`, `defaultBandwidthEstimate`,
   `bandwidthUpgradeTarget`, `bandwidthDowngradeTarget`.
 - `getDecision()`:
@@ -137,8 +141,12 @@ directly. No shared context object.
 **Purpose:** What does the buffer level justify?
 
 - No config. Derives decisions from buffer level and the stream ladder.
+- Utility per stream: `log(bandwidth)` normalized so lowest stream = 1.
+- Vp and gp derived from buffer target and number of streams (not hardcoded).
 - `getDecision()`:
-  1. Reads buffer level from the player.
+  1. If buffer level < `maxSegmentDuration` from current track, returns
+     `null` (abstains during startup — lets ThroughputRule drive initial
+     selection).
   2. For each video stream, computes a utility score: quality-to-bitrate
      tradeoff weighted by current buffer level.
   3. Low buffer produces conservative scores, high buffer produces aggressive
@@ -149,11 +157,16 @@ directly. No shared context object.
 
 **Purpose:** Are we about to rebuffer?
 
-- Config: `insufficientBufferThreshold` (default 0.5s).
+- Uses proportional formula from dash.js:
+  `bitrate = throughput * 0.7 * (bufferLevel / maxSegmentDuration)`.
+- Reads throughput via `controller.getThroughputEstimate()`.
+- Reads `maxSegmentDuration` from current video track.
 - `getDecision()`:
-  1. Reads buffer level from the player.
-  2. If buffer < `insufficientBufferThreshold`, returns the lowest stream.
-  3. Otherwise returns `null` (abstains).
+  1. If buffer level < `maxSegmentDuration`, returns `null` (abstains during
+     startup — same as BolaRule).
+  2. Reads buffer level from the player.
+  3. Computes target bitrate using the formula above.
+  4. Returns the highest stream fitting within the target bitrate.
 
 ### DroppedFramesRule
 
@@ -161,7 +174,7 @@ directly. No shared context object.
 
 - Config: `droppedFramesThreshold` (default 0.15).
 - `getDecision()`:
-  1. Reads `video.getVideoPlaybackQuality()` from the video element.
+  1. Reads `video.getVideoPlaybackQuality()` via `player.getMedia()`.
   2. If dropped frame ratio > `droppedFramesThreshold`, returns one stream
      below the current stream.
   3. Otherwise returns `null` (abstains).
@@ -175,9 +188,10 @@ all non-null responses. No priority system. The most conservative rule wins.
 |------------------------|-----------|----------|-------------|---------|----------|
 | Healthy playback       | Stream 5  | Stream 7 | null        | null    | Stream 5 |
 | Full buffer, good bw   | Stream 7  | Stream 7 | null        | null    | Stream 7 |
-| Buffer dropping        | Stream 5  | Stream 3 | null        | null    | Stream 3 |
+| Buffer dropping        | Stream 5  | Stream 3 | Stream 4    | null    | Stream 3 |
 | Buffer critical        | Stream 5  | Stream 2 | Stream 0    | null    | Stream 0 |
 | Weak device            | Stream 5  | Stream 5 | null        | Stream 4| Stream 4 |
+| Startup (no buffer)    | Stream 3  | null     | null        | null    | Stream 3 |
 
 ## Prerequisite Changes
 
@@ -187,6 +201,13 @@ all non-null responses. No priority system. The most conservative rule wins.
 before returning. A comment above the sort explains this is needed for ABR
 (index 0 = lowest quality, last = highest quality). Rules can work with
 stream indices directly.
+
+### Track maxSegmentDuration
+
+Add `maxSegmentDuration` field to `Track` in `lib/types/manifest.ts`.
+Computed during DASH parsing as `Math.max(segment.end - segment.start)`
+across all segments in the track. Used by BolaRule (startup threshold) and
+InsufficientBufferRule (proportional formula).
 
 ## Teardown
 
@@ -200,6 +221,9 @@ event listeners from the player. Called by Player on destroy.
   `getBufferedEnd(buffered, currentTime, maxHole) - currentTime`.
 - **Video element access:** DroppedFramesRule accesses the video element via
   `player.getMedia()` to call `getVideoPlaybackQuality()`.
+- **EWMA sample mapping:** `NetworkResponse.data_.arrayBuffer.byteLength`
+  for size, `NetworkResponse.timeElapsed` for duration, mapped to
+  `@svta/cml-throughput`'s `ResourceTiming` format.
 
 ## Dependencies
 
