@@ -315,10 +315,7 @@ export class StreamController {
     if (!mediaState.lastSegment) {
       return null;
     }
-    asserts.assertExists(
-      mediaState.stream,
-      `No Stream for ${mediaState.type}`,
-    );
+    asserts.assertExists(mediaState.stream, `No Stream for ${mediaState.type}`);
     const { segments } = mediaState.stream.hierarchy.track;
     const lastIndex = segments.indexOf(mediaState.lastSegment);
     return segments[lastIndex + 1] ?? null;
@@ -357,10 +354,7 @@ export class StreamController {
     if (!mediaState.lastSegment) {
       return false;
     }
-    asserts.assertExists(
-      mediaState.stream,
-      `No Stream for ${mediaState.type}`,
-    );
+    asserts.assertExists(mediaState.stream, `No Stream for ${mediaState.type}`);
     const { segments } = mediaState.stream.hierarchy.track;
     return segments.indexOf(mediaState.lastSegment) === segments.length - 1;
   }
