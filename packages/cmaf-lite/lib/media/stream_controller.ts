@@ -33,7 +33,7 @@ type MediaState = {
 };
 
 export class StreamController {
-  private streams_: Map<MediaType, Stream[]> | null = null;
+  private streamsMap_ = new Map<MediaType, Stream[]>();
   private media_: HTMLMediaElement | null = null;
   private mediaStates_ = new Map<MediaType, MediaState>();
   private preferences_ = new Map<MediaType, StreamPreference>();
@@ -46,8 +46,7 @@ export class StreamController {
   }
 
   getStreams(type: MediaType) {
-    asserts.assertExists(this.streams_, "No Streams");
-    const list = this.streams_.get(type);
+    const list = this.streamsMap_.get(type);
     asserts.assertExists(list, `No streams for ${type}`);
     return list;
   }
@@ -77,13 +76,16 @@ export class StreamController {
     this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.off(Events.MEDIA_DETACHED, this.onMediaDetached_);
     this.player_.off(Events.BUFFER_FLUSHED, this.onBufferFlushed_);
-    this.streams_ = null;
     this.mediaStates_.clear();
     this.preferences_.clear();
   }
 
   private onManifestParsed_ = (event: ManifestParsedEvent) => {
-    this.streams_ = StreamUtils.buildStreams(event.manifest);
+    this.streamsMap_ = StreamUtils.buildStreams(event.manifest);
+    log.info("Streams", this.streamsMap_);
+    this.player_.emit(Events.STREAMS_UPDATED, {
+      streamsMap: this.streamsMap_,
+    });
     this.tryStart_();
   };
 
@@ -106,11 +108,11 @@ export class StreamController {
     this.preferences_.set(preference.type, preference);
 
     const mediaState = this.mediaStates_.get(preference.type);
-    if (!mediaState || !this.streams_) {
+    if (!mediaState) {
       return;
     }
 
-    const streams = this.streams_.get(preference.type);
+    const streams = this.streamsMap_.get(preference.type);
     if (!streams) {
       return;
     }
@@ -182,11 +184,11 @@ export class StreamController {
   };
 
   private tryStart_() {
-    if (!this.streams_ || !this.media_) {
+    if (!this.media_) {
       return;
     }
 
-    for (const [type, streams] of this.streams_) {
+    for (const [type, streams] of this.streamsMap_) {
       const preference = this.preferences_.get(type) ?? { type };
       this.preferences_.set(type, preference);
       const stream = StreamUtils.selectStream(streams, preference);
