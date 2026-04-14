@@ -212,12 +212,7 @@ export class BufferController {
 
     // Record byte size for quota-aware eviction decisions.
     if (ManifestUtils.isMediaSegment(segment)) {
-      this.segmentTracker_.trackAppend(
-        type,
-        segment.start,
-        segment.end,
-        data.byteLength,
-      );
+      this.segmentTracker_.trackAppend(type, segment, data);
     }
 
     const sb = this.sourceBuffers_.get(type);

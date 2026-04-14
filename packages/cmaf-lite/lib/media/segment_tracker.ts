@@ -1,3 +1,4 @@
+import type { Segment } from "../types/manifest";
 import type { MediaType } from "../types/media";
 
 type TrackedSegment = {
@@ -12,13 +13,17 @@ export class SegmentTracker {
   /**
    * Record a successfully appended media segment.
    */
-  trackAppend(type: MediaType, start: number, end: number, byteLength: number) {
+  trackAppend(type: MediaType, segment: Segment, data: ArrayBuffer) {
     let list = this.segments_.get(type);
     if (!list) {
       list = [];
       this.segments_.set(type, list);
     }
-    list.push({ start, end, byteLength });
+    list.push({
+      start: segment.start,
+      end: segment.end,
+      byteLength: data.byteLength,
+    });
   }
 
   /**
