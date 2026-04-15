@@ -45,6 +45,11 @@ export type AbrConfig = {
   /** EWMA slow estimator half-life in seconds. */
   slowHalfLife: number;
   /**
+   * Minimum bytes of real samples before switching from
+   * `defaultBandwidthEstimate` to the EWMA estimate.
+   */
+  minTotalBytes: number;
+  /**
    * Dropped frame ratio above which the controller forces a
    * downgrade.
    */
@@ -118,6 +123,7 @@ export const DEFAULT_CONFIG: PlayerConfig = {
     evaluationInterval: 8,
     fastHalfLife: 3,
     slowHalfLife: 9,
+    minTotalBytes: 128_000,
     droppedFramesThreshold: 0.15,
   },
 };

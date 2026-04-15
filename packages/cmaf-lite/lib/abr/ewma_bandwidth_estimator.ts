@@ -1,26 +1,5 @@
+import type { AbrConfig } from "../config";
 import { Ewma } from "./ewma";
-
-/**
- * Configuration for {@link EwmaBandwidthEstimator}.
- *
- * @internal
- */
-export type EwmaBandwidthEstimatorOptions = {
-  /** Fast EWMA half-life in seconds. */
-  fastHalfLife: number;
-  /** Slow EWMA half-life in seconds. */
-  slowHalfLife: number;
-  /**
-   * Initial bandwidth estimate in bits/s, returned until
-   * `minTotalBytes` of real samples have accumulated.
-   */
-  defaultBandwidthEstimate: number;
-  /**
-   * Minimum bytes of real samples before switching from
-   * `defaultBandwidthEstimate` to the EWMA estimate.
-   */
-  minTotalBytes: number;
-};
 
 /**
  * Dual-EWMA bandwidth estimator. Maintains a fast and slow EWMA and
@@ -31,15 +10,11 @@ export type EwmaBandwidthEstimatorOptions = {
 export class EwmaBandwidthEstimator {
   private fast_: Ewma;
   private slow_: Ewma;
-  private defaultBandwidthEstimate_: number;
-  private minTotalBytes_: number;
   private totalBytes_ = 0;
 
-  constructor(options: EwmaBandwidthEstimatorOptions) {
-    this.fast_ = new Ewma(options.fastHalfLife);
-    this.slow_ = new Ewma(options.slowHalfLife);
-    this.defaultBandwidthEstimate_ = options.defaultBandwidthEstimate;
-    this.minTotalBytes_ = options.minTotalBytes;
+  constructor(private config_: AbrConfig) {
+    this.fast_ = new Ewma(config_.fastHalfLife);
+    this.slow_ = new Ewma(config_.slowHalfLife);
   }
 
   /**
@@ -62,9 +37,9 @@ export class EwmaBandwidthEstimator {
    * Returns the current bandwidth estimate in bits/s. Returns
    * `defaultBandwidthEstimate` until `minTotalBytes` has accumulated.
    */
-  getEstimate(): number {
-    if (this.totalBytes_ < this.minTotalBytes_) {
-      return this.defaultBandwidthEstimate_;
+  getEstimate(defaultEstimate: number): number {
+    if (this.totalBytes_ < this.config_.minTotalBytes) {
+      return defaultEstimate;
     }
     return Math.min(this.fast_.getEstimate(), this.slow_.getEstimate());
   }

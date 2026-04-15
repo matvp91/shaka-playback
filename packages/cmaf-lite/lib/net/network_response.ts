@@ -43,10 +43,10 @@ export class NetworkResponse {
   }
 
   /**
-   * The time elapsed that the response was in flight.
+   * The duration in seconds that the response was in flight.
    */
-  get timeElapsed() {
-    return this.endTime - this.startTime;
+  get durationSec() {
+    return (this.endTime - this.startTime) / 1000;
   }
 
   private static decoder_ = new TextDecoder();

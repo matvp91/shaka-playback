@@ -1,4 +1,3 @@
-import { EwmaBandwidthEstimator } from "./ewma_bandwidth_estimator";
 import type { NetworkResponseEvent, StreamsUpdatedEvent } from "../events";
 import { Events } from "../events";
 import type { Player } from "../player";
@@ -8,6 +7,7 @@ import { NetworkRequestType } from "../types/net";
 import { getBufferedEnd } from "../utils/buffer_utils";
 import { Log } from "../utils/log";
 import { Timer } from "../utils/timer";
+import { EwmaBandwidthEstimator } from "./ewma_bandwidth_estimator";
 
 const log = Log.create("AbrController");
 
@@ -16,9 +16,9 @@ const log = Log.create("AbrController");
  * applies the most conservative (lowest bandwidth) result.
  *
  * Rules:
- *   - Throughput   — highest stream fitting measured bandwidth.
- *   - BOLA         — buffer-level utility scoring (paper formulation).
- *   - Insufficient — proportional downshift when buffer is thin.
+ *   - Throughput    — highest stream fitting measured bandwidth.
+ *   - BOLA          — buffer-level utility scoring (paper formulation).
+ *   - Insufficient  — proportional downshift when buffer is thin.
  *   - DroppedFrames — one step down when decoder can't keep up.
  *
  * @internal
@@ -33,14 +33,8 @@ export class AbrController {
     this.player_ = player;
     this.timer_ = new Timer(() => this.evaluate_());
 
-    const { fastHalfLife, slowHalfLife, defaultBandwidthEstimate } =
-      player.getConfig().abr;
-    this.bandwidthEstimator_ = new EwmaBandwidthEstimator({
-      fastHalfLife,
-      slowHalfLife,
-      defaultBandwidthEstimate,
-      minTotalBytes: 128_000,
-    });
+    const abrConfig = player.getConfig().abr;
+    this.bandwidthEstimator_ = new EwmaBandwidthEstimator(abrConfig);
 
     this.player_.on(Events.STREAMS_UPDATED, this.onStreamsUpdated_);
     this.player_.on(Events.NETWORK_RESPONSE, this.onNetworkResponse_);
@@ -50,7 +44,8 @@ export class AbrController {
    * Returns the current throughput estimate in bits/s.
    */
   getThroughputEstimate(): number {
-    return this.bandwidthEstimator_.getEstimate();
+    const { defaultBandwidthEstimate } = this.player_.getConfig().abr;
+    return this.bandwidthEstimator_.getEstimate(defaultBandwidthEstimate);
   }
 
   /**
@@ -76,7 +71,13 @@ export class AbrController {
   }
 
   private onStreamsUpdated_ = (event: StreamsUpdatedEvent) => {
-    this.videoStreams_ = event.streamsMap.get(MediaType.VIDEO) ?? [];
+    const videoStreams = event.streamsMap.get(MediaType.VIDEO);
+    if (!videoStreams) {
+      return;
+    }
+
+    this.videoStreams_ = videoStreams;
+
     const { evaluationInterval } = this.player_.getConfig().abr;
     this.timer_.tickEvery(evaluationInterval);
   };
@@ -85,10 +86,8 @@ export class AbrController {
     if (event.type !== NetworkRequestType.SEGMENT) {
       return;
     }
-    this.bandwidthEstimator_.sample(
-      event.response.timeElapsed / 1000,
-      event.response.arrayBuffer.byteLength,
-    );
+    const { durationSec, arrayBuffer } = event.response;
+    this.bandwidthEstimator_.sample(durationSec, arrayBuffer.byteLength);
   };
 
   /**
