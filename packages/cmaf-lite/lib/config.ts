@@ -18,6 +18,40 @@ export type ConfigPathValue<P extends ConfigPath> = Prettify<
 >;
 
 /**
+ * ABR controller configuration.
+ *
+ * @public
+ */
+export type AbrConfig = {
+  /**
+   * Initial bandwidth estimate in bits/s, used before the EWMA
+   * estimator has seen any samples.
+   */
+  defaultBandwidthEstimate: number;
+  /**
+   * Bandwidth fraction required to upgrade to a higher quality.
+   * Lower values make upgrades harder (resists oscillation).
+   */
+  bandwidthUpgradeTarget: number;
+  /**
+   * Bandwidth fraction that triggers a downgrade below current
+   * quality.
+   */
+  bandwidthDowngradeTarget: number;
+  /** Seconds between ABR evaluations. */
+  evaluationInterval: number;
+  /** EWMA fast estimator half-life in seconds. */
+  fastHalfLife: number;
+  /** EWMA slow estimator half-life in seconds. */
+  slowHalfLife: number;
+  /**
+   * Dropped frame ratio above which the controller forces a
+   * downgrade.
+   */
+  droppedFramesThreshold: number;
+};
+
+/**
  * Player configuration. Override defaults via
  * `Player.setConfig`.
  *
@@ -54,6 +88,8 @@ export type PlayerConfig = {
   manifestRequestOptions: NetworkRequestOptions;
   /** Network options for segment requests. */
   segmentRequestOptions: NetworkRequestOptions;
+  /** ABR controller configuration. */
+  abr: AbrConfig;
 };
 
 /**
@@ -74,5 +110,14 @@ export const DEFAULT_CONFIG: PlayerConfig = {
   segmentRequestOptions: {
     maxAttempts: 3,
     delay: 500,
+  },
+  abr: {
+    defaultBandwidthEstimate: 1_000_000,
+    bandwidthUpgradeTarget: 0.7,
+    bandwidthDowngradeTarget: 0.95,
+    evaluationInterval: 8,
+    fastHalfLife: 3,
+    slowHalfLife: 9,
+    droppedFramesThreshold: 0.15,
   },
 };
