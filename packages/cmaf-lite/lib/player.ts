@@ -1,4 +1,5 @@
 import { EventEmitter } from "@matvp91/eventemitter3";
+import { AbrController } from "./abr/abr_controller";
 import type { ConfigPath, ConfigPathValue, PlayerConfig } from "./config";
 import { DEFAULT_CONFIG } from "./config";
 import type { EventMap } from "./events";
@@ -6,7 +7,6 @@ import { Events } from "./events";
 import { ManifestController } from "./manifest/manifest_controller";
 import { BufferController } from "./media/buffer_controller";
 import { GapController } from "./media/gap_controller";
-import { AbrController } from "./abr/abr_controller";
 import { StreamController } from "./media/stream_controller";
 import { NetworkService } from "./net/network_service";
 import type { RegistryType } from "./registry";

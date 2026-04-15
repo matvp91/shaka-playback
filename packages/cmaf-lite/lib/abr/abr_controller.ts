@@ -1,13 +1,12 @@
 import { EwmaEstimator } from "@svta/cml-throughput";
+import type { NetworkResponseEvent, StreamsUpdatedEvent } from "../events";
+import { Events } from "../events";
 import type { Player } from "../player";
 import type { Stream } from "../types/media";
 import { MediaType } from "../types/media";
-import type { NetworkResponseEvent } from "../events";
-import type { StreamsUpdatedEvent } from "../events";
-import { Events } from "../events";
 import { NetworkRequestType } from "../types/net";
-import { Timer } from "../utils/timer";
 import { getBufferedEnd } from "../utils/buffer_utils";
+import { Timer } from "../utils/timer";
 
 /**
  * Rule-based ABR controller. Evaluates four rules on a timer and
@@ -196,7 +195,9 @@ export class AbrController {
     let bestScore = -Infinity;
     for (let i = 0; i < videoStreams.length; i++) {
       const stream = videoStreams[i];
-      if (!stream) continue;
+      if (!stream) {
+        continue;
+      }
       const vm = Math.log(stream.bandwidth) - lnS1 + 1;
       // Paper: (V * (v_m + gp) - Q) / S_m with lowest v_m = 0.
       // Our vm is +1 shifted, so subtract 1 to recover paper's v_m.
@@ -249,14 +250,20 @@ export class AbrController {
     currentVideoStream: Stream,
   ): Stream | null {
     const media = this.player_.getMedia() as HTMLVideoElement | null;
-    if (!media?.getVideoPlaybackQuality) return null;
+    if (!media?.getVideoPlaybackQuality) {
+      return null;
+    }
 
     const quality = media.getVideoPlaybackQuality();
-    if (quality.totalVideoFrames === 0) return null;
+    if (quality.totalVideoFrames === 0) {
+      return null;
+    }
 
     const ratio = quality.droppedVideoFrames / quality.totalVideoFrames;
     const { droppedFramesThreshold } = this.player_.getConfig().abr;
-    if (ratio <= droppedFramesThreshold) return null;
+    if (ratio <= droppedFramesThreshold) {
+      return null;
+    }
 
     const currentIndex = videoStreams.indexOf(currentVideoStream);
     const newIndex = Math.max(0, currentIndex - 1);

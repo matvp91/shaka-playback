@@ -48,9 +48,21 @@ describe("StreamUtils", () => {
         switchingSets: [
           createSwitchingSet({
             tracks: [
-              createVideoTrack({ bandwidth: 5_000_000, width: 1920, height: 1080 }),
-              createVideoTrack({ bandwidth: 1_000_000, width: 640, height: 360 }),
-              createVideoTrack({ bandwidth: 3_000_000, width: 1280, height: 720 }),
+              createVideoTrack({
+                bandwidth: 5_000_000,
+                width: 1920,
+                height: 1080,
+              }),
+              createVideoTrack({
+                bandwidth: 1_000_000,
+                width: 640,
+                height: 360,
+              }),
+              createVideoTrack({
+                bandwidth: 3_000_000,
+                width: 1280,
+                height: 720,
+              }),
             ],
           }),
         ],
