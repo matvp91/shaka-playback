@@ -43,6 +43,24 @@ describe("StreamUtils", () => {
       expect(() => buildStreams(manifest)).toThrow("No streams found");
     });
 
+    it("sorts streams by bandwidth ascending for ABR", () => {
+      const manifest = createManifest({
+        switchingSets: [
+          createSwitchingSet({
+            tracks: [
+              createVideoTrack({ bandwidth: 5_000_000, width: 1920, height: 1080 }),
+              createVideoTrack({ bandwidth: 1_000_000, width: 640, height: 360 }),
+              createVideoTrack({ bandwidth: 3_000_000, width: 1280, height: 720 }),
+            ],
+          }),
+        ],
+      });
+      const streams = buildStreams(manifest);
+      const video = streams.get(MediaType.VIDEO)!;
+      const bandwidths = video.map((s) => s.bandwidth);
+      expect(bandwidths).toEqual([1_000_000, 3_000_000, 5_000_000]);
+    });
+
     it("produces separate streams for tracks with different resolutions", () => {
       const manifest = createManifest({
         switchingSets: [
