@@ -1,3 +1,4 @@
+export { AbrController } from "./abr/abr_controller";
 export * from "./config";
 export * from "./events";
 export * from "./manifest/manifest_parser";
