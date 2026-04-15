@@ -6,6 +6,7 @@ import { Events } from "./events";
 import { ManifestController } from "./manifest/manifest_controller";
 import { BufferController } from "./media/buffer_controller";
 import { GapController } from "./media/gap_controller";
+import { AbrController } from "./abr/abr_controller";
 import { StreamController } from "./media/stream_controller";
 import { NetworkService } from "./net/network_service";
 import type { RegistryType } from "./registry";
@@ -32,6 +33,7 @@ export class Player extends EventEmitter<EventMap> {
   private bufferController_: BufferController;
   private gapController_: GapController;
   private streamController_: StreamController;
+  private abrController_: AbrController;
 
   constructor() {
     super();
@@ -43,6 +45,7 @@ export class Player extends EventEmitter<EventMap> {
     this.bufferController_ = new BufferController(this);
     this.gapController_ = new GapController(this);
     this.streamController_ = new StreamController(this);
+    this.abrController_ = new AbrController(this);
   }
 
   /**
@@ -181,6 +184,7 @@ export class Player extends EventEmitter<EventMap> {
     this.bufferController_.destroy();
     this.gapController_.destroy();
     this.streamController_.destroy();
+    this.abrController_.destroy();
     this.removeAllListeners();
   }
 }
