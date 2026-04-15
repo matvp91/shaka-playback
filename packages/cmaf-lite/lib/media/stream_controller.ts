@@ -53,9 +53,7 @@ export class StreamController {
 
   getActiveStream(type: MediaType) {
     const mediaState = this.mediaStates_.get(type);
-    asserts.assertExists(mediaState, `No Media State for ${type}`);
-    asserts.assertExists(mediaState.stream, `No Stream for ${type}`);
-    return mediaState.stream;
+    return mediaState?.stream ?? null;
   }
 
   getActiveStreamPreference(type: MediaType) {
@@ -192,7 +190,6 @@ export class StreamController {
       const preference = this.preferences_.get(type) ?? { type };
       this.preferences_.set(type, preference);
       const stream = StreamUtils.selectStream(streams, preference);
-      log.info(`Initial Stream ${type}`, stream);
 
       const mediaState: MediaState = {
         type,

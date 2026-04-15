@@ -1,4 +1,4 @@
-import { EwmaEstimator } from "@svta/cml-throughput";
+import { EwmaBandwidthEstimator } from "./ewma_bandwidth_estimator";
 import type { NetworkResponseEvent, StreamsUpdatedEvent } from "../events";
 import { Events } from "../events";
 import type { Player } from "../player";
@@ -6,7 +6,10 @@ import type { Stream } from "../types/media";
 import { MediaType } from "../types/media";
 import { NetworkRequestType } from "../types/net";
 import { getBufferedEnd } from "../utils/buffer_utils";
+import { Log } from "../utils/log";
 import { Timer } from "../utils/timer";
+
+const log = Log.create("AbrController");
 
 /**
  * Rule-based ABR controller. Evaluates four rules on a timer and
@@ -23,9 +26,7 @@ import { Timer } from "../utils/timer";
 export class AbrController {
   private player_: Player;
   private timer_: Timer;
-  private estimator_: EwmaEstimator;
-
-  // Cached on STREAMS_UPDATED — avoids per-tick Map lookup.
+  private bandwidthEstimator_: EwmaBandwidthEstimator;
   private videoStreams_: Stream[] = [];
 
   constructor(player: Player) {
@@ -34,10 +35,11 @@ export class AbrController {
 
     const { fastHalfLife, slowHalfLife, defaultBandwidthEstimate } =
       player.getConfig().abr;
-    this.estimator_ = new EwmaEstimator({
+    this.bandwidthEstimator_ = new EwmaBandwidthEstimator({
       fastHalfLife,
       slowHalfLife,
-      defaultEstimate: defaultBandwidthEstimate,
+      defaultBandwidthEstimate,
+      minTotalBytes: 128_000,
     });
 
     this.player_.on(Events.STREAMS_UPDATED, this.onStreamsUpdated_);
@@ -46,10 +48,9 @@ export class AbrController {
 
   /**
    * Returns the current throughput estimate in bits/s.
-   * The EWMA estimator returns bytes/s, so multiply by 8.
    */
   getThroughputEstimate(): number {
-    return this.estimator_.getEstimate() * 8;
+    return this.bandwidthEstimator_.getEstimate();
   }
 
   /**
@@ -74,11 +75,8 @@ export class AbrController {
     this.player_.off(Events.NETWORK_RESPONSE, this.onNetworkResponse_);
   }
 
-  // --- Lifecycle ---
-
   private onStreamsUpdated_ = (event: StreamsUpdatedEvent) => {
     this.videoStreams_ = event.streamsMap.get(MediaType.VIDEO) ?? [];
-    this.evaluate_();
     const { evaluationInterval } = this.player_.getConfig().abr;
     this.timer_.tickEvery(evaluationInterval);
   };
@@ -87,15 +85,15 @@ export class AbrController {
     if (event.type !== NetworkRequestType.SEGMENT) {
       return;
     }
-    this.estimator_.sample({
-      startTime: event.response.startTime,
-      duration: event.response.timeElapsed,
-      encodedBodySize: event.response.arrayBuffer.byteLength,
-    });
+    this.bandwidthEstimator_.sample(
+      event.response.timeElapsed / 1000,
+      event.response.arrayBuffer.byteLength,
+    );
   };
 
-  // --- Evaluation ---
-
+  /**
+   * Evaluate potential stream targets
+   */
   private evaluate_() {
     const videoStreams = this.videoStreams_;
     const currentVideoStream = this.player_.getActiveStream(MediaType.VIDEO);
@@ -120,16 +118,14 @@ export class AbrController {
     }
 
     if (best && best !== currentVideoStream) {
-      this.player_.setStreamPreference({
-        type: MediaType.VIDEO,
-        bandwidth: best.bandwidth,
-      });
+      log.info("ABR decision", best);
+      this.player_.setStreamPreference(best);
     }
   }
 
-  // --- Rules ---
-
-  /** Highest video stream fitting measured throughput, minus audio. */
+  /**
+   * Highest video stream fitting measured throughput, minus audio.
+   */
   private evaluateThroughput_(
     videoStreams: Stream[],
     currentVideoStream: Stream,
@@ -244,7 +240,9 @@ export class AbrController {
     return best ?? videoStreams[0] ?? null;
   }
 
-  /** Step one quality level down when dropped frame ratio is high. */
+  /**
+   * Step one quality level down when dropped frame ratio is high.
+   */
   private evaluateDroppedFrames_(
     videoStreams: Stream[],
     currentVideoStream: Stream,
@@ -255,11 +253,9 @@ export class AbrController {
     }
 
     const quality = media.getVideoPlaybackQuality();
-    if (quality.totalVideoFrames === 0) {
-      return null;
-    }
-
-    const ratio = quality.droppedVideoFrames / quality.totalVideoFrames;
+    const ratio = quality.totalVideoFrames
+      ? quality.droppedVideoFrames / quality.totalVideoFrames
+      : 0;
     const { droppedFramesThreshold } = this.player_.getConfig().abr;
     if (ratio <= droppedFramesThreshold) {
       return null;
