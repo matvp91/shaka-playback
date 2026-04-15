@@ -62,7 +62,7 @@ it("computes maxSegmentDuration on each track", () => {
   const result = parse(loadFixture("basic"));
   for (const ss of result.switchingSets) {
     for (const track of ss.tracks) {
-      expect(track.maxSegmentDuration).toBeGreaterThan(0);
+      expect(track.maxSegmentDuration).toBe(4);
     }
   }
 });
@@ -355,27 +355,289 @@ git commit -m "feat: add ABR config to PlayerConfig"
 
 ---
 
-### Task 5: Add AbrRule interface
+### Task 5: Implement AbrController with inline rules
+
+All four rules live as private methods in `AbrController`. Each receives
+`videoStreams` and `currentVideoStream` as parameters, avoiding the need
+for per-rule early-exit checks. `evaluate_` guards once that both are
+available before invoking the rules.
+
+Note: ABR tests are deferred — validated via the demo app, added
+separately after the feature is working.
 
 **Files:**
-- Create: `packages/cmaf-lite/lib/types/abr.ts`
+- Create: `packages/cmaf-lite/lib/abr/abr_controller.ts`
 - Modify: `packages/cmaf-lite/lib/index.ts`
 
-- [ ] **Step 1: Create types file**
+- [ ] **Step 1: Implement AbrController**
 
-Create `lib/types/abr.ts`:
+Create `lib/abr/abr_controller.ts`:
 
 ```ts
-import type { Stream } from "./media";
+import { EwmaEstimator } from "@svta/cml-throughput";
+import type { Player } from "../player";
+import type { Stream } from "../types/media";
+import { MediaType } from "../types/media";
+import type { NetworkResponseEvent } from "../events";
+import type { StreamsUpdatedEvent } from "../events";
+import { Events } from "../events";
+import { NetworkRequestType } from "../types/net";
+import { Timer } from "../utils/timer";
+import { getBufferedEnd } from "../utils/buffer_utils";
 
 /**
- * ABR rule that proposes a video stream based on its
- * own heuristic. Returns `null` to abstain.
+ * Rule-based ABR controller. Evaluates four rules on a timer and
+ * applies the most conservative (lowest bandwidth) result.
+ *
+ * Rules:
+ *   - Throughput   — highest stream fitting measured bandwidth.
+ *   - BOLA         — buffer-level utility scoring (paper formulation).
+ *   - Insufficient — proportional downshift when buffer is thin.
+ *   - DroppedFrames — one step down when decoder can't keep up.
  *
  * @internal
  */
-export interface AbrRule {
-  getDecision(): Stream | null;
+export class AbrController {
+  private player_: Player;
+  private timer_: Timer;
+  private estimator_: EwmaEstimator;
+
+  // Cached on STREAMS_UPDATED — avoids per-tick Map lookup.
+  private videoStreams_: Stream[] = [];
+
+  constructor(player: Player) {
+    this.player_ = player;
+    this.timer_ = new Timer(() => this.evaluate_());
+
+    const { fastHalfLife, slowHalfLife, defaultBandwidthEstimate } =
+      player.getConfig().abr;
+    this.estimator_ = new EwmaEstimator({
+      fastHalfLife,
+      slowHalfLife,
+      defaultEstimate: defaultBandwidthEstimate,
+    });
+
+    this.player_.on(Events.STREAMS_UPDATED, this.onStreamsUpdated_);
+    this.player_.on(Events.NETWORK_RESPONSE, this.onNetworkResponse_);
+  }
+
+  /**
+   * Returns the current throughput estimate in bits/s.
+   * The EWMA estimator returns bytes/s, so multiply by 8.
+   */
+  getThroughputEstimate(): number {
+    return this.estimator_.getEstimate() * 8;
+  }
+
+  /**
+   * Returns the video buffer level ahead of the playhead in seconds.
+   * Returns 0 when no media is attached or the playhead is outside
+   * buffered ranges.
+   */
+  getBufferLevel(): number {
+    const media = this.player_.getMedia();
+    if (!media) {
+      return 0;
+    }
+    const buffered = this.player_.getBuffered(MediaType.VIDEO);
+    const { maxBufferHole } = this.player_.getConfig();
+    const end = getBufferedEnd(buffered, media.currentTime, maxBufferHole);
+    return end ? end - media.currentTime : 0;
+  }
+
+  destroy() {
+    this.timer_.stop();
+    this.player_.off(Events.STREAMS_UPDATED, this.onStreamsUpdated_);
+    this.player_.off(Events.NETWORK_RESPONSE, this.onNetworkResponse_);
+  }
+
+  // --- Lifecycle ---
+
+  private onStreamsUpdated_ = (event: StreamsUpdatedEvent) => {
+    this.videoStreams_ = event.streamsMap.get(MediaType.VIDEO) ?? [];
+    this.evaluate_();
+    const { evaluationInterval } = this.player_.getConfig().abr;
+    this.timer_.tickEvery(evaluationInterval);
+  };
+
+  private onNetworkResponse_ = (event: NetworkResponseEvent) => {
+    if (event.type !== NetworkRequestType.SEGMENT) {
+      return;
+    }
+    this.estimator_.sample({
+      startTime: event.response.startTime,
+      duration: event.response.timeElapsed,
+      encodedBodySize: event.response.arrayBuffer.byteLength,
+    });
+  };
+
+  // --- Evaluation ---
+
+  private evaluate_() {
+    const videoStreams = this.videoStreams_;
+    const currentVideoStream = this.player_.getActiveStream(MediaType.VIDEO);
+
+    // Rules need both streams and a current stream to reason.
+    if (!videoStreams.length || !currentVideoStream) {
+      return;
+    }
+
+    const candidates = [
+      this.evaluateThroughput_(videoStreams, currentVideoStream),
+      this.evaluateBola_(videoStreams, currentVideoStream),
+      this.evaluateInsufficientBuffer_(videoStreams, currentVideoStream),
+      this.evaluateDroppedFrames_(videoStreams, currentVideoStream),
+    ];
+
+    let best: Stream | null = null;
+    for (const candidate of candidates) {
+      if (candidate && (!best || candidate.bandwidth < best.bandwidth)) {
+        best = candidate;
+      }
+    }
+
+    if (best && best !== currentVideoStream) {
+      this.player_.setStreamPreference({
+        type: MediaType.VIDEO,
+        bandwidth: best.bandwidth,
+      });
+    }
+  }
+
+  // --- Rules ---
+
+  /** Highest video stream fitting measured throughput, minus audio. */
+  private evaluateThroughput_(
+    videoStreams: Stream[],
+    currentVideoStream: Stream,
+  ): Stream | null {
+    const { bandwidthUpgradeTarget, bandwidthDowngradeTarget } =
+      this.player_.getConfig().abr;
+    const audioStream = this.player_.getActiveStream(MediaType.AUDIO);
+    const audioBandwidth = audioStream ? audioStream.bandwidth : 0;
+    const effectiveBandwidth = this.getThroughputEstimate() - audioBandwidth;
+
+    let best: Stream | null = null;
+    for (const stream of videoStreams) {
+      const isUpgrade = stream.bandwidth > currentVideoStream.bandwidth;
+      const factor = isUpgrade
+        ? bandwidthUpgradeTarget
+        : bandwidthDowngradeTarget;
+      if (stream.bandwidth <= effectiveBandwidth * factor) {
+        best = stream;
+      }
+    }
+
+    return best ?? videoStreams[0] ?? null;
+  }
+
+  /**
+   * BOLA — buffer-level utility scoring. Abstains during startup.
+   * See BOLA paper (arxiv 1601.06748). Utility v_m = ln(S_m / S_1)
+   * shifted by +1 so lowest stream has utility 1.
+   */
+  private evaluateBola_(
+    videoStreams: Stream[],
+    currentVideoStream: Stream,
+  ): Stream | null {
+    const MINIMUM_BUFFER_S = 10;
+
+    const lowestStream = videoStreams[0];
+    const highestStream = videoStreams[videoStreams.length - 1];
+    if (!lowestStream || !highestStream) {
+      return null;
+    }
+
+    const { maxSegmentDuration } = currentVideoStream.hierarchy.track;
+    const { frontBufferLength } = this.player_.getConfig();
+    const bufferLevel = this.getBufferLevel();
+
+    if (bufferLevel < maxSegmentDuration) {
+      return null;
+    }
+
+    const lnS1 = Math.log(lowestStream.bandwidth);
+    const vM = Math.log(highestStream.bandwidth) - lnS1 + 1;
+
+    // Q_max: at least front buffer, scaled up by stream count.
+    const Qmax = Math.max(
+      frontBufferLength,
+      MINIMUM_BUFFER_S + 2 * videoStreams.length,
+    );
+
+    const gp = (vM - 1) / (Qmax / MINIMUM_BUFFER_S - 1);
+    const V = MINIMUM_BUFFER_S / gp;
+
+    let bestIndex = 0;
+    let bestScore = -Infinity;
+    for (let i = 0; i < videoStreams.length; i++) {
+      const stream = videoStreams[i];
+      if (!stream) continue;
+      const vm = Math.log(stream.bandwidth) - lnS1 + 1;
+      // Paper: (V * (v_m + gp) - Q) / S_m with lowest v_m = 0.
+      // Our vm is +1 shifted, so subtract 1 to recover paper's v_m.
+      const score = (V * (vm - 1 + gp) - bufferLevel) / stream.bandwidth;
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = i;
+      }
+    }
+
+    return videoStreams[bestIndex] ?? null;
+  }
+
+  /**
+   * Proportional downshift based on buffer thinness. Formula:
+   * `throughput * safety * (bufferLevel / maxSegmentDuration)`.
+   * Abstains during startup.
+   */
+  private evaluateInsufficientBuffer_(
+    videoStreams: Stream[],
+    currentVideoStream: Stream,
+  ): Stream | null {
+    const THROUGHPUT_SAFETY_FACTOR = 0.7;
+
+    const { maxSegmentDuration } = currentVideoStream.hierarchy.track;
+    const bufferLevel = this.getBufferLevel();
+
+    if (bufferLevel < maxSegmentDuration) {
+      return null;
+    }
+
+    const targetBitrate =
+      this.getThroughputEstimate() *
+      THROUGHPUT_SAFETY_FACTOR *
+      (bufferLevel / maxSegmentDuration);
+
+    let best: Stream | null = null;
+    for (const stream of videoStreams) {
+      if (stream.bandwidth <= targetBitrate) {
+        best = stream;
+      }
+    }
+
+    return best ?? videoStreams[0] ?? null;
+  }
+
+  /** Step one quality level down when dropped frame ratio is high. */
+  private evaluateDroppedFrames_(
+    videoStreams: Stream[],
+    currentVideoStream: Stream,
+  ): Stream | null {
+    const media = this.player_.getMedia() as HTMLVideoElement | null;
+    if (!media?.getVideoPlaybackQuality) return null;
+
+    const quality = media.getVideoPlaybackQuality();
+    if (quality.totalVideoFrames === 0) return null;
+
+    const ratio = quality.droppedVideoFrames / quality.totalVideoFrames;
+    const { droppedFramesThreshold } = this.player_.getConfig().abr;
+    if (ratio <= droppedFramesThreshold) return null;
+
+    const currentIndex = videoStreams.indexOf(currentVideoStream);
+    const newIndex = Math.max(0, currentIndex - 1);
+    return videoStreams[newIndex] ?? null;
+  }
 }
 ```
 
@@ -384,7 +646,7 @@ export interface AbrRule {
 In `lib/index.ts`, add:
 
 ```ts
-export * from "./types/abr";
+export { AbrController } from "./abr/abr_controller";
 ```
 
 - [ ] **Step 3: Run type check**
@@ -398,1049 +660,21 @@ Expected: No errors.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add packages/cmaf-lite/lib/types/abr.ts \
-  packages/cmaf-lite/lib/index.ts
-git commit -m "feat: add AbrRule interface"
-```
-
----
-
-### Task 6: Add test mock helpers
-
-**Files:**
-- Create: `packages/cmaf-lite/test/__framework__/player_mock.ts`
-- Create: `packages/cmaf-lite/test/__framework__/abr_controller_mock.ts`
-
-- [ ] **Step 1: Create player mock factory**
-
-Create `test/__framework__/player_mock.ts`:
-
-```ts
-import { vi } from "vitest";
-import type { Player } from "../../lib/player";
-import { DEFAULT_CONFIG } from "../../lib/config";
-import { createTimeRanges } from "./time_ranges";
-
-/**
- * Minimal Player mock for rule testing. Configure only
- * what the test needs via overrides.
- */
-export function createMockPlayer(
-  overrides: Record<string, unknown> = {},
-) {
-  return {
-    on: vi.fn(),
-    off: vi.fn(),
-    getStreams: vi.fn(() => []),
-    getActiveStream: vi.fn(() => null),
-    getBuffered: vi.fn(() => createTimeRanges()),
-    getMedia: vi.fn(() => null),
-    getConfig: vi.fn(() => DEFAULT_CONFIG),
-    setStreamPreference: vi.fn(),
-    ...overrides,
-  } as unknown as Player;
-}
-```
-
-- [ ] **Step 2: Create AbrController mock factory**
-
-Create `test/__framework__/abr_controller_mock.ts`:
-
-```ts
-import { vi } from "vitest";
-import type { AbrController } from "../../lib/abr/abr_controller";
-import { DEFAULT_CONFIG } from "../../lib/config";
-
-/**
- * Minimal AbrController mock for rules that need a
- * controller reference (e.g. InsufficientBufferRule).
- */
-export function createMockAbrController(
-  overrides: Record<string, unknown> = {},
-) {
-  return {
-    getThroughputEstimate: vi.fn(
-      () => DEFAULT_CONFIG.abr.defaultBandwidthEstimate,
-    ),
-    ...overrides,
-  } as unknown as AbrController;
-}
-```
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add packages/cmaf-lite/test/__framework__/player_mock.ts \
-  packages/cmaf-lite/test/__framework__/abr_controller_mock.ts
-git commit -m "test: add Player and AbrController mock factories"
-```
-
----
-
-### Task 7: Implement ThroughputRule
-
-**Files:**
-- Create: `packages/cmaf-lite/lib/abr/rule_throughput.ts`
-- Create: `packages/cmaf-lite/test/abr/rule_throughput.test.ts`
-
-- [ ] **Step 1: Write failing tests**
-
-Create `test/abr/rule_throughput.test.ts`:
-
-```ts
-import { describe, expect, it } from "vitest";
-import { ThroughputRule } from "../../lib/abr/rule_throughput";
-import { MediaType } from "../../lib/types/media";
-import { buildStreams } from "../../lib/utils/stream_utils";
-import {
-  createManifest,
-  createSwitchingSet,
-  createVideoTrack,
-  createAudioTrack,
-} from "../__framework__/factories";
-import { createMockPlayer } from "../__framework__/player_mock";
-
-function createVideoStreams() {
-  const manifest = createManifest({
-    switchingSets: [
-      createSwitchingSet({
-        tracks: [
-          createVideoTrack({ bandwidth: 500_000, width: 640, height: 360 }),
-          createVideoTrack({ bandwidth: 1_500_000, width: 1280, height: 720 }),
-          createVideoTrack({ bandwidth: 3_000_000, width: 1920, height: 1080 }),
-        ],
-      }),
-    ],
-  });
-  return buildStreams(manifest).get(MediaType.VIDEO)!;
-}
-
-describe("ThroughputRule", () => {
-  it("selects stream fitting defaultBandwidthEstimate when no samples", () => {
-    const streams = createVideoStreams();
-    const player = createMockPlayer({
-      getStreams: () => streams,
-      getActiveStream: (type: MediaType) =>
-        type === MediaType.VIDEO ? streams[0] : null,
-    });
-    const rule = new ThroughputRule(player);
-
-    // 1_000_000 * 0.7 = 700_000 — highest fitting is 500_000
-    expect(rule.getDecision()).toBe(streams[0]);
-  });
-
-  it("selects highest stream fitting effective bandwidth", () => {
-    const streams = createVideoStreams();
-    const player = createMockPlayer({
-      getStreams: () => streams,
-      getActiveStream: (type: MediaType) =>
-        type === MediaType.VIDEO ? streams[0] : null,
-      getConfig: () => ({
-        ...DEFAULT_CONFIG,
-        abr: {
-          ...DEFAULT_CONFIG.abr,
-          defaultBandwidthEstimate: 5_000_000,
-        },
-      }),
-    });
-    const rule = new ThroughputRule(player);
-
-    // 5_000_000 * 0.7 = 3_500_000 — highest fitting is 3_000_000
-    expect(rule.getDecision()).toBe(streams[2]);
-  });
-
-  it("subtracts audio bandwidth from throughput estimate", () => {
-    const streams = createVideoStreams();
-    const audioManifest = createManifest({
-      switchingSets: [
-        createSwitchingSet({
-          type: MediaType.AUDIO,
-          codec: "mp4a.40.2",
-          tracks: [createAudioTrack({ bandwidth: 400_000 })],
-        }),
-      ],
-    });
-    const audioStreams = buildStreams(audioManifest).get(MediaType.AUDIO);
-    const audioStream = audioStreams ? audioStreams[0] ?? null : null;
-    const player = createMockPlayer({
-      getStreams: () => streams,
-      getActiveStream: (type: MediaType) => {
-        if (type === MediaType.AUDIO) return audioStream;
-        if (type === MediaType.VIDEO) return streams[0];
-        return null;
-      },
-      getConfig: () => ({
-        ...DEFAULT_CONFIG,
-        abr: {
-          ...DEFAULT_CONFIG.abr,
-          defaultBandwidthEstimate: 2_000_000,
-        },
-      }),
-    });
-    const rule = new ThroughputRule(player);
-
-    // (2_000_000 - 400_000) * 0.7 = 1_120_000 — highest fitting is 500_000
-    expect(rule.getDecision()).toBe(streams[0]);
-  });
-
-  it("exposes throughput estimate via getEstimate", () => {
-    const player = createMockPlayer();
-    const rule = new ThroughputRule(player);
-
-    expect(rule.getEstimate()).toBe(1_000_000);
-  });
-});
-```
-
-- [ ] **Step 2: Run tests to verify they fail**
-
-```bash
-cd packages/cmaf-lite && pnpm test -- --run -t "ThroughputRule"
-```
-
-Expected: FAIL — module does not exist.
-
-- [ ] **Step 3: Implement ThroughputRule**
-
-Create `lib/abr/rule_throughput.ts`:
-
-```ts
-import { EwmaEstimator } from "@svta/cml-throughput";
-import type { AbrRule } from "../types/abr";
-import type { Stream } from "../types/media";
-import { MediaType } from "../types/media";
-import type { NetworkResponseEvent } from "../events";
-import { Events } from "../events";
-import { NetworkRequestType } from "../types/net";
-import type { Player } from "../player";
-
-/**
- * Selects the highest video stream that fits within
- * the measured throughput, accounting for audio bandwidth.
- *
- * @internal
- */
-export class ThroughputRule implements AbrRule {
-  private estimator_: EwmaEstimator;
-  private player_: Player;
-
-  constructor(player: Player) {
-    this.player_ = player;
-
-    const { fastHalfLife, slowHalfLife, defaultBandwidthEstimate } =
-      player.getConfig().abr;
-    this.estimator_ = new EwmaEstimator({
-      fastHalfLife,
-      slowHalfLife,
-      defaultEstimate: defaultBandwidthEstimate,
-    });
-
-    this.player_.on(Events.NETWORK_RESPONSE, this.onNetworkResponse_);
-  }
-
-  /**
-   * Returns the current throughput estimate in bits/s.
-   * The EWMA estimator returns bytes/s, so we multiply
-   * by 8 to convert.
-   */
-  getEstimate(): number {
-    return this.estimator_.getEstimate() * 8;
-  }
-
-  getDecision(): Stream | null {
-    const streams = this.player_.getStreams(MediaType.VIDEO);
-    if (!streams.length) {
-      return null;
-    }
-
-    const { bandwidthUpgradeTarget, bandwidthDowngradeTarget } =
-      this.player_.getConfig().abr;
-    const throughput = this.getEstimate();
-    const audioStream = this.player_.getActiveStream(MediaType.AUDIO);
-    const audioBandwidth = audioStream ? audioStream.bandwidth : 0;
-    const effectiveBandwidth = throughput - audioBandwidth;
-
-    const currentStream = this.player_.getActiveStream(MediaType.VIDEO);
-
-    let best: Stream | null = null;
-    for (const stream of streams) {
-      const factor = ThroughputRule.isUpgrade_(currentStream, stream)
-        ? bandwidthUpgradeTarget
-        : bandwidthDowngradeTarget;
-      if (stream.bandwidth <= effectiveBandwidth * factor) {
-        best = stream;
-      }
-    }
-
-    return best ?? streams[0] ?? null;
-  }
-
-  destroy() {
-    this.player_.off(Events.NETWORK_RESPONSE, this.onNetworkResponse_);
-  }
-
-  private static isUpgrade_(
-    current: Stream | null,
-    candidate: Stream,
-  ): boolean {
-    return !current || candidate.bandwidth > current.bandwidth;
-  }
-
-  private onNetworkResponse_ = (event: NetworkResponseEvent) => {
-    if (event.type !== NetworkRequestType.SEGMENT) {
-      return;
-    }
-    this.estimator_.sample({
-      startTime: 0,
-      duration: event.response.timeElapsed,
-      encodedBodySize: event.response.arrayBuffer.byteLength,
-    });
-  };
-}
-```
-
-- [ ] **Step 4: Run tests to verify they pass**
-
-```bash
-cd packages/cmaf-lite && pnpm test -- --run -t "ThroughputRule"
-```
-
-Expected: All ThroughputRule tests pass.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add packages/cmaf-lite/lib/abr/rule_throughput.ts \
-  packages/cmaf-lite/test/abr/rule_throughput.test.ts
-git commit -m "feat: implement ThroughputRule"
-```
-
----
-
-### Task 8: Implement BolaRule
-
-**Files:**
-- Create: `packages/cmaf-lite/lib/abr/rule_bola.ts`
-- Create: `packages/cmaf-lite/test/abr/rule_bola.test.ts`
-
-- [ ] **Step 1: Write failing tests**
-
-Create `test/abr/rule_bola.test.ts`:
-
-```ts
-import { describe, expect, it } from "vitest";
-import { BolaRule } from "../../lib/abr/rule_bola";
-import { MediaType } from "../../lib/types/media";
-import { buildStreams } from "../../lib/utils/stream_utils";
-import {
-  createManifest,
-  createSwitchingSet,
-  createVideoTrack,
-} from "../__framework__/factories";
-import { createMockPlayer } from "../__framework__/player_mock";
-import { createTimeRanges } from "../__framework__/time_ranges";
-
-function createVideoStreams() {
-  const manifest = createManifest({
-    switchingSets: [
-      createSwitchingSet({
-        tracks: [
-          createVideoTrack({ bandwidth: 500_000, width: 640, height: 360 }),
-          createVideoTrack({ bandwidth: 1_500_000, width: 1280, height: 720 }),
-          createVideoTrack({ bandwidth: 3_000_000, width: 1920, height: 1080 }),
-        ],
-      }),
-    ],
-  });
-  return buildStreams(manifest).get(MediaType.VIDEO)!;
-}
-
-describe("BolaRule", () => {
-  it("abstains when buffer is below maxSegmentDuration", () => {
-    const streams = createVideoStreams();
-    const player = createMockPlayer({
-      getStreams: () => streams,
-      getActiveStream: () => streams[0],
-      getBuffered: () => createTimeRanges([0, 2]),
-      getMedia: () => ({ currentTime: 0 }),
-    });
-    const rule = new BolaRule(player);
-
-    // maxSegmentDuration is 4 (from factory default), buffer is 2
-    expect(rule.getDecision()).toBeNull();
-  });
-
-  it("picks higher stream when buffer is healthy", () => {
-    const streams = createVideoStreams();
-    const player = createMockPlayer({
-      getStreams: () => streams,
-      getActiveStream: () => streams[0],
-      getBuffered: () => createTimeRanges([0, 30]),
-      getMedia: () => ({ currentTime: 0 }),
-    });
-    const rule = new BolaRule(player);
-
-    const decision = rule.getDecision();
-    expect(decision).not.toBeNull();
-    expect(decision!.bandwidth).toBeGreaterThanOrEqual(streams[1]!.bandwidth);
-  });
-
-  it("picks conservatively when buffer is just above threshold", () => {
-    const streams = createVideoStreams();
-    const player = createMockPlayer({
-      getStreams: () => streams,
-      getActiveStream: () => streams[0],
-      getBuffered: () => createTimeRanges([0, 5]),
-      getMedia: () => ({ currentTime: 0 }),
-    });
-    const rule = new BolaRule(player);
-
-    const decision = rule.getDecision();
-    expect(decision).not.toBeNull();
-    expect(decision!.bandwidth).toBeLessThanOrEqual(streams[1]!.bandwidth);
-  });
-});
-```
-
-- [ ] **Step 2: Run tests to verify they fail**
-
-```bash
-cd packages/cmaf-lite && pnpm test -- --run -t "BolaRule"
-```
-
-Expected: FAIL — module does not exist.
-
-- [ ] **Step 3: Implement BolaRule**
-
-Create `lib/abr/rule_bola.ts`:
-
-```ts
-import type { AbrRule } from "../types/abr";
-import type { Stream } from "../types/media";
-import { MediaType } from "../types/media";
-import type { Player } from "../player";
-import { getBufferedEnd } from "../utils/buffer_utils";
-
-const MINIMUM_BUFFER_S = 10;
-const MINIMUM_BUFFER_PER_LEVEL_S = 2;
-
-/**
- * Buffer-Optimized Bitrate Algorithm. Uses buffer level
- * to compute utility scores per stream — higher buffer
- * allows higher quality.
- *
- * Abstains during startup (buffer < maxSegmentDuration).
- *
- * @internal
- */
-export class BolaRule implements AbrRule {
-  private player_: Player;
-
-  constructor(player: Player) {
-    this.player_ = player;
-  }
-
-  getDecision(): Stream | null {
-    const streams = this.player_.getStreams(MediaType.VIDEO);
-    if (!streams.length) {
-      return null;
-    }
-
-    const currentStream = this.player_.getActiveStream(MediaType.VIDEO);
-    if (!currentStream) {
-      return null;
-    }
-
-    const { maxSegmentDuration } = currentStream.hierarchy.track;
-    const bufferLevel = this.getBufferLevel_();
-
-    if (bufferLevel < maxSegmentDuration) {
-      return null;
-    }
-
-    // Compute utility parameters inline — no array allocations.
-    // Utility is log(bandwidth) normalized so lowest stream = 1.
-    const minUtility = Math.log(streams[0].bandwidth);
-    const highestNormalized =
-      Math.log(streams[streams.length - 1].bandwidth) - minUtility + 1;
-
-    const bufferTarget = Math.max(
-      MINIMUM_BUFFER_S,
-      MINIMUM_BUFFER_S + MINIMUM_BUFFER_PER_LEVEL_S * streams.length,
-    );
-
-    const utilityOffset =
-      (highestNormalized - 1) / (bufferTarget / MINIMUM_BUFFER_S - 1);
-    const utilityScale = MINIMUM_BUFFER_S / utilityOffset;
-
-    let bestIndex = 0;
-    let bestScore = -Infinity;
-
-    for (let i = 0; i < streams.length; i++) {
-      const normalized = Math.log(streams[i].bandwidth) - minUtility + 1;
-      const score =
-        (utilityScale * (normalized + utilityOffset) - bufferLevel) /
-        streams[i].bandwidth;
-      if (score > bestScore) {
-        bestScore = score;
-        bestIndex = i;
-      }
-    }
-
-    return streams[bestIndex] ?? null;
-  }
-
-  private getBufferLevel_(): number {
-    const media = this.player_.getMedia();
-    if (!media) {
-      return 0;
-    }
-    const buffered = this.player_.getBuffered(MediaType.VIDEO);
-    const { maxBufferHole } = this.player_.getConfig();
-    const end = getBufferedEnd(buffered, media.currentTime, maxBufferHole);
-    return end ? end - media.currentTime : 0;
-  }
-}
-```
-
-- [ ] **Step 4: Run tests to verify they pass**
-
-```bash
-cd packages/cmaf-lite && pnpm test -- --run -t "BolaRule"
-```
-
-Expected: All BolaRule tests pass.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add packages/cmaf-lite/lib/abr/rule_bola.ts \
-  packages/cmaf-lite/test/abr/rule_bola.test.ts
-git commit -m "feat: implement BolaRule"
-```
-
----
-
-### Task 9: Implement InsufficientBufferRule
-
-**Files:**
-- Create: `packages/cmaf-lite/lib/abr/rule_insufficient_buffer.ts`
-- Create: `packages/cmaf-lite/test/abr/rule_insufficient_buffer.test.ts`
-
-- [ ] **Step 1: Write failing tests**
-
-Create `test/abr/rule_insufficient_buffer.test.ts`:
-
-```ts
-import { describe, expect, it } from "vitest";
-import { InsufficientBufferRule } from "../../lib/abr/rule_insufficient_buffer";
-import { MediaType } from "../../lib/types/media";
-import { buildStreams } from "../../lib/utils/stream_utils";
-import {
-  createManifest,
-  createSwitchingSet,
-  createVideoTrack,
-} from "../__framework__/factories";
-import { createMockPlayer } from "../__framework__/player_mock";
-import { createMockAbrController } from "../__framework__/abr_controller_mock";
-import { createTimeRanges } from "../__framework__/time_ranges";
-
-function createVideoStreams() {
-  const manifest = createManifest({
-    switchingSets: [
-      createSwitchingSet({
-        tracks: [
-          createVideoTrack({ bandwidth: 500_000, width: 640, height: 360 }),
-          createVideoTrack({ bandwidth: 1_500_000, width: 1280, height: 720 }),
-          createVideoTrack({ bandwidth: 3_000_000, width: 1920, height: 1080 }),
-        ],
-      }),
-    ],
-  });
-  return buildStreams(manifest).get(MediaType.VIDEO)!;
-}
-
-describe("InsufficientBufferRule", () => {
-  it("abstains when buffer is below maxSegmentDuration", () => {
-    const streams = createVideoStreams();
-    const player = createMockPlayer({
-      getStreams: () => streams,
-      getActiveStream: () => streams[1],
-      getBuffered: () => createTimeRanges([0, 2]),
-      getMedia: () => ({ currentTime: 0 }),
-    });
-    const controller = createMockAbrController({
-      getThroughputEstimate: () => 5_000_000,
-    });
-    const rule = new InsufficientBufferRule(player, controller);
-
-    expect(rule.getDecision()).toBeNull();
-  });
-
-  it("returns proportionally scaled stream when buffer is low", () => {
-    const streams = createVideoStreams();
-    const player = createMockPlayer({
-      getStreams: () => streams,
-      getActiveStream: () => streams[1],
-      getBuffered: () => createTimeRanges([0, 6]),
-      getMedia: () => ({ currentTime: 0 }),
-    });
-    const controller = createMockAbrController({
-      getThroughputEstimate: () => 3_000_000,
-    });
-    const rule = new InsufficientBufferRule(player, controller);
-
-    const decision = rule.getDecision();
-    // bitrate = 3_000_000 * 0.7 * (6 / 4) = 3_150_000
-    // Fits stream at 3_000_000
-    expect(decision).not.toBeNull();
-    expect(decision?.bandwidth).toBe(3_000_000);
-  });
-
-  it("returns lowest stream when buffer barely above threshold", () => {
-    const streams = createVideoStreams();
-    const player = createMockPlayer({
-      getStreams: () => streams,
-      getActiveStream: () => streams[1],
-      getBuffered: () => createTimeRanges([0, 4.5]),
-      getMedia: () => ({ currentTime: 0 }),
-    });
-    const controller = createMockAbrController({
-      getThroughputEstimate: () => 1_000_000,
-    });
-    const rule = new InsufficientBufferRule(player, controller);
-
-    const decision = rule.getDecision();
-    // bitrate = 1_000_000 * 0.7 * (4.5 / 4) = 787_500
-    // Fits stream at 500_000
-    expect(decision).not.toBeNull();
-    expect(decision?.bandwidth).toBe(500_000);
-  });
-});
-```
-
-- [ ] **Step 2: Run tests to verify they fail**
-
-```bash
-cd packages/cmaf-lite && pnpm test -- --run -t "InsufficientBufferRule"
-```
-
-Expected: FAIL — module does not exist.
-
-- [ ] **Step 3: Implement InsufficientBufferRule**
-
-Create `lib/abr/rule_insufficient_buffer.ts`:
-
-```ts
-import type { AbrRule } from "../types/abr";
-import type { Stream } from "../types/media";
-import { MediaType } from "../types/media";
-import type { Player } from "../player";
-import type { AbrController } from "./abr_controller";
-import { getBufferedEnd } from "../utils/buffer_utils";
-
-const THROUGHPUT_SAFETY_FACTOR = 0.7;
-
-/**
- * Proportionally reduces quality when buffer is low.
- * Uses `throughput * 0.7 * (bufferLevel / maxSegmentDuration)`
- * to compute a target bitrate.
- *
- * Abstains during startup (buffer < maxSegmentDuration).
- *
- * @internal
- */
-export class InsufficientBufferRule implements AbrRule {
-  private player_: Player;
-  private controller_: AbrController;
-
-  constructor(player: Player, controller: AbrController) {
-    this.player_ = player;
-    this.controller_ = controller;
-  }
-
-  getDecision(): Stream | null {
-    const streams = this.player_.getStreams(MediaType.VIDEO);
-    if (!streams.length) {
-      return null;
-    }
-
-    const currentStream = this.player_.getActiveStream(MediaType.VIDEO);
-    if (!currentStream) {
-      return null;
-    }
-
-    const { maxSegmentDuration } = currentStream.hierarchy.track;
-    const bufferLevel = this.getBufferLevel_();
-
-    if (bufferLevel < maxSegmentDuration) {
-      return null;
-    }
-
-    const throughput = this.controller_.getThroughputEstimate();
-    const targetBitrate =
-      throughput *
-      THROUGHPUT_SAFETY_FACTOR *
-      (bufferLevel / maxSegmentDuration);
-
-    let best: Stream | null = null;
-    for (const stream of streams) {
-      if (stream.bandwidth <= targetBitrate) {
-        best = stream;
-      }
-    }
-
-    return best ?? streams[0] ?? null;
-  }
-
-  private getBufferLevel_(): number {
-    const media = this.player_.getMedia();
-    if (!media) {
-      return 0;
-    }
-    const buffered = this.player_.getBuffered(MediaType.VIDEO);
-    const { maxBufferHole } = this.player_.getConfig();
-    const end = getBufferedEnd(buffered, media.currentTime, maxBufferHole);
-    return end ? end - media.currentTime : 0;
-  }
-}
-```
-
-- [ ] **Step 4: Run tests to verify they pass**
-
-```bash
-cd packages/cmaf-lite && pnpm test -- --run -t "InsufficientBufferRule"
-```
-
-Expected: All InsufficientBufferRule tests pass.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add packages/cmaf-lite/lib/abr/rule_insufficient_buffer.ts \
-  packages/cmaf-lite/test/abr/rule_insufficient_buffer.test.ts
-git commit -m "feat: implement InsufficientBufferRule"
-```
-
----
-
-### Task 10: Implement DroppedFramesRule
-
-**Files:**
-- Create: `packages/cmaf-lite/lib/abr/rule_dropped_frames.ts`
-- Create: `packages/cmaf-lite/test/abr/rule_dropped_frames.test.ts`
-
-- [ ] **Step 1: Write failing tests**
-
-Create `test/abr/rule_dropped_frames.test.ts`:
-
-```ts
-import { describe, expect, it } from "vitest";
-import { DroppedFramesRule } from "../../lib/abr/rule_dropped_frames";
-import { MediaType } from "../../lib/types/media";
-import { buildStreams } from "../../lib/utils/stream_utils";
-import {
-  createManifest,
-  createSwitchingSet,
-  createVideoTrack,
-} from "../__framework__/factories";
-import { createMockPlayer } from "../__framework__/player_mock";
-
-function createVideoStreams() {
-  const manifest = createManifest({
-    switchingSets: [
-      createSwitchingSet({
-        tracks: [
-          createVideoTrack({ bandwidth: 500_000, width: 640, height: 360 }),
-          createVideoTrack({ bandwidth: 1_500_000, width: 1280, height: 720 }),
-          createVideoTrack({ bandwidth: 3_000_000, width: 1920, height: 1080 }),
-        ],
-      }),
-    ],
-  });
-  return buildStreams(manifest).get(MediaType.VIDEO)!;
-}
-
-function playerWithDrops(
-  streams: ReturnType<typeof createVideoStreams>,
-  currentIndex: number,
-  droppedRatio: number,
-) {
-  const totalFrames = 1000;
-  return createMockPlayer({
-    getStreams: () => streams,
-    getActiveStream: (type: MediaType) =>
-      type === MediaType.VIDEO ? streams[currentIndex] : null,
-    getMedia: () => ({
-      getVideoPlaybackQuality: () => ({
-        totalVideoFrames: totalFrames,
-        droppedVideoFrames: Math.round(totalFrames * droppedRatio),
-      }),
-    }),
-  });
-}
-
-describe("DroppedFramesRule", () => {
-  it("abstains when dropped frame ratio is below threshold", () => {
-    const streams = createVideoStreams();
-    const player = playerWithDrops(streams, 2, 0.05);
-    const rule = new DroppedFramesRule(player);
-
-    expect(rule.getDecision()).toBeNull();
-  });
-
-  it("returns one stream below current when ratio exceeds threshold", () => {
-    const streams = createVideoStreams();
-    const player = playerWithDrops(streams, 2, 0.20);
-    const rule = new DroppedFramesRule(player);
-
-    expect(rule.getDecision()).toBe(streams[1]);
-  });
-
-  it("returns lowest stream when already at index 1", () => {
-    const streams = createVideoStreams();
-    const player = playerWithDrops(streams, 1, 0.20);
-    const rule = new DroppedFramesRule(player);
-
-    expect(rule.getDecision()).toBe(streams[0]);
-  });
-
-  it("returns lowest stream when already at lowest", () => {
-    const streams = createVideoStreams();
-    const player = playerWithDrops(streams, 0, 0.20);
-    const rule = new DroppedFramesRule(player);
-
-    expect(rule.getDecision()).toBe(streams[0]);
-  });
-
-  it("abstains when media element is not available", () => {
-    const streams = createVideoStreams();
-    const player = createMockPlayer({
-      getStreams: () => streams,
-      getActiveStream: () => streams[2],
-      getMedia: () => null,
-    });
-    const rule = new DroppedFramesRule(player);
-
-    expect(rule.getDecision()).toBeNull();
-  });
-});
-```
-
-- [ ] **Step 2: Run tests to verify they fail**
-
-```bash
-cd packages/cmaf-lite && pnpm test -- --run -t "DroppedFramesRule"
-```
-
-Expected: FAIL — module does not exist.
-
-- [ ] **Step 3: Implement DroppedFramesRule**
-
-Create `lib/abr/rule_dropped_frames.ts`:
-
-```ts
-import type { AbrRule } from "../types/abr";
-import type { Stream } from "../types/media";
-import { MediaType } from "../types/media";
-import type { Player } from "../player";
-
-/**
- * Downgrades quality when the device cannot keep up
- * with decoding, detected via dropped frame ratio.
- *
- * @internal
- */
-export class DroppedFramesRule implements AbrRule {
-  private player_: Player;
-
-  constructor(player: Player) {
-    this.player_ = player;
-  }
-
-  getDecision(): Stream | null {
-    const media = this.player_.getMedia() as HTMLVideoElement | null;
-    if (!media?.getVideoPlaybackQuality) {
-      return null;
-    }
-
-    const quality = media.getVideoPlaybackQuality();
-    if (quality.totalVideoFrames === 0) {
-      return null;
-    }
-
-    const ratio = quality.droppedVideoFrames / quality.totalVideoFrames;
-    const { droppedFramesThreshold } = this.player_.getConfig().abr;
-
-    if (ratio <= droppedFramesThreshold) {
-      return null;
-    }
-
-    const streams = this.player_.getStreams(MediaType.VIDEO);
-    if (!streams.length) {
-      return null;
-    }
-
-    const currentStream = this.player_.getActiveStream(MediaType.VIDEO);
-    const currentIndex = currentStream
-      ? streams.indexOf(currentStream)
-      : streams.length - 1;
-
-    return streams[Math.max(0, currentIndex - 1)] ?? null;
-  }
-}
-```
-
-- [ ] **Step 4: Run tests to verify they pass**
-
-```bash
-cd packages/cmaf-lite && pnpm test -- --run -t "DroppedFramesRule"
-```
-
-Expected: All DroppedFramesRule tests pass.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add packages/cmaf-lite/lib/abr/rule_dropped_frames.ts \
-  packages/cmaf-lite/test/abr/rule_dropped_frames.test.ts
-git commit -m "feat: implement DroppedFramesRule"
-```
-
----
-
-### Task 11: Implement AbrController
-
-**Files:**
-- Create: `packages/cmaf-lite/lib/abr/abr_controller.ts`
-
-Note: AbrController tests are skipped for now — validated via the demo app.
-
-- [ ] **Step 1: Implement AbrController**
-
-Create `lib/abr/abr_controller.ts`:
-
-```ts
-import type { Player } from "../player";
-import type { AbrRule } from "../types/abr";
-import type { Stream } from "../types/media";
-import { MediaType } from "../types/media";
-import { Events } from "../events";
-import { Timer } from "../utils/timer";
-import { ThroughputRule } from "./rule_throughput";
-import { BolaRule } from "./rule_bola";
-import { InsufficientBufferRule } from "./rule_insufficient_buffer";
-import { DroppedFramesRule } from "./rule_dropped_frames";
-
-/**
- * Rule-based ABR controller. Evaluates all rules on a
- * timer and applies the most conservative (lowest
- * bandwidth) result.
- *
- * @internal
- */
-export class AbrController {
-  private player_: Player;
-  private timer_: Timer;
-  private throughputRule_: ThroughputRule;
-  private bolaRule_: BolaRule;
-  private insufficientBufferRule_: InsufficientBufferRule;
-  private droppedFramesRule_: DroppedFramesRule;
-  private rules_: AbrRule[];
-
-  constructor(player: Player) {
-    this.player_ = player;
-    this.timer_ = new Timer(() => this.evaluate_());
-
-    this.throughputRule_ = new ThroughputRule(player);
-    this.bolaRule_ = new BolaRule(player);
-    this.insufficientBufferRule_ = new InsufficientBufferRule(
-      player,
-      this,
-    );
-    this.droppedFramesRule_ = new DroppedFramesRule(player);
-
-    this.rules_ = [
-      this.throughputRule_,
-      this.bolaRule_,
-      this.insufficientBufferRule_,
-      this.droppedFramesRule_,
-    ];
-
-    this.player_.on(Events.STREAMS_UPDATED, this.onStreamsUpdated_);
-  }
-
-  /**
-   * Returns the current throughput estimate in bits/s.
-   */
-  getThroughputEstimate(): number {
-    return this.throughputRule_.getEstimate();
-  }
-
-  destroy() {
-    this.timer_.stop();
-    this.player_.off(Events.STREAMS_UPDATED, this.onStreamsUpdated_);
-    this.throughputRule_.destroy();
-  }
-
-  private onStreamsUpdated_ = () => {
-    this.evaluate_();
-    const interval = this.player_.getConfig().abr.evaluationInterval;
-    this.timer_.tickEvery(interval);
-  };
-
-  private evaluate_() {
-    const streams = this.player_.getStreams(MediaType.VIDEO);
-    if (!streams.length) {
-      return;
-    }
-
-    let best: Stream | null = null;
-    for (const rule of this.rules_) {
-      const stream = rule.getDecision();
-      if (stream && (!best || stream.bandwidth < best.bandwidth)) {
-        best = stream;
-      }
-    }
-
-    const current = this.player_.getActiveStream(MediaType.VIDEO);
-    if (best && best !== current) {
-      this.player_.setStreamPreference({
-        type: MediaType.VIDEO,
-        bandwidth: best.bandwidth,
-      });
-    }
-  }
-}
-```
-
-- [ ] **Step 2: Run type check**
-
-```bash
-cd packages/cmaf-lite && pnpm tsc
-```
-
-Expected: No errors.
-
-- [ ] **Step 3: Commit**
-
-```bash
 git add packages/cmaf-lite/lib/abr/abr_controller.ts \
-  packages/cmaf-lite/test/abr/abr_controller.test.ts
-git commit -m "feat: implement AbrController"
+  packages/cmaf-lite/lib/index.ts
+git commit -m "feat: implement AbrController with inline rules"
 ```
 
 ---
 
-### Task 12: Wire AbrController into Player
+### Task 6: Wire AbrController into Player
 
 **Files:**
 - Modify: `packages/cmaf-lite/lib/player.ts`
-- Modify: `packages/cmaf-lite/lib/index.ts`
 
 - [ ] **Step 1: Add AbrController to Player**
 
-In `lib/player.ts`, add the import and instantiation:
+In `lib/player.ts`, add the import:
 
 ```ts
 import { AbrController } from "./abr/abr_controller";
@@ -1464,15 +698,7 @@ In the `destroy()` method, before `this.removeAllListeners()`:
 this.abrController_.destroy();
 ```
 
-- [ ] **Step 2: Export ABR modules from index**
-
-In `lib/index.ts`, add:
-
-```ts
-export { AbrController } from "./abr/abr_controller";
-```
-
-- [ ] **Step 3: Run type check and tests**
+- [ ] **Step 2: Run type check and tests**
 
 ```bash
 cd packages/cmaf-lite && pnpm tsc && pnpm test
@@ -1480,17 +706,16 @@ cd packages/cmaf-lite && pnpm tsc && pnpm test
 
 Expected: All pass.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add packages/cmaf-lite/lib/player.ts \
-  packages/cmaf-lite/lib/index.ts
+git add packages/cmaf-lite/lib/player.ts
 git commit -m "feat: wire AbrController into Player"
 ```
 
 ---
 
-### Task 13: Write user-facing ABR documentation
+### Task 7: Write user-facing ABR documentation
 
 **Files:**
 - Create: `packages/cmaf-lite/docs/abr.md`
@@ -1566,6 +791,59 @@ All settings live under the `abr` key in the player config:
 | `fastHalfLife` | `3` | EWMA fast estimator half-life (seconds) |
 | `slowHalfLife` | `9` | EWMA slow estimator half-life (seconds) |
 | `droppedFramesThreshold` | `0.15` | Dropped frame ratio to trigger downgrade |
+
+## Future Enhancements
+
+The following refinements are intentionally deferred. They are tracked
+here so future work can revisit them with full context.
+
+### BOLA placeholder buffer
+
+The original BOLA paper and dash.js maintain a virtual buffer that
+compensates for non-download delays (pauses, stalls, seek recovery).
+Without it, a user-initiated pause can make BOLA pick a lower quality
+when playback resumes because actual throughput samples have grown
+stale. A placeholder buffer decays gradually (0.99 per cycle in dash.js)
+so BOLA sees a smoothly declining virtual buffer rather than a cliff.
+
+Not implemented because cmaf-lite is VOD-focused and the min-aggregation
+with ThroughputRule keeps the overall decision safe even if BOLA's score
+is temporarily pessimistic.
+
+### BOLA startup mode
+
+dash.js uses throughput-guided selection inside BOLA during startup
+until the buffer reaches one segment duration. Our BolaRule abstains
+entirely below that threshold and lets ThroughputRule drive initial
+quality.
+
+The simpler approach works because ThroughputRule always runs. If a
+future change isolates rules (e.g., strategy switching), BOLA will need
+its own startup handling.
+
+### InsufficientBufferRule buffer-empty hard zero
+
+dash.js force-selects the lowest quality when the buffer state is
+completely empty, in addition to the proportional formula. We abstain
+when the buffer is below one segment duration, so near-zero buffer is
+only reachable between evaluations. With a high throughput estimate and
+a sudden buffer drop, the proportional formula could pick a non-lowest
+stream.
+
+Not implemented because rebuffering is imminent regardless in that
+scenario, and shortening the evaluation interval is a simpler mitigation
+if it becomes a real problem.
+
+### Per-representation dropped frame history
+
+dash.js tracks dropped frames per quality level and caps below the
+lowest bad level (with a 375-frame minimum sample size). Our rule uses
+the global ratio from `getVideoPlaybackQuality()` and steps down one
+level when it exceeds the threshold.
+
+Not implemented because cmaf-lite does not flush the buffer on ABR
+switches, so frames from prior streams continue decoding into the new
+stream — we cannot cleanly attribute drops per stream.
 ```
 
 - [ ] **Step 2: Commit**
@@ -1577,7 +855,7 @@ git commit -m "docs: add ABR documentation"
 
 ---
 
-### Task 14: Final verification
+### Task 8: Final verification
 
 - [ ] **Step 1: Run full test suite**
 

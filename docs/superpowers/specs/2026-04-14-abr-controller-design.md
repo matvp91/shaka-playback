@@ -236,8 +236,9 @@ event listeners from the player. Called by Player on destroy.
   `getBufferedEnd(buffered, currentTime, maxBufferHole) - currentTime`.
 - **Video element access:** DroppedFramesRule accesses the video element via
   `player.getMedia()` to call `getVideoPlaybackQuality()`.
-- **EWMA sample mapping:** `NetworkResponse.arrayBuffer.byteLength`
-  for size, `NetworkResponse.timeElapsed` for duration, mapped to
+- **EWMA sample mapping:** `NetworkResponse.arrayBuffer.byteLength` for
+  size, `NetworkResponse.timeElapsed` for duration,
+  `NetworkResponse.startTime` for startTime — mapped to
   `@svta/cml-throughput`'s `ResourceTiming` format. Returns bytes/s,
   converted to bits/s via `* 8` in `getEstimate()`.
 
