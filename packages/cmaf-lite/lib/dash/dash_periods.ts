@@ -6,7 +6,7 @@ import * as Functional from "../utils/functional";
 import * as ManifestUtils from "../utils/manifest_utils";
 import * as UrlUtils from "../utils/url_utils";
 import * as XmlUtils from "../utils/xml_utils";
-import { parseSegments } from "./dash_segments";
+import { parseSegmentData } from "./dash_segments";
 
 type PeriodContext = {
   sourceUrl: string;
@@ -175,7 +175,7 @@ function parseTrack(
   );
   asserts.assertExists(bandwidth, "bandwidth is mandatory");
 
-  const segments = parseSegments(
+  const segmentData = parseSegmentData(
     period,
     adaptationSet,
     representation,
@@ -200,7 +200,7 @@ function parseTrack(
       width,
       height,
       bandwidth,
-      segments,
+      ...segmentData,
     };
   }
 
@@ -208,7 +208,7 @@ function parseTrack(
     return {
       type: MediaType.AUDIO,
       bandwidth,
-      segments,
+      ...segmentData,
     };
   }
 
