@@ -116,6 +116,15 @@ describe("DashParser", () => {
     expect(audio).toBeDefined();
   });
 
+  it("computes maxSegmentDuration on each track", () => {
+    const result = parseManifest(loadFixture("basic.mpd"), sourceUrl);
+    for (const ss of result.switchingSets) {
+      for (const track of ss.tracks) {
+        expect(track.maxSegmentDuration).toBe(4);
+      }
+    }
+  });
+
   it("throws when MPD contains no Period elements", () => {
     const emptyMpd = `<?xml version="1.0" encoding="UTF-8"?>
 <MPD xmlns="urn:mpeg:dash:schema:mpd:2011"

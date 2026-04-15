@@ -136,16 +136,15 @@ export class NetworkService {
   ): Promise<NetworkResponse> {
     this.player_.emit(Events.NETWORK_REQUEST, { type, request });
 
-    const start = performance.now();
+    const startTime = performance.now();
     const res = await this.fetch_(request);
     const data = await res.arrayBuffer();
-    const timeElapsed = performance.now() - start;
 
     const response = new NetworkResponse(
       request,
       res.status,
       res.headers,
-      timeElapsed,
+      startTime,
       data,
     );
 

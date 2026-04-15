@@ -25,6 +25,11 @@ export function buildStreams(manifest: Manifest): Map<MediaType, Stream[]> {
     }
   }
   asserts.assert(result.size > 0, "No streams found");
+  // Sorted by bandwidth ascending — index 0 is lowest quality.
+  // Required for ABR rules to reason about the quality ladder.
+  for (const streams of result.values()) {
+    streams.sort((a, b) => a.bandwidth - b.bandwidth);
+  }
   return result;
 }
 

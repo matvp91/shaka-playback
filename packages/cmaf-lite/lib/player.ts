@@ -1,4 +1,5 @@
 import { EventEmitter } from "@matvp91/eventemitter3";
+import { AbrController } from "./abr/abr_controller";
 import type { ConfigPath, ConfigPathValue, PlayerConfig } from "./config";
 import { DEFAULT_CONFIG } from "./config";
 import type { EventMap } from "./events";
@@ -32,6 +33,7 @@ export class Player extends EventEmitter<EventMap> {
   private bufferController_: BufferController;
   private gapController_: GapController;
   private streamController_: StreamController;
+  private abrController_: AbrController;
 
   constructor() {
     super();
@@ -43,6 +45,7 @@ export class Player extends EventEmitter<EventMap> {
     this.bufferController_ = new BufferController(this);
     this.gapController_ = new GapController(this);
     this.streamController_ = new StreamController(this);
+    this.abrController_ = new AbrController(this);
   }
 
   /**
@@ -181,6 +184,7 @@ export class Player extends EventEmitter<EventMap> {
     this.bufferController_.destroy();
     this.gapController_.destroy();
     this.streamController_.destroy();
+    this.abrController_.destroy();
     this.removeAllListeners();
   }
 }

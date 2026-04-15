@@ -6,14 +6,19 @@ import * as Functional from "../utils/functional";
 import * as UrlUtils from "../utils/url_utils";
 import * as XmlUtils from "../utils/xml_utils";
 
-export function parseSegments(
+type SegmentData = {
+  segments: Segment[];
+  maxSegmentDuration: number;
+};
+
+export function parseSegmentData(
   period: txml.TNode,
   adaptationSet: txml.TNode,
   representation: txml.TNode,
   baseUrl: string,
   bandwidth: number,
   duration: number | null,
-): Segment[] {
+): SegmentData {
   const st = resolveSegmentTemplate(period, adaptationSet, representation);
 
   const initialization = XmlUtils.attr(
@@ -65,7 +70,7 @@ function mapTemplateTimeline(
   bandwidth: number,
   periodStart: number,
   initSegment: InitSegment,
-): Segment[] {
+): SegmentData {
   const media = XmlUtils.attr(st, "media", XmlUtils.parseString);
   asserts.assertExists(media, "media is mandatory");
 
@@ -76,6 +81,7 @@ function mapTemplateTimeline(
     XmlUtils.attr(st, "presentationTimeOffset", XmlUtils.parseNumber) ?? 0;
 
   const segments: Segment[] = [];
+  let maxSegmentDuration = 0;
   let time = 0;
   let number = startNumber;
 
@@ -96,18 +102,16 @@ function mapTemplateTimeline(
         time,
       );
       const url = UrlUtils.resolveUrl(relativeUrl, baseUrl);
-      segments.push({
-        url,
-        start: (time - pto) / timescale + periodStart,
-        end: (time - pto + d) / timescale + periodStart,
-        initSegment,
-      });
+      const start = (time - pto) / timescale + periodStart;
+      const end = (time - pto + d) / timescale + periodStart;
+      segments.push({ url, start, end, initSegment });
+      maxSegmentDuration = Math.max(maxSegmentDuration, end - start);
       time += d;
       number++;
     }
   }
 
-  return segments;
+  return { segments, maxSegmentDuration };
 }
 
 function mapTemplateDuration(
@@ -118,7 +122,7 @@ function mapTemplateDuration(
   periodStart: number,
   presentationDuration: number | null,
   initSegment: InitSegment,
-): Segment[] {
+): SegmentData {
   const media = XmlUtils.attr(st, "media", XmlUtils.parseString);
   asserts.assertExists(media, "media is mandatory");
   asserts.assertExists(
@@ -154,15 +158,12 @@ function mapTemplateDuration(
       time,
     );
     const url = UrlUtils.resolveUrl(relativeUrl, baseUrl);
-    segments.push({
-      url,
-      start: (time - pto) / timescale + periodStart,
-      end: (time - pto + templateDuration) / timescale + periodStart,
-      initSegment,
-    });
+    const start = (time - pto) / timescale + periodStart;
+    const end = (time - pto + templateDuration) / timescale + periodStart;
+    segments.push({ url, start, end, initSegment });
   }
 
-  return segments;
+  return { segments, maxSegmentDuration: segmentDuration };
 }
 
 /**

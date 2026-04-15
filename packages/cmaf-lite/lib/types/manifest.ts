@@ -40,6 +40,8 @@ export type Track = Prettify<
     bandwidth: number;
     /** Ordered chunks on the presentation timeline. */
     segments: Segment[];
+    /** Longest segment duration in seconds. */
+    maxSegmentDuration: number;
   } & (
     | {
         /** Video type */

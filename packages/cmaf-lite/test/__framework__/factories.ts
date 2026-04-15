@@ -35,6 +35,7 @@ export function createVideoTrack(
     width: 1920,
     height: 1080,
     segments: [createSegment()],
+    maxSegmentDuration: 4,
     ...overrides,
   };
 }
@@ -46,6 +47,7 @@ export function createAudioTrack(
     type: MediaType.AUDIO,
     bandwidth: 128_000,
     segments: [createSegment()],
+    maxSegmentDuration: 4,
     ...overrides,
   };
 }
