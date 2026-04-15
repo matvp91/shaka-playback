@@ -29,6 +29,9 @@ importers:
       '@svta/cml-iso-bmff':
         specifier: ^1.0.1
         version: 1.0.1(@svta/cml-utils@1.4.0)
+      '@svta/cml-throughput':
+        specifier: ^1.0.5
+        version: 1.0.5(@svta/cml-utils@1.4.0)
       '@svta/cml-utils':
         specifier: ^1.4.0
         version: 1.4.0
@@ -53,7 +56,7 @@ importers:
         version: 20.8.9
       tsdown:
         specifier: ^0.21.7
-        version: 0.21.7(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+        version: 0.21.7(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(typescript@5.9.3)
       vitest:
         specifier: ^4.1.4
         version: 4.1.4(@types/node@25.5.2)(happy-dom@20.8.9)(vite@8.0.3)
@@ -2437,6 +2440,15 @@ packages:
 
   /@svta/cml-iso-bmff@1.0.1(@svta/cml-utils@1.4.0):
     resolution: {integrity: sha512-MOhATJYQ6cVrIcoY3nj8p/vGYDpG3wjQIIhBPHNt9yjFijdwFdBNqdZbCXv3aFhRjdx5Saca5TkgNJusKhnI/w==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@svta/cml-utils': 1.4.0
+    dependencies:
+      '@svta/cml-utils': 1.4.0
+    dev: false
+
+  /@svta/cml-throughput@1.0.5(@svta/cml-utils@1.4.0):
+    resolution: {integrity: sha512-NbHZOGyKgcFMZIQ1DoTiZUdbTp8MLjpQLOJBTrVsYi7qfriXAFjmrZqzcKP18qm9tNSrAJtDzP4AOuwekzFYtA==}
     engines: {node: '>=20'}
     peerDependencies:
       '@svta/cml-utils': 1.4.0
@@ -6355,7 +6367,7 @@ packages:
     engines: {iojs: '>=1.0.0', node: '>=0.10.0'}
     dev: false
 
-  /rolldown-plugin-dts@0.23.2(rolldown@1.0.0-rc.12):
+  /rolldown-plugin-dts@0.23.2(rolldown@1.0.0-rc.12)(typescript@5.9.3):
     resolution: {integrity: sha512-PbSqLawLgZBGcOGT3yqWBGn4cX+wh2nt5FuBGdcMHyOhoukmjbhYAl8NT9sE4U38Cm9tqLOIQeOrvzeayM0DLQ==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
@@ -6385,6 +6397,7 @@ packages:
       obug: 2.1.1
       picomatch: 4.0.4
       rolldown: 1.0.0-rc.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+      typescript: 5.9.3
     transitivePeerDependencies:
       - oxc-resolver
     dev: true
@@ -7064,7 +7077,7 @@ packages:
       strip-bom: 3.0.0
     dev: false
 
-  /tsdown@0.21.7(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2):
+  /tsdown@0.21.7(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(typescript@5.9.3):
     resolution: {integrity: sha512-ukKIxKQzngkWvOYJAyptudclkm4VQqbjq+9HF5K5qDO8GJsYtMh8gIRwicbnZEnvFPr6mquFwYAVZ8JKt3rY2g==}
     engines: {node: '>=20.19.0'}
     hasBin: true
@@ -7101,11 +7114,12 @@ packages:
       obug: 2.1.1
       picomatch: 4.0.4
       rolldown: 1.0.0-rc.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
-      rolldown-plugin-dts: 0.23.2(rolldown@1.0.0-rc.12)
+      rolldown-plugin-dts: 0.23.2(rolldown@1.0.0-rc.12)(typescript@5.9.3)
       semver: 7.7.4
       tinyexec: 1.1.1
       tinyglobby: 0.2.15
       tree-kill: 1.2.2
+      typescript: 5.9.3
       unconfig-core: 7.5.0
       unrun: 0.2.34(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
     transitivePeerDependencies:
