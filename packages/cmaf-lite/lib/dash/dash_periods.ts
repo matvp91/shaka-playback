@@ -72,6 +72,10 @@ function processAdaptationSet(
       type,
       duration,
     );
+    if (!track) {
+      // We parsed a track we don't support (yet)
+      continue;
+    }
     const trackKey = `${switchingSetKey}:${id}`;
     addTrack(ctx, switchingSet, trackKey, track);
   }
@@ -157,7 +161,7 @@ function parseTrack(
   representation: txml.TNode,
   type: MediaType,
   duration: number | null,
-): Track {
+): Track | null {
   const baseUrls = [ctx.mpd, period, adaptationSet, representation].flatMap(
     (node) => XmlUtils.children(node, "BaseURL").map(XmlUtils.text),
   );
@@ -210,7 +214,7 @@ function parseTrack(
     };
   }
 
-  throw new Error("TODO: Map TEXT type");
+  return null;
 }
 
 function inferMediaType(
@@ -229,7 +233,7 @@ function inferMediaType(
     return MediaType.AUDIO;
   }
   if (contentType === "text") {
-    return MediaType.TEXT;
+    return MediaType.SUBTITLE;
   }
   const mimeType =
     XmlUtils.attr(adaptationSet, "mimeType", XmlUtils.parseString) ??
@@ -243,7 +247,7 @@ function inferMediaType(
     return MediaType.AUDIO;
   }
   if (mimeType?.startsWith("text/") || mimeType?.startsWith("application/")) {
-    return MediaType.TEXT;
+    return MediaType.SUBTITLE;
   }
   throw new Error("Failed to infer media type");
 }

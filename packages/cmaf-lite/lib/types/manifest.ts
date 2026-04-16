@@ -45,14 +45,14 @@ export interface AudioSwitchingSet extends BaseSwitchingSet {
 }
 
 /**
- * Text switching set.
+ * Subtitle switching set.
  *
  * @public
  */
-export interface TextSwitchingSet extends BaseSwitchingSet {
-  type: MediaType.TEXT;
-  /** Text tracks. */
-  tracks: TextTrack[];
+export interface SubtitleSwitchingSet extends BaseSwitchingSet {
+  type: MediaType.SUBTITLE;
+  /** Subtitle tracks. */
+  tracks: SubtitleTrack[];
 }
 
 /**
@@ -62,7 +62,7 @@ export interface TextSwitchingSet extends BaseSwitchingSet {
  * @public
  */
 export type SwitchingSet<T extends MediaType = MediaType> = Extract<
-  VideoSwitchingSet | AudioSwitchingSet | TextSwitchingSet,
+  VideoSwitchingSet | AudioSwitchingSet | SubtitleSwitchingSet,
   {
     type: T;
   }
@@ -105,12 +105,12 @@ export interface AudioTrack extends BaseTrack {
 }
 
 /**
- * Text track.
+ * Subtitle track.
  *
  * @public
  */
-export interface TextTrack extends BaseTrack {
-  type: MediaType.TEXT;
+export interface SubtitleTrack extends BaseTrack {
+  type: MediaType.SUBTITLE;
 }
 
 /**
@@ -120,7 +120,7 @@ export interface TextTrack extends BaseTrack {
  * @public
  */
 export type Track<T extends MediaType = MediaType> = Extract<
-  VideoTrack | AudioTrack | TextTrack,
+  VideoTrack | AudioTrack | SubtitleTrack,
   {
     type: T;
   }

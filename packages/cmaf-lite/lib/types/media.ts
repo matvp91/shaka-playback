@@ -8,7 +8,7 @@ import type { SwitchingSet, Track } from "./manifest";
 export enum MediaType {
   VIDEO = "video",
   AUDIO = "audio",
-  TEXT = "text",
+  SUBTITLE = "subtitle",
 }
 
 /**
@@ -68,15 +68,15 @@ export interface AudioStream extends BaseStream {
 }
 
 /**
- * Text stream. No additional fields today; text streams
+ * Subtitle stream. No additional fields today; subtitle streams
  * are part of the stream model but not yet wired through
  * the stream controller.
  *
  * @public
  */
-export interface TextStream extends BaseStream {
-  type: MediaType.TEXT;
-  hierarchy: StreamHierarchy<MediaType.TEXT>;
+export interface SubtitleStream extends BaseStream {
+  type: MediaType.SUBTITLE;
+  hierarchy: StreamHierarchy<MediaType.SUBTITLE>;
 }
 
 /**
@@ -86,7 +86,7 @@ export interface TextStream extends BaseStream {
  * @public
  */
 export type Stream<T extends MediaType = MediaType> = Extract<
-  VideoStream | AudioStream | TextStream,
+  VideoStream | AudioStream | SubtitleStream,
   {
     type: T;
   }
@@ -123,12 +123,12 @@ export interface AudioStreamPreference extends BaseStreamPreference {
 }
 
 /**
- * Text stream preference.
+ * Subtitle stream preference.
  *
  * @public
  */
-export interface TextStreamPreference extends BaseStreamPreference {
-  type: MediaType.TEXT;
+export interface SubtitleStreamPreference extends BaseStreamPreference {
+  type: MediaType.SUBTITLE;
 }
 
 /**
@@ -139,7 +139,7 @@ export interface TextStreamPreference extends BaseStreamPreference {
  * @public
  */
 export type StreamPreference<T extends MediaType = MediaType> = Extract<
-  VideoStreamPreference | AudioStreamPreference | TextStreamPreference,
+  VideoStreamPreference | AudioStreamPreference | SubtitleStreamPreference,
   {
     type: T;
   }

@@ -89,10 +89,10 @@ export class Player extends EventEmitter<EventMap> {
 
   /**
    * Returns buffered time ranges for the given media type.
-   * Not supported for {@link MediaType.TEXT}.
+   * Not supported for {@link MediaType.SUBTITLE}.
    */
   getBuffered(type: MediaType) {
-    if (type === MediaType.TEXT) {
+    if (type === MediaType.SUBTITLE) {
       throw new Error(`getBuffered is not supported for type "${type}"`);
     }
     return this.bufferController_.getBuffered(type);
