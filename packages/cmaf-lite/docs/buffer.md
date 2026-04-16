@@ -78,10 +78,5 @@ self-resolve transient stalls.
 
 ## Configuration
 
-| Parameter | Default | Purpose |
-|---|---|---|
-| `frontBufferLength` | 30s | Buffer goal ahead of playhead |
-| `backBufferLength` | Infinity | Auto-evict behind playhead |
-| `backBufferQuotaPadding` | 2s | Headroom on quota eviction |
-| `maxBufferHole` | 0.1s | Gap tolerance merging ranges |
-| `maxSegmentLookupTolerance` | 0.25s | Segment time lookup tolerance |
+See [`PlayerConfig`](/cmaf-lite/reference/cmaf-lite.playerconfig/)
+for buffer-related settings and their defaults.

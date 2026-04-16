@@ -1,4 +1,4 @@
-import type { NetworkResponseEvent, StreamsUpdatedEvent } from "../events";
+import type { NetworkResponseEvent } from "../events";
 import { Events } from "../events";
 import type { Player } from "../player";
 import type { Stream } from "../types/media";
@@ -15,7 +15,7 @@ export class AbrController {
   private player_: Player;
   private timer_: Timer;
   private bandwidthEstimator_: EwmaBandwidthEstimator;
-  private videoStreams_: Stream[] = [];
+  private videoStreams_: Stream<MediaType.VIDEO>[] = [];
 
   constructor(player: Player) {
     this.player_ = player;
@@ -50,8 +50,8 @@ export class AbrController {
     this.player_.off(Events.NETWORK_RESPONSE, this.onNetworkResponse_);
   }
 
-  private onStreamsUpdated_ = (event: StreamsUpdatedEvent) => {
-    const videoStreams = event.streamsMap.get(MediaType.VIDEO);
+  private onStreamsUpdated_ = () => {
+    const videoStreams = this.player_.getStreams(MediaType.VIDEO);
     if (!videoStreams) {
       return;
     }

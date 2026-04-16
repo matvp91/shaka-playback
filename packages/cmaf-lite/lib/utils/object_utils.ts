@@ -1,10 +1,4 @@
-import type { UnknownRecord } from "../types/helpers";
-
-/** Deep-merges `source` into `target`, returning a new object. */
-export function deepMerge<T extends UnknownRecord>(
-  target: T,
-  source: unknown,
-): T {
+export function deepMerge<T extends object>(target: T, source: unknown): T {
   if (
     source === null ||
     source === undefined ||
@@ -13,8 +7,8 @@ export function deepMerge<T extends UnknownRecord>(
   ) {
     return target;
   }
-  const src = source as UnknownRecord;
-  const result: UnknownRecord = { ...target };
+  const src = source as Record<string, unknown>;
+  const result = { ...target } as unknown as Record<string, unknown>;
   for (const key in src) {
     const val = src[key];
     if (
@@ -24,7 +18,7 @@ export function deepMerge<T extends UnknownRecord>(
       typeof result[key] === "object" &&
       result[key] !== null
     ) {
-      result[key] = deepMerge(result[key] as UnknownRecord, val);
+      result[key] = deepMerge(result[key] as object, val);
     } else {
       result[key] = val;
     }
@@ -32,9 +26,6 @@ export function deepMerge<T extends UnknownRecord>(
   return result as T;
 }
 
-/**
- * Expands a dot-notation path and value into a nested object.
- */
 export function unflattenPath(path: string, value: unknown) {
   return path.split(".").reduceRight((acc, key) => ({ [key]: acc }), value);
 }

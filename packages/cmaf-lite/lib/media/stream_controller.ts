@@ -45,21 +45,21 @@ export class StreamController {
     this.player_.on(Events.BUFFER_FLUSHED, this.onBufferFlushed_);
   }
 
-  getStreams(type: MediaType) {
+  getStreams<T extends MediaType>(type: T) {
     const list = this.streamsMap_.get(type);
     asserts.assertExists(list, `No streams for ${type}`);
-    return list;
+    return list as Stream<T>[];
   }
 
-  getActiveStream(type: MediaType) {
+  getActiveStream<T extends MediaType>(type: T) {
     const mediaState = this.mediaStates_.get(type);
-    return mediaState?.stream ?? null;
+    return (mediaState?.stream ?? null) as Stream<T> | null;
   }
 
-  getActiveStreamPreference(type: MediaType) {
+  getPreference<T extends MediaType>(type: T) {
     const preference = this.preferences_.get(type);
     asserts.assertExists(preference, `No Preference for ${type}`);
-    return preference;
+    return preference as StreamPreference<T>;
   }
 
   destroy() {
@@ -75,15 +75,12 @@ export class StreamController {
     this.player_.off(Events.MEDIA_DETACHED, this.onMediaDetached_);
     this.player_.off(Events.BUFFER_FLUSHED, this.onBufferFlushed_);
     this.mediaStates_.clear();
-    this.preferences_.clear();
   }
 
   private onManifestParsed_ = (event: ManifestParsedEvent) => {
     this.streamsMap_ = StreamUtils.buildStreams(event.manifest);
     log.info("Streams", this.streamsMap_);
-    this.player_.emit(Events.STREAMS_UPDATED, {
-      streamsMap: this.streamsMap_,
-    });
+    this.player_.emit(Events.STREAMS_UPDATED);
     this.tryStart_();
   };
 
@@ -162,6 +159,7 @@ export class StreamController {
     log.info("Switched stream", stream);
 
     this.player_.emit(Events.STREAM_CHANGED, {
+      type: mediaState.type,
       oldStream,
       stream,
     });
@@ -187,8 +185,12 @@ export class StreamController {
     }
 
     for (const [type, streams] of this.streamsMap_) {
-      const preference = this.preferences_.get(type) ?? { type };
-      this.preferences_.set(type, preference);
+      if (!this.preferences_.has(type)) {
+        // TODO(matvp): We enforce that each preference is present for each
+        // type. Check if we can make preferences optional instead.
+        this.preferences_.set(type, { type });
+      }
+      const preference = this.getPreference(type);
       const stream = StreamUtils.selectStream(streams, preference);
 
       const mediaState: MediaState = {

@@ -1,4 +1,3 @@
-import type { Prettify } from "./helpers";
 import type { MediaType } from "./media";
 
 /**
@@ -6,12 +5,55 @@ import type { MediaType } from "./media";
  *
  * @public
  */
-export type Manifest = {
+export interface Manifest {
   /** Total duration in seconds. */
   duration: number;
   /** Groups of switchable tracks. */
   switchingSets: SwitchingSet[];
-};
+}
+
+/**
+ * Shared fields across all switching set types.
+ *
+ * @public
+ */
+export interface BaseSwitchingSet {
+  /** Codec string. */
+  codec: string;
+}
+
+/**
+ * Video switching set.
+ *
+ * @public
+ */
+export interface VideoSwitchingSet extends BaseSwitchingSet {
+  type: MediaType.VIDEO;
+  /** Video tracks. */
+  tracks: VideoTrack[];
+}
+
+/**
+ * Audio switching set.
+ *
+ * @public
+ */
+export interface AudioSwitchingSet extends BaseSwitchingSet {
+  type: MediaType.AUDIO;
+  /** Audio tracks. */
+  tracks: AudioTrack[];
+}
+
+/**
+ * Subtitle switching set.
+ *
+ * @public
+ */
+export interface SubtitleSwitchingSet extends BaseSwitchingSet {
+  type: MediaType.SUBTITLE;
+  /** Subtitle tracks. */
+  tracks: SubtitleTrack[];
+}
 
 /**
  * CMAF switching set — tracks that can be seamlessly
@@ -19,14 +61,57 @@ export type Manifest = {
  *
  * @public
  */
-export type SwitchingSet = {
-  /** Media type shared by all tracks. */
-  type: MediaType;
-  /** Codec shared by all tracks. */
-  codec: string;
-  /** Seamlessly switchable tracks. */
-  tracks: Track[];
-};
+export type SwitchingSet<T extends MediaType = MediaType> = Extract<
+  VideoSwitchingSet | AudioSwitchingSet | SubtitleSwitchingSet,
+  {
+    type: T;
+  }
+>;
+
+/**
+ * Shared fields across all track types.
+ *
+ * @public
+ */
+export interface BaseTrack {
+  /** Bitrate in bits per second. */
+  bandwidth: number;
+  /** Ordered chunks on the presentation timeline. */
+  segments: Segment[];
+  /** Longest segment duration in seconds. */
+  maxSegmentDuration: number;
+}
+
+/**
+ * Video track with resolution.
+ *
+ * @public
+ */
+export interface VideoTrack extends BaseTrack {
+  type: MediaType.VIDEO;
+  /** Video width. */
+  width: number;
+  /** Video height. */
+  height: number;
+}
+
+/**
+ * Audio track.
+ *
+ * @public
+ */
+export interface AudioTrack extends BaseTrack {
+  type: MediaType.AUDIO;
+}
+
+/**
+ * Subtitle track.
+ *
+ * @public
+ */
+export interface SubtitleTrack extends BaseTrack {
+  type: MediaType.SUBTITLE;
+}
 
 /**
  * Single track with its segment list, discriminated
@@ -34,32 +119,11 @@ export type SwitchingSet = {
  *
  * @public
  */
-export type Track = Prettify<
+export type Track<T extends MediaType = MediaType> = Extract<
+  VideoTrack | AudioTrack | SubtitleTrack,
   {
-    /** Bitrate in bits per second. */
-    bandwidth: number;
-    /** Ordered chunks on the presentation timeline. */
-    segments: Segment[];
-    /** Longest segment duration in seconds. */
-    maxSegmentDuration: number;
-  } & (
-    | {
-        /** Video type */
-        type: MediaType.VIDEO;
-        /** Video width */
-        width: number;
-        /** Video height */
-        height: number;
-      }
-    | {
-        /** Audio type */
-        type: MediaType.AUDIO;
-      }
-    | {
-        /** Text type */
-        type: MediaType.TEXT;
-      }
-  )
+    type: T;
+  }
 >;
 
 /**

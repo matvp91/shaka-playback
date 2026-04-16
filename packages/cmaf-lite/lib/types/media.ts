@@ -1,4 +1,3 @@
-import type { OptionalExcept, Prettify } from "./helpers";
 import type { SwitchingSet, Track } from "./manifest";
 
 /**
@@ -9,7 +8,7 @@ import type { SwitchingSet, Track } from "./manifest";
 export enum MediaType {
   VIDEO = "video",
   AUDIO = "audio",
-  TEXT = "text",
+  SUBTITLE = "subtitle",
 }
 
 /**
@@ -27,10 +26,58 @@ export type SourceBufferMediaType = MediaType.VIDEO | MediaType.AUDIO;
  *
  * @public
  */
-export type StreamHierarchy = {
-  switchingSet: SwitchingSet;
-  track: Track;
-};
+export interface StreamHierarchy<T extends MediaType> {
+  switchingSet: SwitchingSet<T>;
+  track: Track<T>;
+}
+
+/**
+ * Shared fields across all stream types.
+ *
+ * @public
+ */
+export interface BaseStream {
+  /** Normalized codec. */
+  codec: string;
+  /** Bitrate in bits per second. */
+  bandwidth: number;
+}
+
+/**
+ * Video stream with resolution and hierarchy.
+ *
+ * @public
+ */
+export interface VideoStream extends BaseStream {
+  type: MediaType.VIDEO;
+  /** Video width. */
+  width: number;
+  /** Video height. */
+  height: number;
+  hierarchy: StreamHierarchy<MediaType.VIDEO>;
+}
+
+/**
+ * Audio stream with hierarchy.
+ *
+ * @public
+ */
+export interface AudioStream extends BaseStream {
+  type: MediaType.AUDIO;
+  hierarchy: StreamHierarchy<MediaType.AUDIO>;
+}
+
+/**
+ * Subtitle stream. No additional fields today; subtitle streams
+ * are part of the stream model but not yet wired through
+ * the stream controller.
+ *
+ * @public
+ */
+export interface SubtitleStream extends BaseStream {
+  type: MediaType.SUBTITLE;
+  hierarchy: StreamHierarchy<MediaType.SUBTITLE>;
+}
 
 /**
  * Set of compatible, switchable tracks sharing a codec
@@ -38,47 +85,62 @@ export type StreamHierarchy = {
  *
  * @public
  */
-export type Stream = Prettify<
+export type Stream<T extends MediaType = MediaType> = Extract<
+  VideoStream | AudioStream | SubtitleStream,
   {
-    /** Normalized codec */
-    codec: string;
-    /** Bandwidth */
-    bandwidth: number;
-    /** Manifest entry this stream is a view of. */
-    hierarchy: StreamHierarchy;
-  } & (
-    | {
-        /** Video type */
-        type: MediaType.VIDEO;
-        /** Video width */
-        width: number;
-        /** Video height */
-        height: number;
-      }
-    | {
-        /** Audio type */
-        type: MediaType.AUDIO;
-      }
-    | {
-        /** Text type. No additional fields today; text streams are part
-         * of the stream model but not yet wired through the stream
-         * controller. */
-        type: MediaType.TEXT;
-      }
-  )
+    type: T;
+  }
 >;
 
 /**
- * User preference for stream selection. Properties are
- * optional — only specified fields constrain selection.
+ * Shared fields across all stream preference types.
  *
  * @public
  */
-export type StreamPreference = Prettify<OptionalExcept<Stream, "type">>;
+export interface BaseStreamPreference {
+  codec?: string;
+  bandwidth?: number;
+}
 
 /**
- * Narrows a union to the given {@link MediaType}.
+ * Video stream preference with optional resolution targets.
  *
  * @public
  */
-export type ByType<K, T extends MediaType> = Extract<K, { type: T }>;
+export interface VideoStreamPreference extends BaseStreamPreference {
+  type: MediaType.VIDEO;
+  width?: number;
+  height?: number;
+}
+
+/**
+ * Audio stream preference.
+ *
+ * @public
+ */
+export interface AudioStreamPreference extends BaseStreamPreference {
+  type: MediaType.AUDIO;
+}
+
+/**
+ * Subtitle stream preference.
+ *
+ * @public
+ */
+export interface SubtitleStreamPreference extends BaseStreamPreference {
+  type: MediaType.SUBTITLE;
+}
+
+/**
+ * Soft targets for stream selection, discriminated by
+ * {@link MediaType}. All fields besides `type` are optional
+ * — the closest available match is chosen.
+ *
+ * @public
+ */
+export type StreamPreference<T extends MediaType = MediaType> = Extract<
+  VideoStreamPreference | AudioStreamPreference | SubtitleStreamPreference,
+  {
+    type: T;
+  }
+>;

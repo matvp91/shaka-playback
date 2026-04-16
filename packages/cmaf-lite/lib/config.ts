@@ -1,4 +1,4 @@
-import type { Path, PathValue, Prettify } from "./types/helpers";
+import type { Path, PathValue } from "./types/helpers";
 import type { NetworkRequestOptions } from "./types/net";
 
 /**
@@ -6,23 +6,21 @@ import type { NetworkRequestOptions } from "./types/net";
  *
  * @public
  */
-export type ConfigPath = Prettify<Path<PlayerConfig>>;
+export type ConfigPath = Path<PlayerConfig>;
 
 /**
  * Value at a given config path.
  *
  * @public
  */
-export type ConfigPathValue<P extends ConfigPath> = Prettify<
-  PathValue<PlayerConfig, P>
->;
+export type ConfigPathValue<P extends ConfigPath> = PathValue<PlayerConfig, P>;
 
 /**
- * ABR controller configuration.
+ * ABR configuration.
  *
  * @public
  */
-export type AbrConfig = {
+export interface AbrConfig {
   /**
    * Initial bandwidth estimate in bits/s, used before the EWMA
    * estimator has seen any samples.
@@ -50,11 +48,11 @@ export type AbrConfig = {
    */
   minTotalBytes: number;
   /**
-   * Dropped frame ratio above which the controller forces a
+   * Dropped frame ratio above which forces a
    * downgrade.
    */
   droppedFramesThreshold: number;
-};
+}
 
 /**
  * Player configuration. Override defaults via
@@ -62,7 +60,7 @@ export type AbrConfig = {
  *
  * @public
  */
-export type PlayerConfig = {
+export interface PlayerConfig {
   /**
    * Maximum seconds of media to buffer ahead of the
    * playback position.
@@ -93,9 +91,9 @@ export type PlayerConfig = {
   manifestRequestOptions: NetworkRequestOptions;
   /** Network options for segment requests. */
   segmentRequestOptions: NetworkRequestOptions;
-  /** ABR controller configuration. */
+  /** ABR configuration. */
   abr: AbrConfig;
-};
+}
 
 /**
  * Default config.

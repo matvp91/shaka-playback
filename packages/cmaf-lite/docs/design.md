@@ -76,8 +76,9 @@ operation at a time per SourceBuffer). Computes
 ### StreamController
 
 Orchestrates segment loading. Waits for both manifest and
-media to be ready, selects initial streams (resolved to
-tracks per presentation), then runs a tick loop per media
+media to be ready, builds
+[streams](stream.md) from the manifest, selects initial
+streams via preferences, then runs a tick loop per media
 type that checks the buffer goal and fetches the next
 segment. Handles presentation transitions and seeking.
 

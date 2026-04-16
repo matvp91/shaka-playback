@@ -53,17 +53,10 @@ initial quality is driven by the configured bandwidth estimate.
 
 ## Configuration
 
-All settings live under the `abr` key in the player config:
-
-| Setting | Default | Description |
-|---|---|---|
-| `defaultBandwidthEstimate` | `1_000_000` | Initial bandwidth estimate in bits/s |
-| `bandwidthUpgradeTarget` | `0.7` | Bandwidth fraction required to upgrade |
-| `bandwidthDowngradeTarget` | `0.95` | Bandwidth fraction to trigger downgrade |
-| `evaluationInterval` | `8` | Seconds between ABR evaluations |
-| `fastHalfLife` | `3` | EWMA fast estimator half-life (seconds) |
-| `slowHalfLife` | `9` | EWMA slow estimator half-life (seconds) |
-| `droppedFramesThreshold` | `0.15` | Dropped frame ratio to trigger downgrade |
+All settings live under the `abr` key in
+[`PlayerConfig`](/cmaf-lite/reference/cmaf-lite.playerconfig/).
+See [`AbrConfig`](/cmaf-lite/reference/cmaf-lite.abrconfig/)
+for the full list of options and their defaults.
 
 ## Future Enhancements
 
