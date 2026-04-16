@@ -146,25 +146,15 @@ export type BufferFlushedEvent = {
 };
 
 /**
- * Fired when the available streams change after a manifest
- * parse or refresh.
- *
- * @public
- */
-export type StreamsUpdatedEvent = {
-  /** All streams grouped by media type. */
-  streamsMap: Map<MediaType, Stream[]>;
-};
-
-/**
  * Fired when the active stream changes for a media type.
  * `oldStream` is `null` on initial stream selection.
  *
  * @public
  */
-export type StreamChangedEvent = {
-  oldStream: Stream | null;
-  stream: Stream;
+export type StreamChangedEvent<T extends MediaType = MediaType> = {
+  type: T;
+  oldStream: Stream<T> | null;
+  stream: Stream<T>;
 };
 
 /**
@@ -207,7 +197,7 @@ export interface EventMap {
   [Events.BUFFER_FLUSHING]: (event: BufferFlushingEvent) => void;
   [Events.BUFFER_APPEND_ERROR]: (event: BufferAppendErrorEvent) => void;
   [Events.BUFFER_FLUSHED]: (event: BufferFlushedEvent) => void;
-  [Events.STREAMS_UPDATED]: (event: StreamsUpdatedEvent) => void;
+  [Events.STREAMS_UPDATED]: undefined;
   [Events.STREAM_CHANGED]: (event: StreamChangedEvent) => void;
   [Events.NETWORK_REQUEST]: (event: NetworkRequestEvent) => void;
   [Events.NETWORK_RESPONSE]: (event: NetworkResponseEvent) => void;

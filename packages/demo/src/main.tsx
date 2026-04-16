@@ -1,11 +1,4 @@
-import {
-  Events,
-  Log,
-  LogLevel,
-  MediaType,
-  Player,
-  Timer,
-} from "cmaf-lite";
+import { Events, Log, LogLevel, MediaType, Player, Timer } from "cmaf-lite";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.tsx";
 

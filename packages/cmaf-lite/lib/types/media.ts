@@ -1,4 +1,4 @@
-import type { OptionalExcept, Prettify } from "./helpers";
+import type { Prettify } from "./helpers";
 import type { SwitchingSet, Track } from "./manifest";
 
 /**
@@ -72,19 +72,26 @@ export type Stream<T extends MediaType = MediaType> = TypeUnion<
 >;
 
 /**
- * User preference for stream selection. Properties are
- * optional — only specified fields constrain selection.
- *
  * @public
  */
-export type StreamPreference = Prettify<OptionalExcept<Stream, "type">>;
-
-/**
- * Narrows a union to the given {@link MediaType}.
- *
- * @public
- */
-export type ByType<K, T extends MediaType> = Extract<K, { type: T }>;
+export type StreamPreference<T extends MediaType = MediaType> = TypeUnion<
+  {
+    codec?: string;
+    bandwidth?: number;
+  },
+  | {
+      type: MediaType.VIDEO;
+      width?: number;
+      height?: number;
+    }
+  | {
+      type: MediaType.AUDIO;
+    }
+  | {
+      type: MediaType.TEXT;
+    },
+  T
+>;
 
 export type TypeUnion<TBase, TVariants, T = unknown> = Prettify<
   Extract<TBase & TVariants, { type: T }>

@@ -101,14 +101,14 @@ export class Player extends EventEmitter<EventMap> {
   /**
    * Returns resolved streams for the given media type.
    */
-  getStreams(type: MediaType) {
+  getStreams<T extends MediaType>(type: T) {
     return this.streamController_.getStreams(type);
   }
 
   /**
    * Returns the currently active stream for the given type.
    */
-  getActiveStream(type: MediaType) {
+  getActiveStream<T extends MediaType>(type: T) {
     return this.streamController_.getActiveStream(type);
   }
 
@@ -119,25 +119,12 @@ export class Player extends EventEmitter<EventMap> {
     return this.networkService_;
   }
 
-  /**
-   * Sets the preferred stream for a media type. When
-   * `flushBuffer` is `true`, the existing buffer is flushed
-   * to apply the switch immediately rather than at the next
-   * segment boundary.
-   *
-   * @param preference - Stream constraints (type is required,
-   *   all other fields are optional filters).
-   * @param flushBuffer - Flush the buffer to switch immediately.
-   */
   setStreamPreference(preference: StreamPreference, flushBuffer = false) {
     this.streamController_.setPreference(preference, flushBuffer);
   }
 
-  /**
-   * Returns the currently active stream preference for the given type.
-   */
-  getStreamPreference(type: MediaType) {
-    return this.streamController_.getActiveStreamPreference(type);
+  getStreamPreference<T extends MediaType>(type: T) {
+    return this.streamController_.getPreference(type);
   }
 
   /**

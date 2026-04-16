@@ -1,5 +1,5 @@
 import type { Manifest, SwitchingSet, Track } from "../types/manifest";
-import type { ByType, Stream, StreamPreference } from "../types/media";
+import type { Stream, StreamPreference } from "../types/media";
 import { MediaType } from "../types/media";
 import * as asserts from "./asserts";
 import * as CodecUtils from "./codec_utils";
@@ -40,19 +40,17 @@ export function selectStream(
   streams: Stream[],
   preference: StreamPreference,
 ): Stream {
-  asserts.assertExists(streams[0], `No streams for ${preference.type}`);
-
   if (preference.type === MediaType.VIDEO) {
-    return matchVideoPreference(
-      streams as ByType<Stream, MediaType.VIDEO>[],
-      preference,
+    const matchedStreams = streams.filter(
+      (stream) => stream.type === preference.type,
     );
+    return matchVideoPreference(matchedStreams, preference);
   }
   if (preference.type === MediaType.AUDIO) {
-    return matchAudioPreference(
-      streams as ByType<Stream, MediaType.AUDIO>[],
-      preference,
+    const matchedStreams = streams.filter(
+      (stream) => stream.type === preference.type,
     );
+    return matchAudioPreference(matchedStreams, preference);
   }
 
   throw new Error("Could not lookup preference type");
@@ -60,23 +58,28 @@ export function selectStream(
 
 function projectStream(ss: SwitchingSet, track: Track): Stream {
   const codec = CodecUtils.getNormalizedCodec(ss.codec);
-  const hierarchy = { switchingSet: ss, track };
-  if (track.type === MediaType.VIDEO) {
+  if (track.type === MediaType.VIDEO && ss.type === MediaType.VIDEO) {
     return {
       type: track.type,
       codec,
       bandwidth: track.bandwidth,
       width: track.width,
       height: track.height,
-      hierarchy,
+      hierarchy: {
+        switchingSet: ss,
+        track,
+      },
     };
   }
-  if (track.type === MediaType.AUDIO) {
+  if (track.type === MediaType.AUDIO && ss.type === MediaType.AUDIO) {
     return {
       type: track.type,
       codec,
       bandwidth: track.bandwidth,
-      hierarchy,
+      hierarchy: {
+        switchingSet: ss,
+        track,
+      },
     };
   }
   throw new Error(`Failed to map track for type ${track.type}`);
@@ -93,9 +96,9 @@ function isSameStream(a: Stream, b: Stream): boolean {
 }
 
 function matchVideoPreference(
-  streams: ByType<Stream, MediaType.VIDEO>[],
-  preference: ByType<StreamPreference, MediaType.VIDEO>,
-): ByType<Stream, MediaType.VIDEO> {
+  streams: Stream<MediaType.VIDEO>[],
+  preference: StreamPreference<MediaType.VIDEO>,
+): Stream<MediaType.VIDEO> {
   asserts.assertExists(streams[0], "No video streams to match against");
   let best = streams[0];
   let bestDist = Number.POSITIVE_INFINITY;
@@ -124,9 +127,9 @@ function matchVideoPreference(
 }
 
 function matchAudioPreference(
-  streams: ByType<Stream, MediaType.AUDIO>[],
-  preference: ByType<StreamPreference, MediaType.AUDIO>,
-): ByType<Stream, MediaType.AUDIO> {
+  streams: Stream<MediaType.AUDIO>[],
+  preference: StreamPreference<MediaType.AUDIO>,
+): Stream<MediaType.AUDIO> {
   asserts.assertExists(streams[0], "No video streams to match against");
   let best = streams[0];
   let bestDist = Number.POSITIVE_INFINITY;
