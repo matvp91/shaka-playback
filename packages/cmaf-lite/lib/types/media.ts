@@ -27,9 +27,9 @@ export type SourceBufferMediaType = MediaType.VIDEO | MediaType.AUDIO;
  *
  * @public
  */
-export type StreamHierarchy = {
-  switchingSet: SwitchingSet;
-  track: Track;
+export type StreamHierarchy<T extends MediaType> = {
+  switchingSet: ByType<SwitchingSet, T>;
+  track: ByType<Track, T>;
 };
 
 /**
@@ -44,8 +44,6 @@ export type Stream = Prettify<
     codec: string;
     /** Bandwidth */
     bandwidth: number;
-    /** Manifest entry this stream is a view of. */
-    hierarchy: StreamHierarchy;
   } & (
     | {
         /** Video type */
@@ -54,16 +52,19 @@ export type Stream = Prettify<
         width: number;
         /** Video height */
         height: number;
+        hierarchy: StreamHierarchy<MediaType.VIDEO>;
       }
     | {
         /** Audio type */
         type: MediaType.AUDIO;
+        hierarchy: StreamHierarchy<MediaType.AUDIO>;
       }
     | {
         /** Text type. No additional fields today; text streams are part
          * of the stream model but not yet wired through the stream
          * controller. */
         type: MediaType.TEXT;
+        hierarchy: StreamHierarchy<MediaType.TEXT>;
       }
   )
 >;

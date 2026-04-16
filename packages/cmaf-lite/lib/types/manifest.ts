@@ -28,26 +28,22 @@ export type SwitchingSet = Prettify<
         /** Video type */
         type: MediaType.VIDEO;
         /** Video tracks */
-        tracks: VideoTrack[];
+        tracks: ByType<Track, MediaType.VIDEO>[];
       }
     | {
         /** Audio type */
         type: MediaType.AUDIO;
         /** Audio tracks */
-        tracks: AudioTrack[];
+        tracks: ByType<Track, MediaType.AUDIO>[];
       }
     | {
         /** Text type */
         type: MediaType.TEXT;
         /** Text tracks */
-        tracks: TextTrack[];
+        tracks: ByType<Track, MediaType.TEXT>[];
       }
   )
 >;
-
-export type VideoSwitchingSet = ByType<SwitchingSet, MediaType.VIDEO>;
-export type AudioSwitchingSet = ByType<SwitchingSet, MediaType.AUDIO>;
-export type TextSwitchingSet = ByType<SwitchingSet, MediaType.TEXT>;
 
 /**
  * Single track with its segment list, discriminated
@@ -82,10 +78,6 @@ export type Track = Prettify<
       }
   )
 >;
-
-export type VideoTrack = ByType<Track, MediaType.VIDEO>;
-export type AudioTrack = ByType<Track, MediaType.AUDIO>;
-export type TextTrack = ByType<Track, MediaType.TEXT>;
 
 /**
  * CMAF initialization segment (moov box).

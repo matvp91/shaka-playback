@@ -107,22 +107,10 @@ function addTrack(
     existingTrack.segments.push(...track.segments);
   } else {
     ctx.tracks.set(trackKey, track);
-    // This is a bit funky but it is to satisfy strict typing. The
-    // media type for switchingSet and track must be the same.
-    if (
-      switchingSet.type === MediaType.VIDEO &&
-      track.type === MediaType.VIDEO
-    ) {
-      switchingSet.tracks.push(track);
-    }
-    if (
-      switchingSet.type === MediaType.AUDIO &&
-      track.type === MediaType.AUDIO
-    ) {
-      switchingSet.tracks.push(track);
-    }
-    if (switchingSet.type === MediaType.TEXT && track.type === MediaType.TEXT) {
-      switchingSet.tracks.push(track);
+    if (switchingSet.type === track.type) {
+      // Allow type cast, TS is not able to infer the
+      // type equality but we conditionally check it anyways.
+      (switchingSet.tracks as Track[]).push(track);
     }
   }
 }
