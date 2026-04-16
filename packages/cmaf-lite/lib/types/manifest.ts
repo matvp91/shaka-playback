@@ -1,5 +1,4 @@
-import type { Prettify } from "./helpers";
-import type { ByType, MediaType } from "./media";
+import type { MediaType, TypeUnion } from "./media";
 
 /**
  * Parsed manifest representing a CMAF presentation.
@@ -19,30 +18,30 @@ export type Manifest = {
  *
  * @public
  */
-export type SwitchingSet = Prettify<
+export type SwitchingSet<T extends MediaType = MediaType> = TypeUnion<
   {
     /** Codec */
     codec: string;
-  } & (
-    | {
-        /** Video type */
-        type: MediaType.VIDEO;
-        /** Video tracks */
-        tracks: ByType<Track, MediaType.VIDEO>[];
-      }
-    | {
-        /** Audio type */
-        type: MediaType.AUDIO;
-        /** Audio tracks */
-        tracks: ByType<Track, MediaType.AUDIO>[];
-      }
-    | {
-        /** Text type */
-        type: MediaType.TEXT;
-        /** Text tracks */
-        tracks: ByType<Track, MediaType.TEXT>[];
-      }
-  )
+  },
+  | {
+      /** Video type */
+      type: MediaType.VIDEO;
+      /** Video tracks */
+      tracks: Track<MediaType.VIDEO>[];
+    }
+  | {
+      /** Audio type */
+      type: MediaType.AUDIO;
+      /** Audio tracks */
+      tracks: Track<MediaType.AUDIO>[];
+    }
+  | {
+      /** Text type */
+      type: MediaType.TEXT;
+      /** Text tracks */
+      tracks: Track<MediaType.TEXT>[];
+    },
+  T
 >;
 
 /**
@@ -51,7 +50,7 @@ export type SwitchingSet = Prettify<
  *
  * @public
  */
-export type Track = Prettify<
+export type Track<T extends MediaType = MediaType> = TypeUnion<
   {
     /** Bitrate in bits per second. */
     bandwidth: number;
@@ -59,24 +58,24 @@ export type Track = Prettify<
     segments: Segment[];
     /** Longest segment duration in seconds. */
     maxSegmentDuration: number;
-  } & (
-    | {
-        /** Video type */
-        type: MediaType.VIDEO;
-        /** Video width */
-        width: number;
-        /** Video height */
-        height: number;
-      }
-    | {
-        /** Audio type */
-        type: MediaType.AUDIO;
-      }
-    | {
-        /** Text type */
-        type: MediaType.TEXT;
-      }
-  )
+  },
+  | {
+      /** Video type */
+      type: MediaType.VIDEO;
+      /** Video width */
+      width: number;
+      /** Video height */
+      height: number;
+    }
+  | {
+      /** Audio type */
+      type: MediaType.AUDIO;
+    }
+  | {
+      /** Text type */
+      type: MediaType.TEXT;
+    },
+  T
 >;
 
 /**

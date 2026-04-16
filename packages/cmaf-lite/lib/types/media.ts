@@ -27,9 +27,9 @@ export type SourceBufferMediaType = MediaType.VIDEO | MediaType.AUDIO;
  *
  * @public
  */
-export type StreamHierarchy<T extends MediaType> = {
-  switchingSet: ByType<SwitchingSet, T>;
-  track: ByType<Track, T>;
+export type StreamHierarchy<T extends MediaType = MediaType> = {
+  switchingSet: SwitchingSet<T>;
+  track: Track<T>;
 };
 
 /**
@@ -38,35 +38,35 @@ export type StreamHierarchy<T extends MediaType> = {
  *
  * @public
  */
-export type Stream = Prettify<
+export type Stream<T extends MediaType = MediaType> = TypeUnion<
   {
     /** Normalized codec */
     codec: string;
     /** Bandwidth */
     bandwidth: number;
-  } & (
-    | {
-        /** Video type */
-        type: MediaType.VIDEO;
-        /** Video width */
-        width: number;
-        /** Video height */
-        height: number;
-        hierarchy: StreamHierarchy<MediaType.VIDEO>;
-      }
-    | {
-        /** Audio type */
-        type: MediaType.AUDIO;
-        hierarchy: StreamHierarchy<MediaType.AUDIO>;
-      }
-    | {
-        /** Text type. No additional fields today; text streams are part
-         * of the stream model but not yet wired through the stream
-         * controller. */
-        type: MediaType.TEXT;
-        hierarchy: StreamHierarchy<MediaType.TEXT>;
-      }
-  )
+  },
+  | {
+      /** Video type */
+      type: MediaType.VIDEO;
+      /** Video width */
+      width: number;
+      /** Video height */
+      height: number;
+      hierarchy: StreamHierarchy<MediaType.VIDEO>;
+    }
+  | {
+      /** Audio type */
+      type: MediaType.AUDIO;
+      hierarchy: StreamHierarchy<MediaType.AUDIO>;
+    }
+  | {
+      /** Text type. No additional fields today; text streams are part
+       * of the stream model but not yet wired through the stream
+       * controller. */
+      type: MediaType.TEXT;
+      hierarchy: StreamHierarchy<MediaType.TEXT>;
+    },
+  T
 >;
 
 /**
@@ -83,3 +83,7 @@ export type StreamPreference = Prettify<OptionalExcept<Stream, "type">>;
  * @public
  */
 export type ByType<K, T extends MediaType> = Extract<K, { type: T }>;
+
+export type TypeUnion<TBase, TVariants, T = unknown> = Prettify<
+  Extract<TBase & TVariants, { type: T }>
+>;
