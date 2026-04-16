@@ -72,7 +72,8 @@ function processAdaptationSet(
       type,
       duration,
     );
-    addTrack(ctx, switchingSet, `${switchingSetKey}:${id}`, track);
+    const trackKey = `${switchingSetKey}:${id}`;
+    addTrack(ctx, switchingSet, trackKey, track);
   }
 }
 
@@ -82,12 +83,17 @@ function getOrCreateSwitchingSet(
   type: MediaType,
   codec: string,
 ): SwitchingSet {
-  let switchingSet = ctx.switchingSets.get(key);
-  if (!switchingSet) {
-    switchingSet = { type, codec, tracks: [] };
-    ctx.switchingSets.set(key, switchingSet);
+  const switchingSet = ctx.switchingSets.get(key);
+  if (switchingSet) {
+    return switchingSet;
   }
-  return switchingSet;
+  const newSwitchingSet: SwitchingSet = {
+    type,
+    codec,
+    tracks: [],
+  };
+  ctx.switchingSets.set(key, newSwitchingSet);
+  return newSwitchingSet;
 }
 
 function addTrack(
@@ -96,22 +102,31 @@ function addTrack(
   trackKey: string,
   track: Track,
 ): void {
-  const existing = ctx.tracks.get(trackKey);
-  if (existing) {
-    existing.segments.push(...track.segments);
-    return;
+  const existingTrack = ctx.tracks.get(trackKey);
+  if (existingTrack) {
+    existingTrack.segments.push(...track.segments);
+  } else {
+    ctx.tracks.set(trackKey, track);
+    // This is a bit funky but it is to satisfy strict typing. The
+    // media type for switchingSet and track must be the same.
+    if (
+      switchingSet.type === MediaType.VIDEO &&
+      track.type === MediaType.VIDEO
+    ) {
+      switchingSet.tracks.push(track);
+    }
+    if (
+      switchingSet.type === MediaType.AUDIO &&
+      track.type === MediaType.AUDIO
+    ) {
+      switchingSet.tracks.push(track);
+    }
+    if (switchingSet.type === MediaType.TEXT && track.type === MediaType.TEXT) {
+      switchingSet.tracks.push(track);
+    }
   }
-  ctx.tracks.set(trackKey, track);
-  switchingSet.tracks.push(track);
 }
 
-/**
- * Resolve the period's duration from manifest metadata only.
- * Runs before segment parsing so duration-based segment
- * generation has the information it needs. Returns null when
- * metadata alone cannot determine the duration — callers must
- * fall back to parsed segment data instead.
- */
 function resolvePeriodDuration(
   mpd: txml.TNode,
   periods: txml.TNode[],

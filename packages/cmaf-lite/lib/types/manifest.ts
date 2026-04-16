@@ -1,5 +1,5 @@
 import type { Prettify } from "./helpers";
-import type { MediaType } from "./media";
+import type { ByType, MediaType } from "./media";
 
 /**
  * Parsed manifest representing a CMAF presentation.
@@ -19,14 +19,35 @@ export type Manifest = {
  *
  * @public
  */
-export type SwitchingSet = {
-  /** Media type shared by all tracks. */
-  type: MediaType;
-  /** Codec shared by all tracks. */
-  codec: string;
-  /** Seamlessly switchable tracks. */
-  tracks: Track[];
-};
+export type SwitchingSet = Prettify<
+  {
+    /** Codec */
+    codec: string;
+  } & (
+    | {
+        /** Video type */
+        type: MediaType.VIDEO;
+        /** Video tracks */
+        tracks: VideoTrack[];
+      }
+    | {
+        /** Audio type */
+        type: MediaType.AUDIO;
+        /** Audio tracks */
+        tracks: AudioTrack[];
+      }
+    | {
+        /** Text type */
+        type: MediaType.TEXT;
+        /** Text tracks */
+        tracks: TextTrack[];
+      }
+  )
+>;
+
+export type VideoSwitchingSet = ByType<SwitchingSet, MediaType.VIDEO>;
+export type AudioSwitchingSet = ByType<SwitchingSet, MediaType.AUDIO>;
+export type TextSwitchingSet = ByType<SwitchingSet, MediaType.TEXT>;
 
 /**
  * Single track with its segment list, discriminated
@@ -61,6 +82,10 @@ export type Track = Prettify<
       }
   )
 >;
+
+export type VideoTrack = ByType<Track, MediaType.VIDEO>;
+export type AudioTrack = ByType<Track, MediaType.AUDIO>;
+export type TextTrack = ByType<Track, MediaType.TEXT>;
 
 /**
  * CMAF initialization segment (moov box).
