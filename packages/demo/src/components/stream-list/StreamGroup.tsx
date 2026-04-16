@@ -10,7 +10,7 @@ type StreamGroupProps = {
 
 export function StreamGroup({ label, player, type }: StreamGroupProps) {
   const streams = player.getStreams(type);
-  const activeStream = player.getStream(type);
+  const activeStream = player.getActiveStream(type);
 
   return (
     <div>
@@ -21,7 +21,7 @@ export function StreamGroup({ label, player, type }: StreamGroupProps) {
           stream={stream}
           active={stream === activeStream}
           onClick={() => {
-            player.setStream(stream);
+            player.setActiveStream(stream);
           }}
         />
       ))}

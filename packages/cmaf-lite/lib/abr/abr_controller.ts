@@ -70,19 +70,13 @@ export class AbrController {
 
   private evaluate_() {
     const streams = this.streams_;
-    const currentStream = this.player_.getStream(MediaType.VIDEO);
+    const activeStream = this.player_.getActiveStream(MediaType.VIDEO);
 
     const candidates = [
-      // Candidates that can operate without knowing the current stream.
-      this.evaluateThroughput_(streams, currentStream),
-      // Candidates that require a current stream.
-      currentStream ? this.evaluateBola_(streams, currentStream) : null,
-      currentStream
-        ? this.evaluateInsufficientBuffer_(streams, currentStream)
-        : null,
-      currentStream
-        ? this.evaluateDroppedFrames_(streams, currentStream)
-        : null,
+      this.evaluateThroughput_(streams, activeStream),
+      this.evaluateBola_(streams, activeStream),
+      this.evaluateInsufficientBuffer_(streams, activeStream),
+      this.evaluateDroppedFrames_(streams, activeStream),
     ];
 
     let best: VideoStream | null = null;
@@ -92,7 +86,7 @@ export class AbrController {
       }
     }
 
-    if (best && best !== currentStream) {
+    if (best && best !== activeStream) {
       log.info("ABR decision", best);
       this.player_.emit(Events.ADAPTATION, {
         stream: best,
@@ -105,21 +99,24 @@ export class AbrController {
    */
   private evaluateThroughput_(
     streams: VideoStream[],
-    currentStream: VideoStream | null,
+    activeStream: VideoStream | null,
   ): VideoStream | null {
     const { bandwidthUpgradeTarget, bandwidthDowngradeTarget } =
       this.player_.getConfig().abr;
-    const audioStream = this.player_.getStream(MediaType.AUDIO);
-    const audioBandwidth = audioStream ? audioStream.bandwidth : 0;
-    const effectiveBandwidth = this.getThroughputEstimate() - audioBandwidth;
+
+    let bandwidth = this.getThroughputEstimate();
+    const audioStream = this.player_.getActiveStream(MediaType.AUDIO);
+    if (audioStream) {
+      bandwidth -= audioStream.bandwidth;
+    }
 
     let best: Stream | null = null;
     for (const stream of streams) {
-      let scaledBandwidth = effectiveBandwidth;
-      if (currentStream) {
+      let scaledBandwidth = bandwidth;
+      if (activeStream) {
         // If we have a current stream active, figure out if we're up or down
         // scaling and apply the scaling factor.
-        const isUpgrade = stream.bandwidth > currentStream.bandwidth;
+        const isUpgrade = stream.bandwidth > activeStream.bandwidth;
         const factor = isUpgrade
           ? bandwidthUpgradeTarget
           : bandwidthDowngradeTarget;
@@ -140,8 +137,12 @@ export class AbrController {
    */
   private evaluateBola_(
     streams: VideoStream[],
-    currentStream: VideoStream,
+    activeStream: VideoStream | null,
   ): VideoStream | null {
+    if (!activeStream) {
+      return null;
+    }
+
     const MINIMUM_BUFFER_S = 10;
 
     const lowestStream = streams[0];
@@ -150,11 +151,11 @@ export class AbrController {
       return null;
     }
 
-    const { maxSegmentDuration } = currentStream.hierarchy.track;
+    const activeTrack = activeStream.hierarchy.track;
     const { frontBufferLength } = this.player_.getConfig();
     const bufferLevel = this.getBufferLevel();
 
-    if (bufferLevel < maxSegmentDuration) {
+    if (bufferLevel < activeTrack.maxSegmentDuration) {
       return null;
     }
 
@@ -197,21 +198,25 @@ export class AbrController {
    */
   private evaluateInsufficientBuffer_(
     streams: VideoStream[],
-    currentStream: VideoStream,
+    activeStream: VideoStream | null,
   ): VideoStream | null {
+    if (!activeStream) {
+      return null;
+    }
+
     const THROUGHPUT_SAFETY_FACTOR = 0.7;
 
-    const { maxSegmentDuration } = currentStream.hierarchy.track;
+    const activeTrack = activeStream.hierarchy.track;
     const bufferLevel = this.getBufferLevel();
 
-    if (bufferLevel < maxSegmentDuration) {
+    if (bufferLevel < activeTrack.maxSegmentDuration) {
       return null;
     }
 
     const targetBitrate =
       this.getThroughputEstimate() *
       THROUGHPUT_SAFETY_FACTOR *
-      (bufferLevel / maxSegmentDuration);
+      (bufferLevel / activeTrack.maxSegmentDuration);
 
     let best: Stream | null = null;
     for (const stream of streams) {
@@ -228,8 +233,12 @@ export class AbrController {
    */
   private evaluateDroppedFrames_(
     streams: VideoStream[],
-    currentStream: VideoStream,
+    currentStream: VideoStream | null,
   ): VideoStream | null {
+    if (!currentStream) {
+      return null;
+    }
+
     const media = this.player_.getMedia() as HTMLVideoElement | null;
     if (!media?.getVideoPlaybackQuality) {
       return null;
