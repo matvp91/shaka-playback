@@ -87,7 +87,7 @@ export class AbrController {
     }
 
     if (best && best !== activeStream) {
-      log.info("ABR decision", best);
+      log.info("Decision", best);
       this.player_.emit(Events.ADAPTATION, {
         stream: best,
       });
