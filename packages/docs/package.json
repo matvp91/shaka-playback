@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "python3 generate.py && astro build",
-    "dev": "astro dev"
+    "dev": "python3 generate.py && astro dev"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.38.3",
