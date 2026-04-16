@@ -27,8 +27,8 @@ export function createSegment(overrides?: Partial<Segment>): Segment {
 }
 
 export function createVideoTrack(
-  overrides?: Partial<Extract<Track, { type: MediaType.VIDEO }>>,
-): Extract<Track, { type: MediaType.VIDEO }> {
+  overrides?: Partial<Track<MediaType.VIDEO>>,
+): Track<MediaType.VIDEO> {
   return {
     type: MediaType.VIDEO,
     bandwidth: 2_000_000,
@@ -41,8 +41,8 @@ export function createVideoTrack(
 }
 
 export function createAudioTrack(
-  overrides?: Partial<Extract<Track, { type: MediaType.AUDIO }>>,
-): Extract<Track, { type: MediaType.AUDIO }> {
+  overrides?: Partial<Track<MediaType.AUDIO>>,
+): Track<MediaType.AUDIO> {
   return {
     type: MediaType.AUDIO,
     bandwidth: 128_000,
@@ -52,9 +52,9 @@ export function createAudioTrack(
   };
 }
 
-export function createSwitchingSet(
-  overrides?: Partial<SwitchingSet>,
-): SwitchingSet {
+export function createVideoSwitchingSet(
+  overrides?: Partial<SwitchingSet<MediaType.VIDEO>>,
+): SwitchingSet<MediaType.VIDEO> {
   return {
     type: MediaType.VIDEO,
     codec: "avc1.64001f",
@@ -63,17 +63,21 @@ export function createSwitchingSet(
   };
 }
 
+export function createAudioSwitchingSet(
+  overrides?: Partial<SwitchingSet<MediaType.AUDIO>>,
+): SwitchingSet<MediaType.AUDIO> {
+  return {
+    type: MediaType.AUDIO,
+    codec: "mp4a.40.2",
+    tracks: [createAudioTrack()],
+    ...overrides,
+  };
+}
+
 export function createManifest(overrides?: Partial<Manifest>): Manifest {
   return {
     duration: 60,
-    switchingSets: [
-      createSwitchingSet(),
-      createSwitchingSet({
-        type: MediaType.AUDIO,
-        codec: "mp4a.40.2",
-        tracks: [createAudioTrack()],
-      }),
-    ],
+    switchingSets: [createVideoSwitchingSet(), createAudioSwitchingSet()],
     ...overrides,
   };
 }

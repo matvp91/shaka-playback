@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { MediaType } from "../../lib/types/media";
 import { buildStreams, selectStream } from "../../lib/utils/stream_utils";
 import {
-  createAudioTrack,
+  createAudioSwitchingSet,
   createManifest,
-  createSwitchingSet,
+  createVideoSwitchingSet,
   createVideoTrack,
 } from "../__framework__/factories";
 
@@ -32,7 +32,7 @@ describe("StreamUtils", () => {
     it("deduplicates streams with identical type, codec, and resolution", () => {
       const track = createVideoTrack();
       const manifest = createManifest({
-        switchingSets: [createSwitchingSet({ tracks: [track, track] })],
+        switchingSets: [createVideoSwitchingSet({ tracks: [track, track] })],
       });
       const streams = buildStreams(manifest);
       expect(streams.get(MediaType.VIDEO)).toHaveLength(1);
@@ -46,7 +46,7 @@ describe("StreamUtils", () => {
     it("sorts streams by bandwidth ascending for ABR", () => {
       const manifest = createManifest({
         switchingSets: [
-          createSwitchingSet({
+          createVideoSwitchingSet({
             tracks: [
               createVideoTrack({
                 bandwidth: 5_000_000,
@@ -76,7 +76,7 @@ describe("StreamUtils", () => {
     it("produces separate streams for tracks with different resolutions", () => {
       const manifest = createManifest({
         switchingSets: [
-          createSwitchingSet({
+          createVideoSwitchingSet({
             tracks: [
               createVideoTrack({ width: 1920, height: 1080 }),
               createVideoTrack({ width: 1280, height: 720 }),
@@ -92,17 +92,13 @@ describe("StreamUtils", () => {
   describe("selectStream", () => {
     const manifest = createManifest({
       switchingSets: [
-        createSwitchingSet({
+        createVideoSwitchingSet({
           tracks: [
             createVideoTrack({ width: 1920, height: 1080 }),
             createVideoTrack({ width: 1280, height: 720 }),
           ],
         }),
-        createSwitchingSet({
-          type: MediaType.AUDIO,
-          codec: "mp4a.40.2",
-          tracks: [createAudioTrack()],
-        }),
+        createAudioSwitchingSet(),
       ],
     });
     const streamsByType = buildStreams(manifest);
@@ -133,11 +129,11 @@ describe("StreamUtils", () => {
       const multiCodecStreams = buildStreams(
         createManifest({
           switchingSets: [
-            createSwitchingSet({
+            createVideoSwitchingSet({
               codec: "avc1.64001f",
               tracks: [createVideoTrack({ width: 1920, height: 1080 })],
             }),
-            createSwitchingSet({
+            createVideoSwitchingSet({
               codec: "hev1.1.6.L93",
               tracks: [createVideoTrack({ width: 1920, height: 1080 })],
             }),
