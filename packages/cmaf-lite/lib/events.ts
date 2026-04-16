@@ -40,18 +40,18 @@ export const Events = {
  *
  * @public
  */
-export type ManifestLoadingEvent = {
+export interface ManifestLoadingEvent {
   url: string;
-};
+}
 
 /**
  * Fired when a manifest has been fetched and parsed.
  *
  * @public
  */
-export type ManifestParsedEvent = {
+export interface ManifestParsedEvent {
   manifest: Manifest;
-};
+}
 
 /**
  * Fired when {@link Player.attachMedia} is called and the media element
@@ -59,19 +59,19 @@ export type ManifestParsedEvent = {
  *
  * @public
  */
-export type MediaAttachingEvent = {
+export interface MediaAttachingEvent {
   media: HTMLMediaElement;
-};
+}
 
 /**
  * Fired when the media element and MediaSource are ready for buffering.
  *
  * @public
  */
-export type MediaAttachedEvent = {
+export interface MediaAttachedEvent {
   media: HTMLMediaElement;
   mediaSource: MediaSource;
-};
+}
 
 /**
  * Fired when {@link Player.detachMedia} is called, before the media element
@@ -80,51 +80,51 @@ export type MediaAttachedEvent = {
  *
  * @public
  */
-export type MediaDetachingEvent = {
+export interface MediaDetachingEvent {
   media: HTMLMediaElement;
-};
+}
 
 /**
  * Fired when a SourceBuffer is being created for a new media type.
  *
  * @public
  */
-export type BufferCodecsEvent = {
+export interface BufferCodecsEvent {
   type: SourceBufferMediaType;
   codec: string;
-};
+}
 
 /**
  * Fired before a segment is appended to a SourceBuffer.
  *
  * @public
  */
-export type BufferAppendingEvent = {
+export interface BufferAppendingEvent {
   type: SourceBufferMediaType;
   segment: InitSegment | Segment;
   data: ArrayBuffer;
-};
+}
 
 /**
  * Fired after a segment has been appended to a SourceBuffer.
  *
  * @public
  */
-export type BufferAppendedEvent = {
+export interface BufferAppendedEvent {
   type: SourceBufferMediaType;
   segment: InitSegment | Segment;
   data: ArrayBuffer;
-};
+}
 
 /**
  * Fired when a SourceBuffer append operation failed.
  *
  * @public
  */
-export type BufferAppendErrorEvent = {
+export interface BufferAppendErrorEvent {
   type: SourceBufferMediaType;
   error: DOMException;
-};
+}
 
 /**
  * Fired to request a SourceBuffer flush. Paired with
@@ -132,18 +132,18 @@ export type BufferAppendErrorEvent = {
  *
  * @public
  */
-export type BufferFlushingEvent = {
+export interface BufferFlushingEvent {
   type: SourceBufferMediaType;
-};
+}
 
 /**
  * Fired when a SourceBuffer is flushed.
  *
  * @public
  */
-export type BufferFlushedEvent = {
+export interface BufferFlushedEvent {
   type: SourceBufferMediaType;
-};
+}
 
 /**
  * Fired when the active stream changes for a media type.
@@ -151,11 +151,11 @@ export type BufferFlushedEvent = {
  *
  * @public
  */
-export type StreamChangedEvent<T extends MediaType = MediaType> = {
+export interface StreamChangedEvent<T extends MediaType = MediaType> {
   type: T;
   oldStream: Stream<T> | null;
   stream: Stream<T>;
-};
+}
 
 /**
  * Fired before a network request is sent. Listeners can mutate the request
@@ -163,20 +163,20 @@ export type StreamChangedEvent<T extends MediaType = MediaType> = {
  *
  * @public
  */
-export type NetworkRequestEvent = {
+export interface NetworkRequestEvent {
   type: NetworkRequestType;
   request: NetworkRequest;
-};
+}
 
 /**
  * Fired when a network response has been received.
  *
  * @public
  */
-export type NetworkResponseEvent = {
+export interface NetworkResponseEvent {
   type: NetworkRequestType;
   response: NetworkResponse;
-};
+}
 
 /**
  * Maps each event name to its listener signature.

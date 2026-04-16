@@ -22,7 +22,7 @@ export type ConfigPathValue<P extends ConfigPath> = Prettify<
  *
  * @public
  */
-export type AbrConfig = {
+export interface AbrConfig {
   /**
    * Initial bandwidth estimate in bits/s, used before the EWMA
    * estimator has seen any samples.
@@ -54,7 +54,7 @@ export type AbrConfig = {
    * downgrade.
    */
   droppedFramesThreshold: number;
-};
+}
 
 /**
  * Player configuration. Override defaults via
@@ -62,7 +62,7 @@ export type AbrConfig = {
  *
  * @public
  */
-export type PlayerConfig = {
+export interface PlayerConfig {
   /**
    * Maximum seconds of media to buffer ahead of the
    * playback position.
@@ -95,7 +95,7 @@ export type PlayerConfig = {
   segmentRequestOptions: NetworkRequestOptions;
   /** ABR configuration. */
   abr: AbrConfig;
-};
+}
 
 /**
  * Default config.

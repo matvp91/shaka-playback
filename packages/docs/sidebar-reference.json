@@ -108,10 +108,6 @@
           {
             "label": "StreamChangedEvent",
             "link": "/reference/cmaf-lite.streamchangedevent/"
-          },
-          {
-            "label": "StreamsUpdatedEvent",
-            "link": "/reference/cmaf-lite.streamsupdatedevent/"
           }
         ],
         "collapsed": true
@@ -136,10 +132,6 @@
           {
             "label": "AbrConfig",
             "link": "/reference/cmaf-lite.abrconfig/"
-          },
-          {
-            "label": "ByType",
-            "link": "/reference/cmaf-lite.bytype/"
           },
           {
             "label": "ConfigPath",
@@ -224,6 +216,10 @@
           {
             "label": "Track",
             "link": "/reference/cmaf-lite.track/"
+          },
+          {
+            "label": "TypeUnion",
+            "link": "/reference/cmaf-lite.typeunion/"
           },
           {
             "label": "UnknownRecord",
