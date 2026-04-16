@@ -60,9 +60,11 @@ export type Stream<T extends MediaType = MediaType> = TypeUnion<
       hierarchy: StreamHierarchy<MediaType.AUDIO>;
     }
   | {
-      /** Text type. No additional fields today; text streams are part
+      /**
+       * Text type. No additional fields today; text streams are part
        * of the stream model but not yet wired through the stream
-       * controller. */
+       * controller.
+       */
       type: MediaType.TEXT;
       hierarchy: StreamHierarchy<MediaType.TEXT>;
     },
