@@ -56,6 +56,10 @@ export class StreamController {
     return stream as Stream<T> | null;
   }
 
+  setStream(stream: Stream) {
+    this.switchStream_(stream);
+  }
+
   destroy() {
     const networkService = this.player_.getNetworkService();
     for (const mediaState of this.mediaStates_.values()) {
@@ -94,10 +98,11 @@ export class StreamController {
   };
 
   private onAdaptation_ = (event: AdaptationEvent) => {
-    this.switchStream_(MediaType.VIDEO, event.stream);
+    this.switchStream_(event.stream);
   };
 
-  private switchStream_<T extends MediaType>(type: T, stream: Stream<T>) {
+  private switchStream_(stream: Stream) {
+    const { type } = stream;
     const oldStream = this.streams_.get(type) ?? null;
     if (oldStream === stream) {
       return;

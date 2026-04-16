@@ -2,7 +2,7 @@ import type {
   BufferAppendedEvent,
   BufferAppendingEvent,
   BufferCodecsEvent,
-  BufferFlushingEvent,
+  BufferFlushEvent,
   ManifestParsedEvent,
   MediaAttachingEvent,
 } from "../events";
@@ -43,7 +43,7 @@ export class BufferController {
     this.player_.on(Events.BUFFER_APPENDING, this.onBufferAppending_);
     this.player_.on(Events.BUFFER_EOS, this.onBufferEos_);
     this.player_.on(Events.BUFFER_APPENDED, this.onBufferAppended_);
-    this.player_.on(Events.BUFFER_FLUSHING, this.onBufferFlushing_);
+    this.player_.on(Events.BUFFER_FLUSH, this.onBufferFlush_);
     this.opQueue_ = new OperationQueue({
       isUpdating: (type) => {
         const sb = this.sourceBuffers_.get(type);
@@ -61,7 +61,7 @@ export class BufferController {
     this.player_.off(Events.BUFFER_APPENDING, this.onBufferAppending_);
     this.player_.off(Events.BUFFER_EOS, this.onBufferEos_);
     this.player_.off(Events.BUFFER_APPENDED, this.onBufferAppended_);
-    this.player_.off(Events.BUFFER_FLUSHING, this.onBufferFlushing_);
+    this.player_.off(Events.BUFFER_FLUSH, this.onBufferFlush_);
     this.opQueue_.destroy();
     this.segmentTracker_.destroy();
     this.quotaEvictionPending_.clear();
@@ -79,7 +79,7 @@ export class BufferController {
     return sb?.buffered ?? null;
   }
 
-  private onBufferFlushing_ = (event: BufferFlushingEvent) => {
+  private onBufferFlush_ = (event: BufferFlushEvent) => {
     const { type } = event;
     this.quotaEvictionPending_.delete(type);
     this.opQueue_.enqueue(type, this.getFlushOperation_(type, 0, Infinity));

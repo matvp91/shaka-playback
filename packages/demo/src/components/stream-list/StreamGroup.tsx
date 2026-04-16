@@ -21,7 +21,7 @@ export function StreamGroup({ label, player, type }: StreamGroupProps) {
           stream={stream}
           active={stream === activeStream}
           onClick={() => {
-            // TODO(matvp): Fix this.
+            player.setStream(stream);
           }}
         />
       ))}

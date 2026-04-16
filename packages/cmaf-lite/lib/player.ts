@@ -10,6 +10,7 @@ import { GapController } from "./media/gap_controller";
 import { StreamController } from "./media/stream_controller";
 import { NetworkService } from "./net/network_service";
 import type { DeepPartial } from "./types/helpers";
+import type { Stream } from "./types/media";
 import { MediaType } from "./types/media";
 import { EMPTY_ARRAY, EMPTY_TIME_RANGES } from "./utils/constants";
 import * as ObjectUtils from "./utils/object_utils";
@@ -109,6 +110,13 @@ export class Player extends EventEmitter<EventMap> {
    */
   getStream<T extends MediaType>(type: T) {
     return this.streamController_.getStream(type) ?? null;
+  }
+
+  /**
+   * Set a stream.
+   */
+  setStream(stream: Stream) {
+    return this.streamController_.setStream(stream);
   }
 
   /**
