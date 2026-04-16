@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MediaType } from "../../lib/types/media";
-import { buildStreams, selectStream } from "../../lib/utils/stream_utils";
+import { buildStreams } from "../../lib/utils/stream_utils";
 import {
-  createAudioSwitchingSet,
   createManifest,
   createVideoSwitchingSet,
   createVideoTrack,
@@ -86,84 +85,6 @@ describe("StreamUtils", () => {
       });
       const streams = buildStreams(manifest);
       expect(streams.get(MediaType.VIDEO)).toHaveLength(2);
-    });
-  });
-
-  describe("selectStream", () => {
-    const manifest = createManifest({
-      switchingSets: [
-        createVideoSwitchingSet({
-          tracks: [
-            createVideoTrack({ width: 1920, height: 1080 }),
-            createVideoTrack({ width: 1280, height: 720 }),
-          ],
-        }),
-        createAudioSwitchingSet(),
-      ],
-    });
-    const streamsByType = buildStreams(manifest);
-    const videoStreams = streamsByType.get(MediaType.VIDEO)!;
-    const audioStreams = streamsByType.get(MediaType.AUDIO)!;
-
-    it("selects the video stream closest to preferred height", () => {
-      const stream = selectStream(videoStreams, {
-        type: MediaType.VIDEO,
-        height: 700,
-      });
-      expect(stream.type).toBe(MediaType.VIDEO);
-      if (stream.type === MediaType.VIDEO) {
-        expect(stream.height).toBe(720);
-      }
-    });
-
-    it("selects an audio stream matching the preferred codec", () => {
-      const stream = selectStream(audioStreams, {
-        type: MediaType.AUDIO,
-        codec: "aac",
-      });
-      expect(stream.type).toBe(MediaType.AUDIO);
-      expect(stream.codec).toBe("aac");
-    });
-
-    it("penalizes codec mismatch when selecting video streams", () => {
-      const multiCodecStreams = buildStreams(
-        createManifest({
-          switchingSets: [
-            createVideoSwitchingSet({
-              codec: "avc1.64001f",
-              tracks: [createVideoTrack({ width: 1920, height: 1080 })],
-            }),
-            createVideoSwitchingSet({
-              codec: "hev1.1.6.L93",
-              tracks: [createVideoTrack({ width: 1920, height: 1080 })],
-            }),
-          ],
-        }),
-      ).get(MediaType.VIDEO)!;
-      const stream = selectStream(multiCodecStreams, {
-        type: MediaType.VIDEO,
-        codec: "hevc",
-      });
-      expect(stream.codec).toBe("hevc");
-    });
-
-    it("selects video stream closest to preferred width", () => {
-      const stream = selectStream(videoStreams, {
-        type: MediaType.VIDEO,
-        width: 1300,
-      });
-      expect(stream.type).toBe(MediaType.VIDEO);
-      if (stream.type === MediaType.VIDEO) {
-        expect(stream.width).toBe(1280);
-      }
-    });
-
-    it("falls back to the first audio stream when preferred codec is unavailable", () => {
-      const stream = selectStream(audioStreams, {
-        type: MediaType.AUDIO,
-        codec: "nonexistent",
-      });
-      expect(stream.type).toBe(MediaType.AUDIO);
     });
   });
 });

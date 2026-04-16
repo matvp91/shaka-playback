@@ -74,10 +74,9 @@ export class BufferController {
     this.manifest_ = null;
   }
 
-  getBuffered(type: SourceBufferMediaType): TimeRanges {
+  getBuffered(type: SourceBufferMediaType): TimeRanges | null {
     const sb = this.sourceBuffers_.get(type);
-    asserts.assertExists(sb, `No SourceBuffer for ${type}`);
-    return sb.buffered;
+    return sb?.buffered ?? null;
   }
 
   private onBufferFlushing_ = (event: BufferFlushingEvent) => {

@@ -8,6 +8,7 @@ import type {
   Segment,
   SourceBufferMediaType,
   Stream,
+  VideoStream,
 } from ".";
 
 /**
@@ -31,6 +32,7 @@ export const Events = {
   BUFFER_APPEND_ERROR: "bufferAppendError",
   STREAMS_UPDATED: "streamsUpdated",
   STREAM_CHANGED: "streamChanged",
+  ADAPTATION: "adaptation",
   NETWORK_REQUEST: "networkRequest",
   NETWORK_RESPONSE: "networkResponse",
 } as const;
@@ -158,6 +160,15 @@ export interface StreamChangedEvent<T extends MediaType = MediaType> {
 }
 
 /**
+ * Fired when ABR decides to adapt.
+ *
+ * @public
+ */
+export interface AdaptationEvent {
+  stream: VideoStream;
+}
+
+/**
  * Fired before a network request is sent. Listeners can mutate the request
  * URL, headers, and method.
  *
@@ -199,6 +210,7 @@ export interface EventMap {
   [Events.BUFFER_FLUSHED]: (event: BufferFlushedEvent) => void;
   [Events.STREAMS_UPDATED]: undefined;
   [Events.STREAM_CHANGED]: (event: StreamChangedEvent) => void;
+  [Events.ADAPTATION]: (event: AdaptationEvent) => void;
   [Events.NETWORK_REQUEST]: (event: NetworkRequestEvent) => void;
   [Events.NETWORK_RESPONSE]: (event: NetworkResponseEvent) => void;
 }

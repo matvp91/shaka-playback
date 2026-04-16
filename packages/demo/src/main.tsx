@@ -1,4 +1,4 @@
-import { Events, Log, LogLevel, MediaType, Player, Timer } from "cmaf-lite";
+import { Events, Log, LogLevel, Player, Timer } from "cmaf-lite";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.tsx";
 
@@ -7,10 +7,7 @@ Log.setLevel(LogLevel.INFO);
 const player = new Player();
 Object.assign(window, { player });
 
-player.setStreamPreference({
-  type: MediaType.VIDEO,
-  codec: "av1",
-});
+player.setConfig("abr.defaultBandwidthEstimate", 10_000 * 10_000);
 
 const video = document.getElementById("videoElement") as HTMLVideoElement;
 

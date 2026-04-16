@@ -26,7 +26,7 @@ export type SourceBufferMediaType = MediaType.VIDEO | MediaType.AUDIO;
  *
  * @public
  */
-export interface StreamHierarchy<T extends MediaType> {
+export interface StreamHierarchy<T extends MediaType = MediaType> {
   switchingSet: SwitchingSet<T>;
   track: Track<T>;
 }
@@ -87,59 +87,6 @@ export interface SubtitleStream extends BaseStream {
  */
 export type Stream<T extends MediaType = MediaType> = Extract<
   VideoStream | AudioStream | SubtitleStream,
-  {
-    type: T;
-  }
->;
-
-/**
- * Shared fields across all stream preference types.
- *
- * @public
- */
-export interface BaseStreamPreference {
-  codec?: string;
-  bandwidth?: number;
-}
-
-/**
- * Video stream preference with optional resolution targets.
- *
- * @public
- */
-export interface VideoStreamPreference extends BaseStreamPreference {
-  type: MediaType.VIDEO;
-  width?: number;
-  height?: number;
-}
-
-/**
- * Audio stream preference.
- *
- * @public
- */
-export interface AudioStreamPreference extends BaseStreamPreference {
-  type: MediaType.AUDIO;
-}
-
-/**
- * Subtitle stream preference.
- *
- * @public
- */
-export interface SubtitleStreamPreference extends BaseStreamPreference {
-  type: MediaType.SUBTITLE;
-}
-
-/**
- * Soft targets for stream selection, discriminated by
- * {@link MediaType}. All fields besides `type` are optional
- * — the closest available match is chosen.
- *
- * @public
- */
-export type StreamPreference<T extends MediaType = MediaType> = Extract<
-  VideoStreamPreference | AudioStreamPreference | SubtitleStreamPreference,
   {
     type: T;
   }

@@ -1,4 +1,5 @@
 import type {
+  AdaptationEvent,
   BufferFlushedEvent,
   ManifestParsedEvent,
   MediaAttachedEvent,
@@ -6,8 +7,8 @@ import type {
 import { Events } from "../events";
 import type { NetworkRequest } from "../net/network_request";
 import type { Player } from "../player";
-import type { InitSegment, Segment, Track } from "../types/manifest";
-import type { Stream, StreamPreference } from "../types/media";
+import type { InitSegment, Segment } from "../types/manifest";
+import type { Stream } from "../types/media";
 import { MediaType } from "../types/media";
 import { ABORTED, NetworkRequestType } from "../types/net";
 import * as ArrayUtils from "../utils/array_utils";
@@ -24,7 +25,6 @@ const TICK_INTERVAL = 0.1;
 
 type MediaState = {
   type: MediaType;
-  stream: Stream | null;
   lastSegment: Segment | null;
   lastInitSegment: InitSegment | null;
   request: NetworkRequest | null;
@@ -34,32 +34,26 @@ type MediaState = {
 
 export class StreamController {
   private streamsMap_ = new Map<MediaType, Stream[]>();
+  private streams_ = new Map<MediaType, Stream>();
   private media_: HTMLMediaElement | null = null;
   private mediaStates_ = new Map<MediaType, MediaState>();
-  private preferences_ = new Map<MediaType, StreamPreference>();
 
   constructor(private player_: Player) {
     this.player_.on(Events.MANIFEST_PARSED, this.onManifestParsed_);
     this.player_.on(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.on(Events.MEDIA_DETACHED, this.onMediaDetached_);
     this.player_.on(Events.BUFFER_FLUSHED, this.onBufferFlushed_);
+    this.player_.on(Events.ADAPTATION, this.onAdaptation_);
   }
 
   getStreams<T extends MediaType>(type: T) {
     const list = this.streamsMap_.get(type);
-    asserts.assertExists(list, `No streams for ${type}`);
-    return list as Stream<T>[];
+    return list as Stream<T>[] | null;
   }
 
-  getActiveStream<T extends MediaType>(type: T) {
-    const mediaState = this.mediaStates_.get(type);
-    return (mediaState?.stream ?? null) as Stream<T> | null;
-  }
-
-  getPreference<T extends MediaType>(type: T) {
-    const preference = this.preferences_.get(type);
-    asserts.assertExists(preference, `No Preference for ${type}`);
-    return preference as StreamPreference<T>;
+  getStream<T extends MediaType>(type: T) {
+    const stream = this.streams_.get(type);
+    return stream as Stream<T> | null;
   }
 
   destroy() {
@@ -74,6 +68,7 @@ export class StreamController {
     this.player_.off(Events.MEDIA_ATTACHED, this.onMediaAttached_);
     this.player_.off(Events.MEDIA_DETACHED, this.onMediaDetached_);
     this.player_.off(Events.BUFFER_FLUSHED, this.onBufferFlushed_);
+    this.player_.off(Events.ADAPTATION, this.onAdaptation_);
     this.mediaStates_.clear();
   }
 
@@ -98,39 +93,20 @@ export class StreamController {
     }
   };
 
-  setPreference(preference: StreamPreference, flushBuffer: boolean) {
-    // We can set preferences before we load.
-    this.preferences_.set(preference.type, preference);
+  private onAdaptation_ = (event: AdaptationEvent) => {
+    this.switchStream_(MediaType.VIDEO, event.stream);
+  };
 
-    const mediaState = this.mediaStates_.get(preference.type);
+  private switchStream_<T extends MediaType>(type: T, stream: Stream<T>) {
+    const oldStream = this.streams_.get(type) ?? null;
+    if (oldStream === stream) {
+      return;
+    }
+    this.streams_.set(type, stream);
+
+    const mediaState = this.mediaStates_.get(type);
     if (!mediaState) {
       return;
-    }
-
-    const streams = this.streamsMap_.get(preference.type);
-    if (!streams) {
-      return;
-    }
-    const stream = StreamUtils.selectStream(streams, preference);
-    if (!this.switchStream_(mediaState, stream)) {
-      return;
-    }
-
-    if (flushBuffer && isAV(mediaState.type)) {
-      this.player_.emit(Events.BUFFER_FLUSHING, { type: mediaState.type });
-    }
-
-    this.update_(mediaState);
-  }
-
-  /**
-   * Applies a stream change to a media state. Returns `false`
-   * if the stream is already active (no-op).
-   */
-  private switchStream_(mediaState: MediaState, stream: Stream): boolean {
-    const oldStream = mediaState.stream;
-    if (stream === oldStream) {
-      return false;
     }
 
     const networkService = this.player_.getNetworkService();
@@ -142,9 +118,9 @@ export class StreamController {
       !oldStream ||
       oldStream.hierarchy.switchingSet !== stream.hierarchy.switchingSet
     ) {
-      if (isAV(mediaState.type)) {
+      if (isAV(type)) {
         this.player_.emit(Events.BUFFER_CODECS, {
-          type: mediaState.type,
+          type,
           codec: stream.hierarchy.switchingSet.codec,
         });
       }
@@ -152,19 +128,16 @@ export class StreamController {
       // so no codec signalling is needed.
     }
 
-    mediaState.stream = stream;
     mediaState.lastSegment = null;
     mediaState.lastInitSegment = null;
 
     log.info("Switched stream", stream);
 
     this.player_.emit(Events.STREAM_CHANGED, {
-      type: mediaState.type,
+      type,
       oldStream,
       stream,
     });
-
-    return true;
   }
 
   private onMediaDetached_ = () => {
@@ -185,26 +158,32 @@ export class StreamController {
     }
 
     for (const [type, streams] of this.streamsMap_) {
-      if (!this.preferences_.has(type)) {
-        // TODO(matvp): We enforce that each preference is present for each
-        // type. Check if we can make preferences optional instead.
-        this.preferences_.set(type, { type });
-      }
-      const preference = this.getPreference(type);
-      const stream = StreamUtils.selectStream(streams, preference);
+      const stream = this.streams_.get(type) ?? streams[0];
+      asserts.assertExists(stream, "Missing initial stream");
+      this.streams_.set(type, stream);
 
       const mediaState: MediaState = {
         type,
-        stream: null,
         ended: false,
         lastSegment: null,
         lastInitSegment: null,
         request: null,
         timer: new Timer(() => this.update_(mediaState)),
       };
-
       this.mediaStates_.set(type, mediaState);
-      this.switchStream_(mediaState, stream);
+
+      if (isAV(type)) {
+        this.player_.emit(Events.BUFFER_CODECS, {
+          type,
+          codec: stream.hierarchy.switchingSet.codec,
+        });
+      }
+
+      this.player_.emit(Events.STREAM_CHANGED, {
+        type,
+        oldStream: null,
+        stream,
+      });
     }
 
     for (const mediaState of this.mediaStates_.values()) {
@@ -217,9 +196,9 @@ export class StreamController {
    * via sequential index or time-based lookup.
    */
   private update_(mediaState: MediaState) {
-    if (!mediaState.stream) {
-      return;
-    }
+    const stream = this.streams_.get(mediaState.type);
+    asserts.assertExists(stream, `No stream for ${mediaState.type}`);
+
     if (mediaState.ended || mediaState.request?.inFlight) {
       return;
     }
@@ -235,9 +214,9 @@ export class StreamController {
       return;
     }
 
-    let segment = this.getNextSegment_(mediaState);
+    let segment = this.getNextSegment_(mediaState, stream);
     if (!segment) {
-      if (this.isEnded_(mediaState)) {
+      if (this.isEnded_(mediaState, stream)) {
         mediaState.ended = true;
         this.checkEndOfStream_();
         return;
@@ -245,10 +224,7 @@ export class StreamController {
 
       const lookupTime =
         bufferEnd ?? Math.max(0, currentTime - /* maybeSegmentSize= */ 4);
-      segment = this.getSegmentForTime_(
-        mediaState.stream.hierarchy.track,
-        lookupTime,
-      );
+      segment = this.getSegmentForTime_(stream, lookupTime);
       log.debug(`Segment by time at ${lookupTime}`, segment);
     } else {
       log.debug(`Segment by index`, segment);
@@ -310,19 +286,21 @@ export class StreamController {
     return BufferUtils.getBufferedEnd(buffered, time, maxBufferHole);
   }
 
-  private getNextSegment_(mediaState: MediaState): Segment | null {
+  private getNextSegment_(
+    mediaState: MediaState,
+    stream: Stream,
+  ): Segment | null {
     if (!mediaState.lastSegment) {
       return null;
     }
-    asserts.assertExists(mediaState.stream, `No Stream for ${mediaState.type}`);
-    const { segments } = mediaState.stream.hierarchy.track;
+    const { segments } = stream.hierarchy.track;
     const lastIndex = segments.indexOf(mediaState.lastSegment);
     return segments[lastIndex + 1] ?? null;
   }
 
-  private getSegmentForTime_(track: Track, time: number): Segment | null {
+  private getSegmentForTime_(stream: Stream, time: number): Segment | null {
     const { maxSegmentLookupTolerance } = this.player_.getConfig();
-    return ArrayUtils.binarySearch(track.segments, (seg) => {
+    return ArrayUtils.binarySearch(stream.hierarchy.track.segments, (seg) => {
       if (time >= seg.start && time < seg.end) {
         return 0;
       }
@@ -340,12 +318,11 @@ export class StreamController {
     });
   }
 
-  private isEnded_(mediaState: MediaState): boolean {
+  private isEnded_(mediaState: MediaState, stream: Stream): boolean {
     if (!mediaState.lastSegment) {
       return false;
     }
-    asserts.assertExists(mediaState.stream, `No Stream for ${mediaState.type}`);
-    const { segments } = mediaState.stream.hierarchy.track;
+    const { segments } = stream.hierarchy.track;
     return segments.indexOf(mediaState.lastSegment) === segments.length - 1;
   }
 
