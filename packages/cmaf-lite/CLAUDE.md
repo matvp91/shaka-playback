@@ -7,6 +7,7 @@ CMAF-compliant media player library extending the HTML `<video>` element with ad
 - [Architecture & Technical Design](docs/design.md)
 - [Manifest Model](docs/manifest.md)
 - [Buffer Management](docs/buffer.md)
+- [Adaptive Bitrate](docs/abr.md)
 
 ## Structure
 
@@ -14,9 +15,9 @@ CMAF-compliant media player library extending the HTML `<video>` element with ad
   - `player.ts` — central Player class
   - `config.ts` — player configuration and defaults
   - `events.ts` — event definitions and type map
-  - `registry.ts` — extensible component registry
-  - `manifest/` — manifest loading and parser base class
+  - `manifest/` — manifest loading
   - `media/` — buffer, stream, and gap controllers
+  - `abr/` — adaptive bitrate controller and estimators
   - `dash/` — DASH MPD parser
   - `net/` — network service and response
   - `types/` — manifest, media, and network types

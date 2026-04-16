@@ -16,7 +16,7 @@ buffering them through MSE.
 
 ### Non-goals (for now)
 
-- DRM, UI/chrome, ABR
+- DRM, UI/chrome
 
 ## Principles
 
@@ -45,12 +45,13 @@ Central class with three roles:
 
 1. **Event bus** — all controller communication flows through
    `EventEmitter`. Controllers never call each other directly.
-2. **Owner** — instantiates and holds controllers,
-   NetworkService, and the component Registry.
+2. **Owner** — instantiates and holds controllers and
+   NetworkService.
 3. **Public API** — `load()`, `attachMedia()`, `detachMedia()`,
    `destroy()`, `getConfig()`, `setConfig()`,
-   `setPreference()`, `getStreams()`, `getBuffered()`,
-   `getMedia()`, `getRegistry()`, `getNetworkService()`.
+   `setStreamPreference()`, `getStreamPreference()`,
+   `getStreams()`, `getActiveStream()`, `getBuffered()`,
+   `getMedia()`, `getNetworkService()`.
 
 ## Controllers
 
@@ -60,9 +61,9 @@ event listeners, has a single responsibility, and provides
 
 ### ManifestController
 
-Fetches manifests via NetworkService and delegates parsing
-to a ManifestParser resolved through the Registry. Emits
-the parsed Manifest for downstream controllers.
+Fetches manifests via NetworkService and parses them with
+the DASH parser. Emits the parsed Manifest for downstream
+controllers.
 
 ### BufferController
 
@@ -85,12 +86,12 @@ segment. Handles presentation transitions and seeking.
 Detects playback stalls and jumps small gaps (up to 2s) to
 keep playback moving.
 
-## Registry
+### AbrController
 
-Static component registry for extensible implementations.
-External code registers components (e.g., `DashParser`) via
-`Registry.add()`. Controllers resolve them at runtime through
-`player.getRegistry()`. Currently supports manifest parsers.
+Evaluates four independent rules (throughput, BOLA,
+insufficient buffer, dropped frames) on a configurable
+interval. Picks the most conservative result. See
+[abr.md](abr.md) for details.
 
 ## Network Layer
 
