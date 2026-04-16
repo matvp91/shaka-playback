@@ -9,21 +9,6 @@ export type Prettify<T> = {
 } & {};
 
 /**
- * Generic string-keyed record.
- *
- * @public
- */
-export type UnknownRecord = Record<string, unknown>;
-
-/**
- * Makes all properties optional except those in `K`.
- *
- * @public
- */
-export type OptionalExcept<T, K extends keyof T> = Partial<T> &
-  Required<Pick<T, K>>;
-
-/**
  * Recursively makes all properties optional.
  *
  * @public
