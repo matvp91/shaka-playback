@@ -71,11 +71,6 @@ export class SegmentTracker {
     return last.end - last.start;
   }
 
-  /**
-   * Reconcile tracked segments against SourceBuffer.buffered.
-   * Discard entries whose time range is no longer in the buffer.
-   * Compacts in place to avoid per-call allocation.
-   */
   reconcile(type: MediaType, buffered: TimeRanges) {
     const list = this.segments_.get(type);
     if (!list) {
@@ -96,10 +91,6 @@ export class SegmentTracker {
   }
 }
 
-/**
- * Check if a time range is contained within any of the
- * buffered ranges, with a small tolerance for float precision.
- */
 function isTimeBuffered(
   start: number,
   end: number,

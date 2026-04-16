@@ -166,12 +166,6 @@ function mapTemplateDuration(
   return { segments, maxSegmentDuration: segmentDuration };
 }
 
-/**
- * Resolve SegmentTemplate inheritance across Period, AdaptationSet, and
- * Representation levels (child wins per DASH spec). Returns a synthetic
- * SegmentTemplate TNode with merged attributes so downstream code reads
- * it uniformly via XmlUtils.attr.
- */
 function resolveSegmentTemplate(
   period: txml.TNode,
   adaptationSet: txml.TNode,

@@ -265,11 +265,6 @@ export class StreamController {
     }
   }
 
-  /**
-   * Fetch an init or media segment and emit
-   * BUFFER_APPENDING. State is updated only after
-   * the fetch resolves.
-   */
   private async loadSegment_(
     mediaState: MediaState,
     segment: Segment | InitSegment,
@@ -323,10 +318,6 @@ export class StreamController {
     return segments[lastIndex + 1] ?? null;
   }
 
-  /**
-   * Binary search for the segment containing the given
-   * time.
-   */
   private getSegmentForTime_(track: Track, time: number): Segment | null {
     const { maxSegmentLookupTolerance } = this.player_.getConfig();
     return ArrayUtils.binarySearch(track.segments, (seg) => {
@@ -347,11 +338,6 @@ export class StreamController {
     });
   }
 
-  /**
-   * Returns true when the track is exhausted: the last
-   * emitted segment is the final entry in the track.
-   * Live manifests (once supported) should bail out here.
-   */
   private isEnded_(mediaState: MediaState): boolean {
     if (!mediaState.lastSegment) {
       return false;

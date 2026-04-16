@@ -11,18 +11,6 @@ import { EwmaBandwidthEstimator } from "./ewma_bandwidth_estimator";
 
 const log = Log.create("AbrController");
 
-/**
- * Rule-based ABR controller. Evaluates four rules on a timer and
- * applies the most conservative (lowest bandwidth) result.
- *
- * Rules:
- *   - Throughput    — highest stream fitting measured bandwidth.
- *   - BOLA          — buffer-level utility scoring (paper formulation).
- *   - Insufficient  — proportional downshift when buffer is thin.
- *   - DroppedFrames — one step down when decoder can't keep up.
- *
- * @internal
- */
 export class AbrController {
   private player_: Player;
   private timer_: Timer;
@@ -40,19 +28,11 @@ export class AbrController {
     this.player_.on(Events.NETWORK_RESPONSE, this.onNetworkResponse_);
   }
 
-  /**
-   * Returns the current throughput estimate in bits/s.
-   */
   getThroughputEstimate(): number {
     const { defaultBandwidthEstimate } = this.player_.getConfig().abr;
     return this.bandwidthEstimator_.getEstimate(defaultBandwidthEstimate);
   }
 
-  /**
-   * Returns the video buffer level ahead of the playhead in seconds.
-   * Returns 0 when no media is attached or the playhead is outside
-   * buffered ranges.
-   */
   getBufferLevel(): number {
     const media = this.player_.getMedia();
     if (!media) {
@@ -90,9 +70,6 @@ export class AbrController {
     this.bandwidthEstimator_.sample(durationSec, arrayBuffer.byteLength);
   };
 
-  /**
-   * Evaluate potential stream targets
-   */
   private evaluate_() {
     const videoStreams = this.videoStreams_;
     const currentVideoStream = this.player_.getActiveStream(MediaType.VIDEO);

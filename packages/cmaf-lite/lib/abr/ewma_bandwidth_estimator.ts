@@ -1,12 +1,6 @@
 import type { AbrConfig } from "../config";
 import { Ewma } from "./ewma";
 
-/**
- * Dual-EWMA bandwidth estimator. Maintains a fast and slow EWMA and
- * returns the minimum — a quick-reacting but conservative estimate.
- *
- * @internal
- */
 export class EwmaBandwidthEstimator {
   private fast_: Ewma;
   private slow_: Ewma;
@@ -17,12 +11,6 @@ export class EwmaBandwidthEstimator {
     this.slow_ = new Ewma(config_.slowHalfLife);
   }
 
-  /**
-   * Records a completed download as a bandwidth sample.
-   *
-   * @param durationSeconds - How long the download took.
-   * @param bytes - How many bytes were received.
-   */
   sample(durationSeconds: number, bytes: number) {
     if (durationSeconds <= 0 || bytes <= 0) {
       return;
@@ -33,10 +21,6 @@ export class EwmaBandwidthEstimator {
     this.totalBytes_ += bytes;
   }
 
-  /**
-   * Returns the current bandwidth estimate in bits/s. Returns
-   * `defaultBandwidthEstimate` until `minTotalBytes` has accumulated.
-   */
   getEstimate(defaultEstimate: number): number {
     if (this.totalBytes_ < this.config_.minTotalBytes) {
       return defaultEstimate;

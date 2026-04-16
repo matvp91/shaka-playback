@@ -15,11 +15,6 @@ type PeriodContext = {
   tracks: Map<string, Track>;
 };
 
-/**
- * Flatten a multi-period MPD into switching sets. Tracks sharing the
- * same (type, codec, representation id) across periods are merged into
- * a single Track with concatenated segments.
- */
 export function flattenPeriods(
   sourceUrl: string,
   mpd: txml.TNode,
