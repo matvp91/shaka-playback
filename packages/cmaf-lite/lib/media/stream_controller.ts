@@ -7,7 +7,7 @@ import { Events } from "../events";
 import type { NetworkRequest } from "../net/network_request";
 import type { Player } from "../player";
 import type { InitSegment, Segment, Track } from "../types/manifest";
-import type { ByType, Stream, StreamPreference } from "../types/media";
+import type { Stream, StreamPreference, TypeUnion } from "../types/media";
 import { MediaType } from "../types/media";
 import { ABORTED, NetworkRequestType } from "../types/net";
 import * as ArrayUtils from "../utils/array_utils";
@@ -22,15 +22,29 @@ const log = Log.create("StreamController");
 
 const TICK_INTERVAL = 0.1;
 
-type MediaState<T extends MediaType = MediaType> = {
-  type: T;
-  stream: ByType<Stream, T> | null;
-  lastSegment: Segment | null;
-  lastInitSegment: InitSegment | null;
-  request: NetworkRequest | null;
-  ended: boolean;
-  timer: Timer;
-};
+type MediaState<T extends MediaType = MediaType> = TypeUnion<
+  {
+    stream: Stream | null;
+    lastSegment: Segment | null;
+    lastInitSegment: InitSegment | null;
+    request: NetworkRequest | null;
+    ended: boolean;
+    timer: Timer;
+  },
+  | {
+      type: MediaType.VIDEO;
+      stream: Stream<MediaType.VIDEO> | null;
+    }
+  | {
+      type: MediaType.AUDIO;
+      stream: Stream<MediaType.AUDIO> | null;
+    }
+  | {
+      type: MediaType.TEXT;
+      stream: Stream<MediaType.TEXT> | null;
+    },
+  T
+>;
 
 export class StreamController {
   private streamsMap_ = new Map<MediaType, Stream[]>();
