@@ -16,6 +16,7 @@ export default defineConfig({
             { label: "Technical Design", slug: "architecture/design" },
             { label: "Buffer", slug: "architecture/buffer" },
             { label: "Manifest", slug: "architecture/manifest" },
+            { label: "Stream Design", slug: "architecture/stream" },
           ],
         },
         ...referenceSidebar,

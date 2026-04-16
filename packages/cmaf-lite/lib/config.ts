@@ -18,7 +18,7 @@ export type ConfigPathValue<P extends ConfigPath> = Prettify<
 >;
 
 /**
- * ABR controller configuration.
+ * ABR configuration.
  *
  * @public
  */
@@ -50,7 +50,7 @@ export type AbrConfig = {
    */
   minTotalBytes: number;
   /**
-   * Dropped frame ratio above which the controller forces a
+   * Dropped frame ratio above which forces a
    * downgrade.
    */
   droppedFramesThreshold: number;
@@ -93,7 +93,7 @@ export type PlayerConfig = {
   manifestRequestOptions: NetworkRequestOptions;
   /** Network options for segment requests. */
   segmentRequestOptions: NetworkRequestOptions;
-  /** ABR controller configuration. */
+  /** ABR configuration. */
   abr: AbrConfig;
 };
 

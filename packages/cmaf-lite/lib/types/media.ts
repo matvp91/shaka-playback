@@ -72,6 +72,10 @@ export type Stream<T extends MediaType = MediaType> = TypeUnion<
 >;
 
 /**
+ * Soft targets for stream selection, discriminated by
+ * {@link MediaType}. All fields besides `type` are optional
+ * — the closest available match is chosen.
+ *
  * @public
  */
 export type StreamPreference<T extends MediaType = MediaType> = TypeUnion<
@@ -93,6 +97,12 @@ export type StreamPreference<T extends MediaType = MediaType> = TypeUnion<
   T
 >;
 
+/**
+ * Discriminated union helper. Combines shared fields with
+ * per-type variants and narrows to the branch matching `T`.
+ *
+ * @public
+ */
 export type TypeUnion<TBase, TVariants, T = unknown> = Prettify<
   Extract<TBase & TVariants, { type: T }>
 >;

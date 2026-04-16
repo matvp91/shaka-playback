@@ -119,10 +119,19 @@ export class Player extends EventEmitter<EventMap> {
     return this.networkService_;
   }
 
+  /**
+   * Sets the preferred stream for a media type. Pass
+   * `flushBuffer` to discard buffered data and switch
+   * immediately.
+   */
   setStreamPreference(preference: StreamPreference, flushBuffer = false) {
     this.streamController_.setPreference(preference, flushBuffer);
   }
 
+  /**
+   * Returns the active stream preference for the given
+   * type, or `undefined` if none has been set.
+   */
   getStreamPreference<T extends MediaType>(type: T) {
     return this.streamController_.getPreference(type);
   }
