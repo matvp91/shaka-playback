@@ -7,12 +7,12 @@
         "label": "Class",
         "items": [
           {
-            "label": "DashParser",
-            "link": "/reference/cmaf-lite.dashparser/"
+            "label": "Log",
+            "link": "/reference/cmaf-lite.log/"
           },
           {
-            "label": "ManifestParser",
-            "link": "/reference/cmaf-lite.manifestparser/"
+            "label": "NetworkRequest",
+            "link": "/reference/cmaf-lite.networkrequest/"
           },
           {
             "label": "NetworkResponse",
@@ -27,8 +27,8 @@
             "link": "/reference/cmaf-lite.player/"
           },
           {
-            "label": "Registry",
-            "link": "/reference/cmaf-lite.registry/"
+            "label": "Timer",
+            "link": "/reference/cmaf-lite.timer/"
           }
         ]
       },
@@ -36,16 +36,16 @@
         "label": "Enum",
         "items": [
           {
+            "label": "LogLevel",
+            "link": "/reference/cmaf-lite.loglevel/"
+          },
+          {
             "label": "MediaType",
             "link": "/reference/cmaf-lite.mediatype/"
           },
           {
             "label": "NetworkRequestType",
             "link": "/reference/cmaf-lite.networkrequesttype/"
-          },
-          {
-            "label": "RegistryType",
-            "link": "/reference/cmaf-lite.registrytype/"
           }
         ],
         "collapsed": true
@@ -70,6 +70,14 @@
             "link": "/reference/cmaf-lite.buffercodecsevent/"
           },
           {
+            "label": "BufferFlushedEvent",
+            "link": "/reference/cmaf-lite.bufferflushedevent/"
+          },
+          {
+            "label": "BufferFlushingEvent",
+            "link": "/reference/cmaf-lite.bufferflushingevent/"
+          },
+          {
             "label": "ManifestLoadingEvent",
             "link": "/reference/cmaf-lite.manifestloadingevent/"
           },
@@ -86,6 +94,10 @@
             "link": "/reference/cmaf-lite.mediaattachingevent/"
           },
           {
+            "label": "MediaDetachingEvent",
+            "link": "/reference/cmaf-lite.mediadetachingevent/"
+          },
+          {
             "label": "NetworkRequestEvent",
             "link": "/reference/cmaf-lite.networkrequestevent/"
           },
@@ -94,8 +106,12 @@
             "link": "/reference/cmaf-lite.networkresponseevent/"
           },
           {
-            "label": "StreamPreferenceChangedEvent",
-            "link": "/reference/cmaf-lite.streampreferencechangedevent/"
+            "label": "StreamChangedEvent",
+            "link": "/reference/cmaf-lite.streamchangedevent/"
+          },
+          {
+            "label": "StreamsUpdatedEvent",
+            "link": "/reference/cmaf-lite.streamsupdatedevent/"
           }
         ],
         "collapsed": true
@@ -106,10 +122,6 @@
           {
             "label": "EventMap",
             "link": "/reference/cmaf-lite.eventmap/"
-          },
-          {
-            "label": "RegistryTypeMap",
-            "link": "/reference/cmaf-lite.registrytypemap/"
           }
         ],
         "collapsed": true
@@ -118,40 +130,88 @@
         "label": "TypeAlias",
         "items": [
           {
+            "label": "AbortableNetworkResponse",
+            "link": "/reference/cmaf-lite.abortablenetworkresponse/"
+          },
+          {
+            "label": "AbrConfig",
+            "link": "/reference/cmaf-lite.abrconfig/"
+          },
+          {
             "label": "ByType",
             "link": "/reference/cmaf-lite.bytype/"
+          },
+          {
+            "label": "ConfigPath",
+            "link": "/reference/cmaf-lite.configpath/"
+          },
+          {
+            "label": "ConfigPathValue",
+            "link": "/reference/cmaf-lite.configpathvalue/"
+          },
+          {
+            "label": "DeepPartial",
+            "link": "/reference/cmaf-lite.deeppartial/"
           },
           {
             "label": "InitSegment",
             "link": "/reference/cmaf-lite.initsegment/"
           },
           {
+            "label": "LogArgs",
+            "link": "/reference/cmaf-lite.logargs/"
+          },
+          {
             "label": "Manifest",
             "link": "/reference/cmaf-lite.manifest/"
           },
           {
-            "label": "NetworkRequest",
-            "link": "/reference/cmaf-lite.networkrequest/"
+            "label": "NetworkRequestOptions",
+            "link": "/reference/cmaf-lite.networkrequestoptions/"
           },
           {
-            "label": "NetworkResponsePromise",
-            "link": "/reference/cmaf-lite.networkresponsepromise/"
+            "label": "OptionalExcept",
+            "link": "/reference/cmaf-lite.optionalexcept/"
+          },
+          {
+            "label": "Path",
+            "link": "/reference/cmaf-lite.path/"
+          },
+          {
+            "label": "PathConcat",
+            "link": "/reference/cmaf-lite.pathconcat/"
+          },
+          {
+            "label": "PathValue",
+            "link": "/reference/cmaf-lite.pathvalue/"
           },
           {
             "label": "PlayerConfig",
             "link": "/reference/cmaf-lite.playerconfig/"
           },
           {
-            "label": "RegistoryComponentCtor",
-            "link": "/reference/cmaf-lite.registorycomponentctor/"
+            "label": "Prettify",
+            "link": "/reference/cmaf-lite.prettify/"
+          },
+          {
+            "label": "Primitive",
+            "link": "/reference/cmaf-lite.primitive/"
           },
           {
             "label": "Segment",
             "link": "/reference/cmaf-lite.segment/"
           },
           {
+            "label": "SourceBufferMediaType",
+            "link": "/reference/cmaf-lite.sourcebuffermediatype/"
+          },
+          {
             "label": "Stream",
             "link": "/reference/cmaf-lite.stream/"
+          },
+          {
+            "label": "StreamHierarchy",
+            "link": "/reference/cmaf-lite.streamhierarchy/"
           },
           {
             "label": "StreamPreference",
@@ -164,6 +224,10 @@
           {
             "label": "Track",
             "link": "/reference/cmaf-lite.track/"
+          },
+          {
+            "label": "UnknownRecord",
+            "link": "/reference/cmaf-lite.unknownrecord/"
           }
         ],
         "collapsed": true

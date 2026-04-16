@@ -1,8 +1,8 @@
+import { parseManifest } from "../dash/dash_parser";
 import type { ManifestLoadingEvent } from "../events";
 import { Events } from "../events";
 import type { NetworkRequest } from "../net/network_request";
 import type { Player } from "../player";
-import { RegistryType } from "../registry";
 import { ABORTED, NetworkRequestType } from "../types/net";
 import { Log } from "../utils/log";
 
@@ -37,24 +37,11 @@ export class ManifestController {
       return;
     }
 
-    const contentType = response.headers.get("content-type");
-    if (!contentType) {
-      throw new Error("Missing response header for manifest");
-    }
-
-    const parser = this.getParser_(contentType);
-    const manifest = parser.parse(response);
-    log.info("Manifest", manifest, parser);
+    // TODO(matvp): We used to have a registry lookup but that complicated
+    // things. We shall look at this again later. For now, always assume
+    // that it's DASH.
+    const manifest = parseManifest(response.text, response.request.url);
+    log.info("Manifest", manifest);
     this.player_.emit(Events.MANIFEST_PARSED, { manifest });
   };
-
-  private getParser_(contentType: string) {
-    const parsers = this.player_.getRegistry(RegistryType.MANIFEST_PARSER);
-    for (const parser of parsers) {
-      if (parser.mimeTypes.includes(contentType)) {
-        return parser;
-      }
-    }
-    throw new Error(`Failed to find parser for ${contentType}`);
-  }
 }

@@ -4,17 +4,12 @@ import {
   LogLevel,
   MediaType,
   Player,
-  Registry,
-  RegistryType,
   Timer,
 } from "cmaf-lite";
-import { DashParser } from "cmaf-lite/dash";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.tsx";
 
 Log.setLevel(LogLevel.INFO);
-
-Registry.add(RegistryType.MANIFEST_PARSER, DashParser);
 
 const player = new Player();
 Object.assign(window, { player });
