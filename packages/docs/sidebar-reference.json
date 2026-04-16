@@ -116,8 +116,88 @@
         "label": "Interface",
         "items": [
           {
+            "label": "AbrConfig",
+            "link": "/reference/cmaf-lite.abrconfig/"
+          },
+          {
+            "label": "AudioStream",
+            "link": "/reference/cmaf-lite.audiostream/"
+          },
+          {
+            "label": "AudioStreamPreference",
+            "link": "/reference/cmaf-lite.audiostreampreference/"
+          },
+          {
+            "label": "AudioSwitchingSet",
+            "link": "/reference/cmaf-lite.audioswitchingset/"
+          },
+          {
+            "label": "AudioTrack",
+            "link": "/reference/cmaf-lite.audiotrack/"
+          },
+          {
+            "label": "BaseStream",
+            "link": "/reference/cmaf-lite.basestream/"
+          },
+          {
+            "label": "BaseStreamPreference",
+            "link": "/reference/cmaf-lite.basestreampreference/"
+          },
+          {
+            "label": "BaseSwitchingSet",
+            "link": "/reference/cmaf-lite.baseswitchingset/"
+          },
+          {
+            "label": "BaseTrack",
+            "link": "/reference/cmaf-lite.basetrack/"
+          },
+          {
             "label": "EventMap",
             "link": "/reference/cmaf-lite.eventmap/"
+          },
+          {
+            "label": "Manifest",
+            "link": "/reference/cmaf-lite.manifest/"
+          },
+          {
+            "label": "PlayerConfig",
+            "link": "/reference/cmaf-lite.playerconfig/"
+          },
+          {
+            "label": "StreamHierarchy",
+            "link": "/reference/cmaf-lite.streamhierarchy/"
+          },
+          {
+            "label": "TextStream",
+            "link": "/reference/cmaf-lite.textstream/"
+          },
+          {
+            "label": "TextStreamPreference",
+            "link": "/reference/cmaf-lite.textstreampreference/"
+          },
+          {
+            "label": "TextSwitchingSet",
+            "link": "/reference/cmaf-lite.textswitchingset/"
+          },
+          {
+            "label": "TextTrack_2",
+            "link": "/reference/cmaf-lite.texttrack_2/"
+          },
+          {
+            "label": "VideoStream",
+            "link": "/reference/cmaf-lite.videostream/"
+          },
+          {
+            "label": "VideoStreamPreference",
+            "link": "/reference/cmaf-lite.videostreampreference/"
+          },
+          {
+            "label": "VideoSwitchingSet",
+            "link": "/reference/cmaf-lite.videoswitchingset/"
+          },
+          {
+            "label": "VideoTrack",
+            "link": "/reference/cmaf-lite.videotrack/"
           }
         ],
         "collapsed": true
@@ -128,10 +208,6 @@
           {
             "label": "AbortableNetworkResponse",
             "link": "/reference/cmaf-lite.abortablenetworkresponse/"
-          },
-          {
-            "label": "AbrConfig",
-            "link": "/reference/cmaf-lite.abrconfig/"
           },
           {
             "label": "ConfigPath",
@@ -154,16 +230,8 @@
             "link": "/reference/cmaf-lite.logargs/"
           },
           {
-            "label": "Manifest",
-            "link": "/reference/cmaf-lite.manifest/"
-          },
-          {
             "label": "NetworkRequestOptions",
             "link": "/reference/cmaf-lite.networkrequestoptions/"
-          },
-          {
-            "label": "OptionalExcept",
-            "link": "/reference/cmaf-lite.optionalexcept/"
           },
           {
             "label": "Path",
@@ -176,14 +244,6 @@
           {
             "label": "PathValue",
             "link": "/reference/cmaf-lite.pathvalue/"
-          },
-          {
-            "label": "PlayerConfig",
-            "link": "/reference/cmaf-lite.playerconfig/"
-          },
-          {
-            "label": "Prettify",
-            "link": "/reference/cmaf-lite.prettify/"
           },
           {
             "label": "Primitive",
@@ -202,10 +262,6 @@
             "link": "/reference/cmaf-lite.stream/"
           },
           {
-            "label": "StreamHierarchy",
-            "link": "/reference/cmaf-lite.streamhierarchy/"
-          },
-          {
             "label": "StreamPreference",
             "link": "/reference/cmaf-lite.streampreference/"
           },
@@ -216,14 +272,6 @@
           {
             "label": "Track",
             "link": "/reference/cmaf-lite.track/"
-          },
-          {
-            "label": "TypeUnion",
-            "link": "/reference/cmaf-lite.typeunion/"
-          },
-          {
-            "label": "UnknownRecord",
-            "link": "/reference/cmaf-lite.unknownrecord/"
           }
         ],
         "collapsed": true

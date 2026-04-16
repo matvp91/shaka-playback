@@ -1,4 +1,3 @@
-import type { Prettify } from "./helpers";
 import type { SwitchingSet, Track } from "./manifest";
 
 /**
@@ -27,10 +26,58 @@ export type SourceBufferMediaType = MediaType.VIDEO | MediaType.AUDIO;
  *
  * @public
  */
-export type StreamHierarchy<T extends MediaType = MediaType> = {
+export interface StreamHierarchy<T extends MediaType> {
   switchingSet: SwitchingSet<T>;
   track: Track<T>;
-};
+}
+
+/**
+ * Shared fields across all stream types.
+ *
+ * @public
+ */
+export interface BaseStream {
+  /** Normalized codec. */
+  codec: string;
+  /** Bitrate in bits per second. */
+  bandwidth: number;
+}
+
+/**
+ * Video stream with resolution and hierarchy.
+ *
+ * @public
+ */
+export interface VideoStream extends BaseStream {
+  type: MediaType.VIDEO;
+  /** Video width. */
+  width: number;
+  /** Video height. */
+  height: number;
+  hierarchy: StreamHierarchy<MediaType.VIDEO>;
+}
+
+/**
+ * Audio stream with hierarchy.
+ *
+ * @public
+ */
+export interface AudioStream extends BaseStream {
+  type: MediaType.AUDIO;
+  hierarchy: StreamHierarchy<MediaType.AUDIO>;
+}
+
+/**
+ * Text stream. No additional fields today; text streams
+ * are part of the stream model but not yet wired through
+ * the stream controller.
+ *
+ * @public
+ */
+export interface TextStream extends BaseStream {
+  type: MediaType.TEXT;
+  hierarchy: StreamHierarchy<MediaType.TEXT>;
+}
 
 /**
  * Set of compatible, switchable tracks sharing a codec
@@ -38,38 +85,51 @@ export type StreamHierarchy<T extends MediaType = MediaType> = {
  *
  * @public
  */
-export type Stream<T extends MediaType = MediaType> = TypeUnion<
+export type Stream<T extends MediaType = MediaType> = Extract<
+  VideoStream | AudioStream | TextStream,
   {
-    /** Normalized codec */
-    codec: string;
-    /** Bandwidth */
-    bandwidth: number;
-  },
-  | {
-      /** Video type */
-      type: MediaType.VIDEO;
-      /** Video width */
-      width: number;
-      /** Video height */
-      height: number;
-      hierarchy: StreamHierarchy<MediaType.VIDEO>;
-    }
-  | {
-      /** Audio type */
-      type: MediaType.AUDIO;
-      hierarchy: StreamHierarchy<MediaType.AUDIO>;
-    }
-  | {
-      /**
-       * Text type. No additional fields today; text streams are part
-       * of the stream model but not yet wired through the stream
-       * controller.
-       */
-      type: MediaType.TEXT;
-      hierarchy: StreamHierarchy<MediaType.TEXT>;
-    },
-  T
+    type: T;
+  }
 >;
+
+/**
+ * Shared fields across all stream preference types.
+ *
+ * @public
+ */
+export interface BaseStreamPreference {
+  codec?: string;
+  bandwidth?: number;
+}
+
+/**
+ * Video stream preference with optional resolution targets.
+ *
+ * @public
+ */
+export interface VideoStreamPreference extends BaseStreamPreference {
+  type: MediaType.VIDEO;
+  width?: number;
+  height?: number;
+}
+
+/**
+ * Audio stream preference.
+ *
+ * @public
+ */
+export interface AudioStreamPreference extends BaseStreamPreference {
+  type: MediaType.AUDIO;
+}
+
+/**
+ * Text stream preference.
+ *
+ * @public
+ */
+export interface TextStreamPreference extends BaseStreamPreference {
+  type: MediaType.TEXT;
+}
 
 /**
  * Soft targets for stream selection, discriminated by
@@ -78,31 +138,9 @@ export type Stream<T extends MediaType = MediaType> = TypeUnion<
  *
  * @public
  */
-export type StreamPreference<T extends MediaType = MediaType> = TypeUnion<
+export type StreamPreference<T extends MediaType = MediaType> = Extract<
+  VideoStreamPreference | AudioStreamPreference | TextStreamPreference,
   {
-    codec?: string;
-    bandwidth?: number;
-  },
-  | {
-      type: MediaType.VIDEO;
-      width?: number;
-      height?: number;
-    }
-  | {
-      type: MediaType.AUDIO;
-    }
-  | {
-      type: MediaType.TEXT;
-    },
-  T
->;
-
-/**
- * Discriminated union helper. Combines shared fields with
- * per-type variants and narrows to the branch matching `T`.
- *
- * @public
- */
-export type TypeUnion<TBase, TVariants, T = unknown> = Prettify<
-  Extract<TBase & TVariants, { type: T }>
+    type: T;
+  }
 >;

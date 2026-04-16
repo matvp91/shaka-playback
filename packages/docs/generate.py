@@ -13,7 +13,7 @@ MD_SOURCE_DIR = GENERATED_DIR / "markdown"
 API_JSON_PATH = GENERATED_DIR / "cmaf-lite.api.json"
 REF_DIR = DOCS_DIR / "src/content/docs/reference"
 ARCH_DIR = DOCS_DIR / "src/content/docs/architecture"
-ARCH_DOCS = ["design", "buffer", "manifest"]
+ARCH_DOCS = ["design", "buffer", "manifest", "stream"]
 
 # --- Architecture docs ---
 

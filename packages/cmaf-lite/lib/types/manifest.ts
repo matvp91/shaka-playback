@@ -1,16 +1,59 @@
-import type { MediaType, TypeUnion } from "./media";
+import type { MediaType } from "./media";
 
 /**
  * Parsed manifest representing a CMAF presentation.
  *
  * @public
  */
-export type Manifest = {
+export interface Manifest {
   /** Total duration in seconds. */
   duration: number;
   /** Groups of switchable tracks. */
   switchingSets: SwitchingSet[];
-};
+}
+
+/**
+ * Shared fields across all switching set types.
+ *
+ * @public
+ */
+export interface BaseSwitchingSet {
+  /** Codec string. */
+  codec: string;
+}
+
+/**
+ * Video switching set.
+ *
+ * @public
+ */
+export interface VideoSwitchingSet extends BaseSwitchingSet {
+  type: MediaType.VIDEO;
+  /** Video tracks. */
+  tracks: VideoTrack[];
+}
+
+/**
+ * Audio switching set.
+ *
+ * @public
+ */
+export interface AudioSwitchingSet extends BaseSwitchingSet {
+  type: MediaType.AUDIO;
+  /** Audio tracks. */
+  tracks: AudioTrack[];
+}
+
+/**
+ * Text switching set.
+ *
+ * @public
+ */
+export interface TextSwitchingSet extends BaseSwitchingSet {
+  type: MediaType.TEXT;
+  /** Text tracks. */
+  tracks: TextTrack[];
+}
 
 /**
  * CMAF switching set — tracks that can be seamlessly
@@ -18,31 +61,57 @@ export type Manifest = {
  *
  * @public
  */
-export type SwitchingSet<T extends MediaType = MediaType> = TypeUnion<
+export type SwitchingSet<T extends MediaType = MediaType> = Extract<
+  VideoSwitchingSet | AudioSwitchingSet | TextSwitchingSet,
   {
-    /** Codec */
-    codec: string;
-  },
-  | {
-      /** Video type */
-      type: MediaType.VIDEO;
-      /** Video tracks */
-      tracks: Track<MediaType.VIDEO>[];
-    }
-  | {
-      /** Audio type */
-      type: MediaType.AUDIO;
-      /** Audio tracks */
-      tracks: Track<MediaType.AUDIO>[];
-    }
-  | {
-      /** Text type */
-      type: MediaType.TEXT;
-      /** Text tracks */
-      tracks: Track<MediaType.TEXT>[];
-    },
-  T
+    type: T;
+  }
 >;
+
+/**
+ * Shared fields across all track types.
+ *
+ * @public
+ */
+export interface BaseTrack {
+  /** Bitrate in bits per second. */
+  bandwidth: number;
+  /** Ordered chunks on the presentation timeline. */
+  segments: Segment[];
+  /** Longest segment duration in seconds. */
+  maxSegmentDuration: number;
+}
+
+/**
+ * Video track with resolution.
+ *
+ * @public
+ */
+export interface VideoTrack extends BaseTrack {
+  type: MediaType.VIDEO;
+  /** Video width. */
+  width: number;
+  /** Video height. */
+  height: number;
+}
+
+/**
+ * Audio track.
+ *
+ * @public
+ */
+export interface AudioTrack extends BaseTrack {
+  type: MediaType.AUDIO;
+}
+
+/**
+ * Text track.
+ *
+ * @public
+ */
+export interface TextTrack extends BaseTrack {
+  type: MediaType.TEXT;
+}
 
 /**
  * Single track with its segment list, discriminated
@@ -50,32 +119,11 @@ export type SwitchingSet<T extends MediaType = MediaType> = TypeUnion<
  *
  * @public
  */
-export type Track<T extends MediaType = MediaType> = TypeUnion<
+export type Track<T extends MediaType = MediaType> = Extract<
+  VideoTrack | AudioTrack | TextTrack,
   {
-    /** Bitrate in bits per second. */
-    bandwidth: number;
-    /** Ordered chunks on the presentation timeline. */
-    segments: Segment[];
-    /** Longest segment duration in seconds. */
-    maxSegmentDuration: number;
-  },
-  | {
-      /** Video type */
-      type: MediaType.VIDEO;
-      /** Video width */
-      width: number;
-      /** Video height */
-      height: number;
-    }
-  | {
-      /** Audio type */
-      type: MediaType.AUDIO;
-    }
-  | {
-      /** Text type */
-      type: MediaType.TEXT;
-    },
-  T
+    type: T;
+  }
 >;
 
 /**

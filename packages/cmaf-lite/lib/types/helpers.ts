@@ -1,14 +1,4 @@
 /**
- * Identity mapped type that flattens intersections into
- * a single object for cleaner IDE tooltips.
- *
- * @public
- */
-export type Prettify<T> = {
-  [K in keyof T]: T[K];
-} & {};
-
-/**
  * Recursively makes all properties optional.
  *
  * @public
