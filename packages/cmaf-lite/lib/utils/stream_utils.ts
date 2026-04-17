@@ -33,14 +33,6 @@ export function buildStreams(manifest: Manifest): Map<MediaType, Stream[]> {
   return result;
 }
 
-/**
- * Picks the best stream for a given list of preferences, in
- * priority order. Within a preference, categorical fields
- * (today: `codec`) must match exactly. For video, `height` is
- * a soft target — closest match by distance. Returns `null`
- * if no preference can be satisfied; callers then decide on
- * a fallback.
- */
 export function findBestSuitableStream<T extends MediaType>(
   type: T,
   streams: Stream<T>[],
@@ -53,10 +45,9 @@ export function findBestSuitableStream<T extends MediaType>(
       continue;
     }
     const matches = streams.filter((s) => matchesPreference(s, preference));
-    if (matches.length === 0) {
-      continue;
+    if (matches[0]) {
+      return matches[0];
     }
-    return pickWithinTier(matches, preference);
   }
 
   return null;
@@ -69,24 +60,6 @@ function matchesPreference(stream: Stream, preference: Preference): boolean {
   // TODO(matvp): language/channels matching once those fields
   // are added to AudioStream/SubtitleStream.
   return true;
-}
-
-function pickWithinTier(matches: Stream[], preference: Preference): Stream {
-  const first = matches[0];
-  asserts.assertExists(first, "pickWithinTier requires a non-empty list");
-  if (preference.type !== MediaType.VIDEO || preference.height === undefined) {
-    return first;
-  }
-  // All matches share the preference type, so they are all video.
-  const videoMatches = matches as Stream<MediaType.VIDEO>[];
-  const target = preference.height;
-  let best = videoMatches[0] as Stream<MediaType.VIDEO>;
-  for (const stream of videoMatches) {
-    if (Math.abs(stream.height - target) < Math.abs(best.height - target)) {
-      best = stream;
-    }
-  }
-  return best;
 }
 
 function projectStream(ss: SwitchingSet, track: Track): Stream {
