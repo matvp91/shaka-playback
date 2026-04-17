@@ -4,6 +4,7 @@ import { MediaType } from "../../lib/types/media";
 import {
   buildStreams,
   findStreamsMatchingPreferences,
+  pickClosestByBandwidth,
 } from "../../lib/utils/stream_utils";
 import {
   createManifest,
@@ -126,6 +127,52 @@ describe("findStreamsMatchingPreferences", () => {
     );
     expect(result).not.toBeNull();
     expect(result!.every((s) => s.codec === "avc")).toBe(true);
+  });
+});
+
+describe("pickClosestByBandwidth", () => {
+  // Build distinct VideoStreams via the manifest factories. Each track
+  // gets a slightly different width/height so `buildStreams` does not
+  // dedupe them (dedup compares type + codec + resolution).
+  const videoStreamsFor = (bandwidths: number[]): VideoStream[] => {
+    const manifest = createManifest({
+      switchingSets: [
+        createVideoSwitchingSet({
+          tracks: bandwidths.map((bandwidth, i) =>
+            createVideoTrack({
+              bandwidth,
+              width: 1920 - i,
+              height: 1080 - i,
+            }),
+          ),
+        }),
+      ],
+    });
+    const list = buildStreams(manifest).get(MediaType.VIDEO) ?? [];
+    return list.filter((s): s is VideoStream => s.type === MediaType.VIDEO);
+  };
+
+  it("returns the match whose bandwidth is closest to the active stream", () => {
+    const matches = videoStreamsFor([500_000, 2_000_000, 5_000_000]);
+    const active = matches[1]!;
+    const result = pickClosestByBandwidth(matches, active);
+    expect(result.bandwidth).toBe(2_000_000);
+  });
+
+  it("keeps the earlier entry when two matches tie on distance", () => {
+    // matches ascending: [1_000_000, 3_000_000]; active is midpoint 2_000_000.
+    // Distance ties → stable iteration keeps the earlier entry (1M).
+    const matches = videoStreamsFor([1_000_000, 3_000_000]);
+    const active = videoStreamsFor([2_000_000])[0]!;
+    const result = pickClosestByBandwidth(matches, active);
+    expect(result.bandwidth).toBe(1_000_000);
+  });
+
+  it("returns the sole match when the set has a single entry", () => {
+    const matches = videoStreamsFor([2_500_000]);
+    const active = videoStreamsFor([9_999_000])[0]!;
+    const result = pickClosestByBandwidth(matches, active);
+    expect(result.bandwidth).toBe(2_500_000);
   });
 });
 

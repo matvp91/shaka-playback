@@ -1,5 +1,5 @@
 import type { Manifest, SwitchingSet, Track } from "../types/manifest";
-import type { Preference, Stream } from "../types/media";
+import type { Preference, Stream, VideoStream } from "../types/media";
 import { MediaType } from "../types/media";
 import * as asserts from "./asserts";
 import * as CodecUtils from "./codec_utils";
@@ -109,6 +109,36 @@ function projectStream(ss: SwitchingSet, track: Track): Stream {
     };
   }
   throw new Error(`Failed to map track for type ${track.type}`);
+}
+
+/**
+ * Pick the stream in `matches` whose bandwidth is closest to
+ * `activeStream.bandwidth`. Ties are broken by iteration order —
+ * the first match wins, which in practice means the lower-bandwidth
+ * stream when `matches` is sorted ascending (see `buildStreams`).
+ */
+export function pickClosestByBandwidth(
+  matches: VideoStream[],
+  activeStream: VideoStream,
+): VideoStream {
+  asserts.assertExists(
+    matches[0],
+    "pickClosestByBandwidth requires a non-empty list",
+  );
+  let best = matches[0];
+  let bestDelta = Math.abs(best.bandwidth - activeStream.bandwidth);
+  for (let i = 1; i < matches.length; i++) {
+    const candidate = matches[i];
+    if (candidate === undefined) {
+      break;
+    }
+    const delta = Math.abs(candidate.bandwidth - activeStream.bandwidth);
+    if (delta < bestDelta) {
+      best = candidate;
+      bestDelta = delta;
+    }
+  }
+  return best;
 }
 
 function isSameStream(a: Stream, b: Stream): boolean {
