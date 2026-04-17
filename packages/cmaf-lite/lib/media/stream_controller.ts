@@ -162,10 +162,15 @@ export class StreamController {
       return;
     }
 
+    const { preferences } = this.player_.getConfig();
     for (const [type, streams] of this.streamsMap_) {
-      const stream = this.streams_.get(type) ?? streams[0];
+      const stream =
+        StreamUtils.findBestSuitableStream(type, streams, preferences) ??
+        this.streams_.get(type) ??
+        streams[0];
       asserts.assertExists(stream, "Missing initial stream");
       this.streams_.set(type, stream);
+      log.info("Initial", type, stream);
 
       const mediaState: MediaState = {
         type,

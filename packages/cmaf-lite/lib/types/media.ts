@@ -108,7 +108,6 @@ export interface BasePreference {
  */
 export interface VideoPreference extends BasePreference {
   type: MediaType.VIDEO;
-  width?: number;
   height?: number;
 }
 
