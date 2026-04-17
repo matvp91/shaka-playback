@@ -169,8 +169,7 @@ export class StreamController {
         streams,
         preferences,
       );
-      const stream =
-        matches?.[0] ?? this.streams_.get(type) ?? streams[0];
+      const stream = matches?.[0] ?? this.streams_.get(type) ?? streams[0];
       asserts.assertExists(stream, "Missing initial stream");
       this.streams_.set(type, stream);
       log.info("Initial", type, stream);

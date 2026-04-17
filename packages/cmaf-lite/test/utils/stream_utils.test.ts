@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { MediaType } from "../../lib/types/media";
 import type { Preference, VideoStream } from "../../lib/types/media";
+import { MediaType } from "../../lib/types/media";
 import {
   buildStreams,
   findStreamsMatchingPreferences,
@@ -19,7 +19,11 @@ describe("findStreamsMatchingPreferences", () => {
           codec: "avc1.64001f",
           tracks: [
             createVideoTrack({ bandwidth: 1_000_000 }),
-            createVideoTrack({ bandwidth: 3_000_000, width: 1280, height: 720 }),
+            createVideoTrack({
+              bandwidth: 3_000_000,
+              width: 1280,
+              height: 720,
+            }),
           ],
         }),
         createVideoSwitchingSet({
@@ -43,7 +47,7 @@ describe("findStreamsMatchingPreferences", () => {
       preferences,
     );
     expect(result).toHaveLength(2);
-    expect(result!.every((s: VideoStream) => s.codec === "avc")).toBe(true);
+    expect(result!.every((s) => s.codec === "avc")).toBe(true);
   });
 
   it("skips preferences whose type does not match the requested type", () => {
@@ -74,7 +78,7 @@ describe("findStreamsMatchingPreferences", () => {
       preferences,
     );
     expect(result).toHaveLength(2);
-    expect(result!.every((s: VideoStream) => s.codec === "avc")).toBe(true);
+    expect(result!.every((s) => s.codec === "avc")).toBe(true);
   });
 
   it("returns null when no preference matches any stream", () => {
@@ -105,6 +109,23 @@ describe("findStreamsMatchingPreferences", () => {
       preferences,
     );
     expect(result).toHaveLength(streams.length);
+  });
+
+  it("matches preferences expressed with raw RFC 6381 codec strings", () => {
+    const streams = videoStreams();
+    // Preference uses the full RFC 6381 string; streams store the
+    // normalized family name. Without codec normalization on the
+    // preference side, this match would never resolve.
+    const preferences: Preference[] = [
+      { type: MediaType.VIDEO, codec: "avc1.64001f" },
+    ];
+    const result = findStreamsMatchingPreferences(
+      MediaType.VIDEO,
+      streams,
+      preferences,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.every((s) => s.codec === "avc")).toBe(true);
   });
 });
 

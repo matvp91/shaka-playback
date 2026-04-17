@@ -33,6 +33,13 @@ export function buildStreams(manifest: Manifest): Map<MediaType, Stream[]> {
   return result;
 }
 
+/**
+ * Return the match set for the highest-priority preference that
+ * yields at least one matching stream. Returns `null` if no
+ * preference matches. Does not perform quality selection — callers
+ * combine this with `pickClosestByBandwidth` or similar when more
+ * than one stream matches.
+ */
 export function findStreamsMatchingPreferences<T extends MediaType>(
   type: T,
   streams: Stream<T>[],
@@ -44,7 +51,13 @@ export function findStreamsMatchingPreferences<T extends MediaType>(
     if (preference.type !== type) {
       continue;
     }
-    const matches = streams.filter((s) => matchesPreference(s, preference));
+    const normalizedCodec =
+      preference.codec !== undefined
+        ? CodecUtils.getNormalizedCodec(preference.codec)
+        : undefined;
+    const matches = streams.filter((s) =>
+      matchesPreference(s, preference, normalizedCodec),
+    );
     if (matches.length === 0) {
       continue;
     }
@@ -54,12 +67,13 @@ export function findStreamsMatchingPreferences<T extends MediaType>(
   return null;
 }
 
-function matchesPreference(stream: Stream, preference: Preference): boolean {
-  if (preference.codec !== undefined) {
-    const normalizedPreferenceCodec = CodecUtils.getNormalizedCodec(
-      preference.codec,
-    );
-    if (stream.codec !== normalizedPreferenceCodec) {
+function matchesPreference(
+  stream: Stream,
+  _preference: Preference,
+  normalizedCodec: string | undefined,
+): boolean {
+  if (normalizedCodec !== undefined) {
+    if (stream.codec !== normalizedCodec) {
       return false;
     }
   }
