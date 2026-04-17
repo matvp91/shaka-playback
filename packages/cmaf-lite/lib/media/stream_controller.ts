@@ -157,20 +157,48 @@ export class StreamController {
     this.media_ = null;
   };
 
+  private resolveStream_<T extends MediaType>(
+    type: T,
+    streams: Stream<T>[],
+  ): Stream<T> {
+    const { preferences } = this.player_.getConfig();
+    const matches = StreamUtils.findStreamsMatchingPreferences(
+      type,
+      streams,
+      preferences,
+    );
+    const activeStream = this.streams_.get(type);
+
+    if (matches) {
+      if (type === MediaType.VIDEO && activeStream) {
+        // @ts-expect-error TS cannot narrow generic T to MediaType.VIDEO
+        // from the runtime check above; the user will address this.
+        return StreamUtils.pickClosestByBandwidth(matches, activeStream);
+      }
+      const first = matches[0];
+      if (first) {
+        return first;
+      }
+    }
+    if (activeStream) {
+      // @ts-expect-error activeStream is Stream<MediaType>, which may be
+      // wider than Stream<T>; the user will address this.
+      return activeStream;
+    }
+    const first = streams[0];
+    if (first) {
+      return first;
+    }
+    throw new Error(`No stream resolvable for type ${type}`);
+  }
+
   private tryStart_() {
     if (!this.media_) {
       return;
     }
 
-    const { preferences } = this.player_.getConfig();
     for (const [type, streams] of this.streamsMap_) {
-      const matches = StreamUtils.findStreamsMatchingPreferences(
-        type,
-        streams,
-        preferences,
-      );
-      const stream = matches?.[0] ?? this.streams_.get(type) ?? streams[0];
-      asserts.assertExists(stream, "Missing initial stream");
+      const stream = this.resolveStream_(type, streams);
       this.streams_.set(type, stream);
       log.info("Initial", type, stream);
 
