@@ -1,6 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { Player } from "cmaf-lite";
-import { MediaType } from "cmaf-lite";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { OptionalInput } from "../form/OptionalInput";
@@ -18,19 +17,15 @@ type VideoPreferenceFormProps = {
   player: Player;
 };
 
+// biome-ignore lint/correctness/noUnusedFunctionParameters: Intended
 export function VideoPreferenceForm({ player }: VideoPreferenceFormProps) {
   const { register, handleSubmit } = useForm({
     resolver: zodResolver(schema),
   });
 
+  // biome-ignore lint/correctness/noUnusedFunctionParameters: Intended
   function onSubmit(values: z.output<typeof schema>) {
-    player.setStreamPreference(
-      {
-        type: MediaType.VIDEO,
-        ...values,
-      },
-      true,
-    );
+    // TODO(matvp): setStreamPreference is gone.
   }
 
   return (

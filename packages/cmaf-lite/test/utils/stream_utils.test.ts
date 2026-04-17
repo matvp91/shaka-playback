@@ -1,12 +1,165 @@
 import { describe, expect, it } from "vitest";
+import type { Preference, VideoStream } from "../../lib/types/media";
 import { MediaType } from "../../lib/types/media";
-import { buildStreams, selectStream } from "../../lib/utils/stream_utils";
 import {
-  createAudioSwitchingSet,
+  buildStreams,
+  findStreamsMatchingPreferences,
+  pickClosestByBandwidth,
+} from "../../lib/utils/stream_utils";
+import {
   createManifest,
   createVideoSwitchingSet,
   createVideoTrack,
 } from "../__framework__/factories";
+
+describe("findStreamsMatchingPreferences", () => {
+  const videoStreams = (): VideoStream[] => {
+    const manifest = createManifest({
+      switchingSets: [
+        createVideoSwitchingSet({
+          codec: "avc1.64001f",
+          tracks: [
+            createVideoTrack({ bandwidth: 1_000_000 }),
+            createVideoTrack({
+              bandwidth: 3_000_000,
+              width: 1280,
+              height: 720,
+            }),
+          ],
+        }),
+        createVideoSwitchingSet({
+          codec: "av01.0.05M.08",
+          tracks: [createVideoTrack({ bandwidth: 2_000_000 })],
+        }),
+      ],
+    });
+    const list = buildStreams(manifest).get(MediaType.VIDEO) ?? [];
+    return list.filter((s): s is VideoStream => s.type === MediaType.VIDEO);
+  };
+
+  it("returns all matching streams for the first type-matching preference", () => {
+    const streams = videoStreams();
+    const preferences: Preference[] = [{ type: MediaType.VIDEO, codec: "avc" }];
+    const result = findStreamsMatchingPreferences(
+      MediaType.VIDEO,
+      streams,
+      preferences,
+    );
+    expect(result).toHaveLength(2);
+    expect(result.every((s) => s.codec === "avc")).toBe(true);
+  });
+
+  it("skips preferences whose type does not match the requested type", () => {
+    const streams = videoStreams();
+    const preferences: Preference[] = [
+      { type: MediaType.AUDIO, codec: "mp4a" },
+      { type: MediaType.VIDEO, codec: "av1" },
+    ];
+    const result = findStreamsMatchingPreferences(
+      MediaType.VIDEO,
+      streams,
+      preferences,
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0]!.codec).toBe("av1");
+  });
+
+  it("returns the match set for the earliest preference that yields hits", () => {
+    const streams = videoStreams();
+    const preferences: Preference[] = [
+      { type: MediaType.VIDEO, codec: "hev" },
+      { type: MediaType.VIDEO, codec: "avc" },
+      { type: MediaType.VIDEO, codec: "av1" },
+    ];
+    const result = findStreamsMatchingPreferences(
+      MediaType.VIDEO,
+      streams,
+      preferences,
+    );
+    expect(result).toHaveLength(2);
+    expect(result.every((s) => s.codec === "avc")).toBe(true);
+  });
+
+  it("returns an empty array when no preference matches any stream", () => {
+    const streams = videoStreams();
+    const preferences: Preference[] = [{ type: MediaType.VIDEO, codec: "hev" }];
+    const result = findStreamsMatchingPreferences(
+      MediaType.VIDEO,
+      streams,
+      preferences,
+    );
+    expect(result).toHaveLength(0);
+  });
+
+  it("returns an empty array when preferences list is empty", () => {
+    const streams = videoStreams();
+    const result = findStreamsMatchingPreferences(MediaType.VIDEO, streams, []);
+    expect(result).toHaveLength(0);
+  });
+
+  it("treats an undefined codec field as an unconstrained match", () => {
+    const streams = videoStreams();
+    const preferences: Preference[] = [{ type: MediaType.VIDEO }];
+    const result = findStreamsMatchingPreferences(
+      MediaType.VIDEO,
+      streams,
+      preferences,
+    );
+    expect(result).toHaveLength(streams.length);
+  });
+});
+
+describe("pickClosestByBandwidth", () => {
+  // Build distinct VideoStreams via the manifest factories. Each track
+  // gets a slightly different width/height so `buildStreams` does not
+  // dedupe them (dedup compares type + codec + resolution).
+  const videoStreamsFor = (bandwidths: number[]): VideoStream[] => {
+    const manifest = createManifest({
+      switchingSets: [
+        createVideoSwitchingSet({
+          tracks: bandwidths.map((bandwidth, i) =>
+            createVideoTrack({
+              bandwidth,
+              width: 1920 - i,
+              height: 1080 - i,
+            }),
+          ),
+        }),
+      ],
+    });
+    const list = buildStreams(manifest).get(MediaType.VIDEO) ?? [];
+    return list.filter((s): s is VideoStream => s.type === MediaType.VIDEO);
+  };
+
+  it("returns the match whose bandwidth is closest to the lookup stream", () => {
+    const matches = videoStreamsFor([500_000, 2_000_000, 5_000_000]);
+    const lookup = matches[1]!;
+    const result = pickClosestByBandwidth(matches, lookup);
+    expect(result!.bandwidth).toBe(2_000_000);
+  });
+
+  it("keeps the earlier entry when two matches tie on distance", () => {
+    // matches ascending: [1_000_000, 3_000_000]; lookup is midpoint 2_000_000.
+    // Distance ties → stable iteration keeps the earlier entry (1M).
+    const matches = videoStreamsFor([1_000_000, 3_000_000]);
+    const lookup = videoStreamsFor([2_000_000])[0]!;
+    const result = pickClosestByBandwidth(matches, lookup);
+    expect(result!.bandwidth).toBe(1_000_000);
+  });
+
+  it("returns the sole match when the set has a single entry", () => {
+    const matches = videoStreamsFor([2_500_000]);
+    const lookup = videoStreamsFor([9_999_000])[0]!;
+    const result = pickClosestByBandwidth(matches, lookup);
+    expect(result!.bandwidth).toBe(2_500_000);
+  });
+
+  it("returns null when the match set is empty", () => {
+    const lookup = videoStreamsFor([1_000_000])[0]!;
+    const result = pickClosestByBandwidth([], lookup);
+    expect(result).toBeNull();
+  });
+});
 
 describe("StreamUtils", () => {
   describe("buildStreams", () => {
@@ -86,84 +239,6 @@ describe("StreamUtils", () => {
       });
       const streams = buildStreams(manifest);
       expect(streams.get(MediaType.VIDEO)).toHaveLength(2);
-    });
-  });
-
-  describe("selectStream", () => {
-    const manifest = createManifest({
-      switchingSets: [
-        createVideoSwitchingSet({
-          tracks: [
-            createVideoTrack({ width: 1920, height: 1080 }),
-            createVideoTrack({ width: 1280, height: 720 }),
-          ],
-        }),
-        createAudioSwitchingSet(),
-      ],
-    });
-    const streamsByType = buildStreams(manifest);
-    const videoStreams = streamsByType.get(MediaType.VIDEO)!;
-    const audioStreams = streamsByType.get(MediaType.AUDIO)!;
-
-    it("selects the video stream closest to preferred height", () => {
-      const stream = selectStream(videoStreams, {
-        type: MediaType.VIDEO,
-        height: 700,
-      });
-      expect(stream.type).toBe(MediaType.VIDEO);
-      if (stream.type === MediaType.VIDEO) {
-        expect(stream.height).toBe(720);
-      }
-    });
-
-    it("selects an audio stream matching the preferred codec", () => {
-      const stream = selectStream(audioStreams, {
-        type: MediaType.AUDIO,
-        codec: "aac",
-      });
-      expect(stream.type).toBe(MediaType.AUDIO);
-      expect(stream.codec).toBe("aac");
-    });
-
-    it("penalizes codec mismatch when selecting video streams", () => {
-      const multiCodecStreams = buildStreams(
-        createManifest({
-          switchingSets: [
-            createVideoSwitchingSet({
-              codec: "avc1.64001f",
-              tracks: [createVideoTrack({ width: 1920, height: 1080 })],
-            }),
-            createVideoSwitchingSet({
-              codec: "hev1.1.6.L93",
-              tracks: [createVideoTrack({ width: 1920, height: 1080 })],
-            }),
-          ],
-        }),
-      ).get(MediaType.VIDEO)!;
-      const stream = selectStream(multiCodecStreams, {
-        type: MediaType.VIDEO,
-        codec: "hevc",
-      });
-      expect(stream.codec).toBe("hevc");
-    });
-
-    it("selects video stream closest to preferred width", () => {
-      const stream = selectStream(videoStreams, {
-        type: MediaType.VIDEO,
-        width: 1300,
-      });
-      expect(stream.type).toBe(MediaType.VIDEO);
-      if (stream.type === MediaType.VIDEO) {
-        expect(stream.width).toBe(1280);
-      }
-    });
-
-    it("falls back to the first audio stream when preferred codec is unavailable", () => {
-      const stream = selectStream(audioStreams, {
-        type: MediaType.AUDIO,
-        codec: "nonexistent",
-      });
-      expect(stream.type).toBe(MediaType.AUDIO);
     });
   });
 });

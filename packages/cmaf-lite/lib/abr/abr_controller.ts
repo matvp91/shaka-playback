@@ -1,7 +1,7 @@
 import type { NetworkResponseEvent } from "../events";
 import { Events } from "../events";
 import type { Player } from "../player";
-import type { Stream } from "../types/media";
+import type { Stream, VideoStream } from "../types/media";
 import { MediaType } from "../types/media";
 import { NetworkRequestType } from "../types/net";
 import { getBufferedEnd } from "../utils/buffer_utils";
@@ -15,7 +15,7 @@ export class AbrController {
   private player_: Player;
   private timer_: Timer;
   private bandwidthEstimator_: EwmaBandwidthEstimator;
-  private videoStreams_: Stream<MediaType.VIDEO>[] = [];
+  private streams_: VideoStream[] = [];
 
   constructor(player: Player) {
     this.player_ = player;
@@ -51,12 +51,10 @@ export class AbrController {
   }
 
   private onStreamsUpdated_ = () => {
-    const videoStreams = this.player_.getStreams(MediaType.VIDEO);
-    if (!videoStreams) {
-      return;
-    }
+    this.streams_ = this.player_.getStreams(MediaType.VIDEO);
 
-    this.videoStreams_ = videoStreams;
+    // Run a first evalulation to contribute to the initial stream selection.
+    this.evaluate_();
 
     const { evaluationInterval } = this.player_.getConfig().abr;
     this.timer_.tickEvery(evaluationInterval);
@@ -71,31 +69,28 @@ export class AbrController {
   };
 
   private evaluate_() {
-    const videoStreams = this.videoStreams_;
-    const currentVideoStream = this.player_.getActiveStream(MediaType.VIDEO);
-
-    // Rules need both streams and a current stream to reason.
-    if (!videoStreams.length || !currentVideoStream) {
-      return;
-    }
+    const streams = this.streams_;
+    const activeStream = this.player_.getActiveStream(MediaType.VIDEO);
 
     const candidates = [
-      this.evaluateThroughput_(videoStreams, currentVideoStream),
-      this.evaluateBola_(videoStreams, currentVideoStream),
-      this.evaluateInsufficientBuffer_(videoStreams, currentVideoStream),
-      this.evaluateDroppedFrames_(videoStreams, currentVideoStream),
+      this.evaluateThroughput_(streams, activeStream),
+      this.evaluateBola_(streams, activeStream),
+      this.evaluateInsufficientBuffer_(streams, activeStream),
+      this.evaluateDroppedFrames_(streams, activeStream),
     ];
 
-    let best: Stream | null = null;
+    let best: VideoStream | null = null;
     for (const candidate of candidates) {
       if (candidate && (!best || candidate.bandwidth < best.bandwidth)) {
         best = candidate;
       }
     }
 
-    if (best && best !== currentVideoStream) {
-      log.info("ABR decision", best);
-      this.player_.setStreamPreference(best);
+    if (best && best !== activeStream) {
+      log.info("Decision", best);
+      this.player_.emit(Events.ADAPTATION, {
+        stream: best,
+      });
     }
   }
 
@@ -103,27 +98,36 @@ export class AbrController {
    * Highest video stream fitting measured throughput, minus audio.
    */
   private evaluateThroughput_(
-    videoStreams: Stream[],
-    currentVideoStream: Stream,
-  ): Stream | null {
+    streams: VideoStream[],
+    activeStream: VideoStream | null,
+  ): VideoStream | null {
     const { bandwidthUpgradeTarget, bandwidthDowngradeTarget } =
       this.player_.getConfig().abr;
+
+    let bandwidth = this.getThroughputEstimate();
     const audioStream = this.player_.getActiveStream(MediaType.AUDIO);
-    const audioBandwidth = audioStream ? audioStream.bandwidth : 0;
-    const effectiveBandwidth = this.getThroughputEstimate() - audioBandwidth;
+    if (audioStream) {
+      bandwidth -= audioStream.bandwidth;
+    }
 
     let best: Stream | null = null;
-    for (const stream of videoStreams) {
-      const isUpgrade = stream.bandwidth > currentVideoStream.bandwidth;
-      const factor = isUpgrade
-        ? bandwidthUpgradeTarget
-        : bandwidthDowngradeTarget;
-      if (stream.bandwidth <= effectiveBandwidth * factor) {
+    for (const stream of streams) {
+      let scaledBandwidth = bandwidth;
+      if (activeStream) {
+        // If we have a current stream active, figure out if we're up or down
+        // scaling and apply the scaling factor.
+        const isUpgrade = stream.bandwidth > activeStream.bandwidth;
+        const factor = isUpgrade
+          ? bandwidthUpgradeTarget
+          : bandwidthDowngradeTarget;
+        scaledBandwidth *= factor;
+      }
+      if (stream.bandwidth <= scaledBandwidth) {
         best = stream;
       }
     }
 
-    return best ?? videoStreams[0] ?? null;
+    return best ?? streams[0] ?? null;
   }
 
   /**
@@ -132,22 +136,26 @@ export class AbrController {
    * shifted by +1 so lowest stream has utility 1.
    */
   private evaluateBola_(
-    videoStreams: Stream[],
-    currentVideoStream: Stream,
-  ): Stream | null {
+    streams: VideoStream[],
+    activeStream: VideoStream | null,
+  ): VideoStream | null {
+    if (!activeStream) {
+      return null;
+    }
+
     const MINIMUM_BUFFER_S = 10;
 
-    const lowestStream = videoStreams[0];
-    const highestStream = videoStreams[videoStreams.length - 1];
+    const lowestStream = streams[0];
+    const highestStream = streams[streams.length - 1];
     if (!lowestStream || !highestStream) {
       return null;
     }
 
-    const { maxSegmentDuration } = currentVideoStream.hierarchy.track;
+    const activeTrack = activeStream.hierarchy.track;
     const { frontBufferLength } = this.player_.getConfig();
     const bufferLevel = this.getBufferLevel();
 
-    if (bufferLevel < maxSegmentDuration) {
+    if (bufferLevel < activeTrack.maxSegmentDuration) {
       return null;
     }
 
@@ -157,7 +165,7 @@ export class AbrController {
     // Q_max: at least front buffer, scaled up by stream count.
     const Qmax = Math.max(
       frontBufferLength,
-      MINIMUM_BUFFER_S + 2 * videoStreams.length,
+      MINIMUM_BUFFER_S + 2 * streams.length,
     );
 
     const gp = (vM - 1) / (Qmax / MINIMUM_BUFFER_S - 1);
@@ -165,8 +173,8 @@ export class AbrController {
 
     let bestIndex = 0;
     let bestScore = -Infinity;
-    for (let i = 0; i < videoStreams.length; i++) {
-      const stream = videoStreams[i];
+    for (let i = 0; i < streams.length; i++) {
+      const stream = streams[i];
       if (!stream) {
         continue;
       }
@@ -180,7 +188,7 @@ export class AbrController {
       }
     }
 
-    return videoStreams[bestIndex] ?? null;
+    return streams[bestIndex] ?? null;
   }
 
   /**
@@ -189,40 +197,48 @@ export class AbrController {
    * Abstains during startup.
    */
   private evaluateInsufficientBuffer_(
-    videoStreams: Stream[],
-    currentVideoStream: Stream,
-  ): Stream | null {
+    streams: VideoStream[],
+    activeStream: VideoStream | null,
+  ): VideoStream | null {
+    if (!activeStream) {
+      return null;
+    }
+
     const THROUGHPUT_SAFETY_FACTOR = 0.7;
 
-    const { maxSegmentDuration } = currentVideoStream.hierarchy.track;
+    const activeTrack = activeStream.hierarchy.track;
     const bufferLevel = this.getBufferLevel();
 
-    if (bufferLevel < maxSegmentDuration) {
+    if (bufferLevel < activeTrack.maxSegmentDuration) {
       return null;
     }
 
     const targetBitrate =
       this.getThroughputEstimate() *
       THROUGHPUT_SAFETY_FACTOR *
-      (bufferLevel / maxSegmentDuration);
+      (bufferLevel / activeTrack.maxSegmentDuration);
 
     let best: Stream | null = null;
-    for (const stream of videoStreams) {
+    for (const stream of streams) {
       if (stream.bandwidth <= targetBitrate) {
         best = stream;
       }
     }
 
-    return best ?? videoStreams[0] ?? null;
+    return best ?? streams[0] ?? null;
   }
 
   /**
    * Step one quality level down when dropped frame ratio is high.
    */
   private evaluateDroppedFrames_(
-    videoStreams: Stream[],
-    currentVideoStream: Stream,
-  ): Stream | null {
+    streams: VideoStream[],
+    currentStream: VideoStream | null,
+  ): VideoStream | null {
+    if (!currentStream) {
+      return null;
+    }
+
     const media = this.player_.getMedia() as HTMLVideoElement | null;
     if (!media?.getVideoPlaybackQuality) {
       return null;
@@ -237,8 +253,8 @@ export class AbrController {
       return null;
     }
 
-    const currentIndex = videoStreams.indexOf(currentVideoStream);
+    const currentIndex = streams.indexOf(currentStream);
     const newIndex = Math.max(0, currentIndex - 1);
-    return videoStreams[newIndex] ?? null;
+    return streams[newIndex] ?? null;
   }
 }

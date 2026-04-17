@@ -1,5 +1,4 @@
 import type { MediaType, Player } from "cmaf-lite";
-import { callSafe } from "../../utils/helpers";
 import { formatStream } from "../../utils/stream";
 import { StreamItem } from "./StreamItem";
 
@@ -10,8 +9,8 @@ type StreamGroupProps = {
 };
 
 export function StreamGroup({ label, player, type }: StreamGroupProps) {
-  const streams = callSafe(() => player.getStreams(type), []);
-  const activeStream = callSafe(() => player.getActiveStream(type));
+  const streams = player.getStreams(type);
+  const activeStream = player.getActiveStream(type);
 
   return (
     <div>
@@ -21,7 +20,9 @@ export function StreamGroup({ label, player, type }: StreamGroupProps) {
           key={formatStream(stream)}
           stream={stream}
           active={stream === activeStream}
-          onClick={() => player.setStreamPreference(stream, true)}
+          onClick={() => {
+            player.setActiveStream(stream);
+          }}
         />
       ))}
     </div>

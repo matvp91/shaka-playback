@@ -1,4 +1,5 @@
 import type { Path, PathValue } from "./types/helpers";
+import type { Preference } from "./types/media";
 import type { NetworkRequestOptions } from "./types/net";
 
 /**
@@ -93,6 +94,8 @@ export interface PlayerConfig {
   segmentRequestOptions: NetworkRequestOptions;
   /** ABR configuration. */
   abr: AbrConfig;
+  /** Preferences */
+  preferences: Preference[];
 }
 
 /**
@@ -124,4 +127,5 @@ export const DEFAULT_CONFIG: PlayerConfig = {
     minTotalBytes: 128_000,
     droppedFramesThreshold: 0.15,
   },
+  preferences: [],
 };

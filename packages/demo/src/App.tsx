@@ -1,10 +1,8 @@
 import type { Player } from "cmaf-lite";
 import { MediaType } from "cmaf-lite";
 import { BufferGraph } from "./components/buffer-graph/BufferGraph";
-import { Preferences } from "./components/preferences/Preferences";
 import { StreamList } from "./components/stream-list/StreamList";
 import type { BufferData, TimeRange } from "./types";
-import { callSafe } from "./utils/helpers";
 
 /**
  * Converts a native TimeRanges object to an array
@@ -19,14 +17,6 @@ function toTimeRanges(ranges: TimeRanges): TimeRange[] {
     });
   }
   return result;
-}
-
-/**
- * Safely reads buffered ranges for a media type.
- * Returns empty array if source buffer is not yet available.
- */
-function getBufferedRanges(player: Player, type: MediaType): TimeRange[] {
-  return callSafe(() => toTimeRanges(player.getBuffered(type)), []);
 }
 
 type AppProps = {
@@ -47,8 +37,8 @@ export function App({ player }: AppProps) {
     seekable: seekableRanges[0] ?? null,
     buffered: toTimeRanges(media.buffered),
     played: toTimeRanges(media.played),
-    video: getBufferedRanges(player, MediaType.VIDEO),
-    audio: getBufferedRanges(player, MediaType.AUDIO),
+    video: toTimeRanges(player.getBuffered(MediaType.VIDEO)),
+    audio: toTimeRanges(player.getBuffered(MediaType.AUDIO)),
     frontBufferLength: config.frontBufferLength,
     backBufferLength: config.backBufferLength,
   };
@@ -57,7 +47,6 @@ export function App({ player }: AppProps) {
     <>
       <div className="flex">
         <StreamList player={player} />
-        <Preferences player={player} />
       </div>
       <BufferGraph data={data} />
     </>

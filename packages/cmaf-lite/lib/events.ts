@@ -8,6 +8,7 @@ import type {
   Segment,
   SourceBufferMediaType,
   Stream,
+  VideoStream,
 } from ".";
 
 /**
@@ -26,11 +27,12 @@ export const Events = {
   BUFFER_APPENDING: "bufferAppending",
   BUFFER_APPENDED: "bufferAppended",
   BUFFER_EOS: "bufferEos",
-  BUFFER_FLUSHING: "bufferFlushing",
+  BUFFER_FLUSH: "bufferFlush",
   BUFFER_FLUSHED: "bufferFlushed",
   BUFFER_APPEND_ERROR: "bufferAppendError",
   STREAMS_UPDATED: "streamsUpdated",
   STREAM_CHANGED: "streamChanged",
+  ADAPTATION: "adaptation",
   NETWORK_REQUEST: "networkRequest",
   NETWORK_RESPONSE: "networkResponse",
 } as const;
@@ -132,7 +134,7 @@ export interface BufferAppendErrorEvent {
  *
  * @public
  */
-export interface BufferFlushingEvent {
+export interface BufferFlushEvent {
   type: SourceBufferMediaType;
 }
 
@@ -155,6 +157,15 @@ export interface StreamChangedEvent<T extends MediaType = MediaType> {
   type: T;
   oldStream: Stream<T> | null;
   stream: Stream<T>;
+}
+
+/**
+ * Fired when ABR decides to adapt.
+ *
+ * @public
+ */
+export interface AdaptationEvent {
+  stream: VideoStream;
 }
 
 /**
@@ -194,11 +205,12 @@ export interface EventMap {
   [Events.BUFFER_APPENDING]: (event: BufferAppendingEvent) => void;
   [Events.BUFFER_APPENDED]: (event: BufferAppendedEvent) => void;
   [Events.BUFFER_EOS]: undefined;
-  [Events.BUFFER_FLUSHING]: (event: BufferFlushingEvent) => void;
+  [Events.BUFFER_FLUSH]: (event: BufferFlushEvent) => void;
   [Events.BUFFER_APPEND_ERROR]: (event: BufferAppendErrorEvent) => void;
   [Events.BUFFER_FLUSHED]: (event: BufferFlushedEvent) => void;
   [Events.STREAMS_UPDATED]: undefined;
   [Events.STREAM_CHANGED]: (event: StreamChangedEvent) => void;
+  [Events.ADAPTATION]: (event: AdaptationEvent) => void;
   [Events.NETWORK_REQUEST]: (event: NetworkRequestEvent) => void;
   [Events.NETWORK_RESPONSE]: (event: NetworkResponseEvent) => void;
 }

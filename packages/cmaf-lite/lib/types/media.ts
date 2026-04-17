@@ -26,7 +26,7 @@ export type SourceBufferMediaType = MediaType.VIDEO | MediaType.AUDIO;
  *
  * @public
  */
-export interface StreamHierarchy<T extends MediaType> {
+export interface StreamHierarchy<T extends MediaType = MediaType> {
   switchingSet: SwitchingSet<T>;
   track: Track<T>;
 }
@@ -93,53 +93,51 @@ export type Stream<T extends MediaType = MediaType> = Extract<
 >;
 
 /**
- * Shared fields across all stream preference types.
+ * Shared preferences across all preference.
  *
  * @public
  */
-export interface BaseStreamPreference {
+export interface BasePreference {
   codec?: string;
-  bandwidth?: number;
 }
 
 /**
- * Video stream preference with optional resolution targets.
+ * Video preference.
  *
  * @public
  */
-export interface VideoStreamPreference extends BaseStreamPreference {
+export interface VideoPreference extends BasePreference {
   type: MediaType.VIDEO;
-  width?: number;
-  height?: number;
 }
 
 /**
- * Audio stream preference.
+ * Audio preference.
  *
  * @public
  */
-export interface AudioStreamPreference extends BaseStreamPreference {
+export interface AudioPreference extends BasePreference {
   type: MediaType.AUDIO;
+  language?: string;
+  channels?: number;
 }
 
 /**
- * Subtitle stream preference.
+ * Subtitle preference.
  *
  * @public
  */
-export interface SubtitleStreamPreference extends BaseStreamPreference {
+export interface SubtitlePreference extends BasePreference {
   type: MediaType.SUBTITLE;
+  language?: string;
 }
 
 /**
- * Soft targets for stream selection, discriminated by
- * {@link MediaType}. All fields besides `type` are optional
- * — the closest available match is chosen.
+ * Set of preferences. Discriminated by {@link MediaType}.
  *
  * @public
  */
-export type StreamPreference<T extends MediaType = MediaType> = Extract<
-  VideoStreamPreference | AudioStreamPreference | SubtitleStreamPreference,
+export type Preference<T extends MediaType = MediaType> = Extract<
+  VideoPreference | AudioPreference | SubtitlePreference,
   {
     type: T;
   }

@@ -10,8 +10,9 @@ import { GapController } from "./media/gap_controller";
 import { StreamController } from "./media/stream_controller";
 import { NetworkService } from "./net/network_service";
 import type { DeepPartial } from "./types/helpers";
-import type { StreamPreference } from "./types/media";
+import type { Stream } from "./types/media";
 import { MediaType } from "./types/media";
+import { EMPTY_ARRAY, EMPTY_TIME_RANGES } from "./utils/constants";
 import * as ObjectUtils from "./utils/object_utils";
 
 /**
@@ -89,27 +90,33 @@ export class Player extends EventEmitter<EventMap> {
 
   /**
    * Returns buffered time ranges for the given media type.
-   * Not supported for {@link MediaType.SUBTITLE}.
    */
   getBuffered(type: MediaType) {
     if (type === MediaType.SUBTITLE) {
-      throw new Error(`getBuffered is not supported for type "${type}"`);
+      return EMPTY_TIME_RANGES;
     }
-    return this.bufferController_.getBuffered(type);
+    return this.bufferController_.getBuffered(type) ?? EMPTY_TIME_RANGES;
   }
 
   /**
    * Returns resolved streams for the given media type.
    */
   getStreams<T extends MediaType>(type: T) {
-    return this.streamController_.getStreams(type);
+    return this.streamController_.getStreams(type) ?? EMPTY_ARRAY;
   }
 
   /**
    * Returns the currently active stream for the given type.
    */
   getActiveStream<T extends MediaType>(type: T) {
-    return this.streamController_.getActiveStream(type);
+    return this.streamController_.getStream(type) ?? null;
+  }
+
+  /**
+   * Set a stream.
+   */
+  setActiveStream(stream: Stream) {
+    return this.streamController_.setStream(stream);
   }
 
   /**
@@ -117,23 +124,6 @@ export class Player extends EventEmitter<EventMap> {
    */
   getNetworkService() {
     return this.networkService_;
-  }
-
-  /**
-   * Sets the preferred stream for a media type. Pass
-   * `flushBuffer` to discard buffered data and switch
-   * immediately.
-   */
-  setStreamPreference(preference: StreamPreference, flushBuffer = false) {
-    this.streamController_.setPreference(preference, flushBuffer);
-  }
-
-  /**
-   * Returns the active stream preference for the given
-   * type, or `undefined` if none has been set.
-   */
-  getStreamPreference<T extends MediaType>(type: T) {
-    return this.streamController_.getPreference(type);
   }
 
   /**

@@ -7,10 +7,18 @@ Log.setLevel(LogLevel.INFO);
 const player = new Player();
 Object.assign(window, { player });
 
-player.setStreamPreference({
-  type: MediaType.VIDEO,
-  codec: "av1",
-});
+player.setConfig("abr.defaultBandwidthEstimate", 10_000 * 10_000);
+
+player.setConfig("preferences", [
+  {
+    type: MediaType.VIDEO,
+    codec: "hevc",
+  },
+  {
+    type: MediaType.VIDEO,
+    codec: "avc",
+  },
+]);
 
 const video = document.getElementById("videoElement") as HTMLVideoElement;
 
