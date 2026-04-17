@@ -16,8 +16,8 @@ player.setConfig("preferences", [
   },
   {
     type: MediaType.VIDEO,
-    codec: "avc"
-  }
+    codec: "avc",
+  },
 ]);
 
 const video = document.getElementById("videoElement") as HTMLVideoElement;

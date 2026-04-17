@@ -39,9 +39,7 @@ describe("findStreamsMatchingPreferences", () => {
 
   it("returns all matching streams for the first type-matching preference", () => {
     const streams = videoStreams();
-    const preferences: Preference[] = [
-      { type: MediaType.VIDEO, codec: "avc" },
-    ];
+    const preferences: Preference[] = [{ type: MediaType.VIDEO, codec: "avc" }];
     const result = findStreamsMatchingPreferences(
       MediaType.VIDEO,
       streams,
@@ -84,9 +82,7 @@ describe("findStreamsMatchingPreferences", () => {
 
   it("returns an empty array when no preference matches any stream", () => {
     const streams = videoStreams();
-    const preferences: Preference[] = [
-      { type: MediaType.VIDEO, codec: "hev" },
-    ];
+    const preferences: Preference[] = [{ type: MediaType.VIDEO, codec: "hev" }];
     const result = findStreamsMatchingPreferences(
       MediaType.VIDEO,
       streams,
