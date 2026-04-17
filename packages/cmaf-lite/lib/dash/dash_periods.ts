@@ -1,9 +1,9 @@
 import type * as txml from "txml";
 import type { AudioSwitchingSet, SwitchingSet, Track } from "../types/manifest";
-import { LANGUAGE_UNKNOWN } from "../types/manifest";
 import { MediaType } from "../types/media";
 import * as asserts from "../utils/asserts";
 import * as Functional from "../utils/functional";
+import * as LanguageUtils from "../utils/language_utils";
 import * as ManifestUtils from "../utils/manifest_utils";
 import * as UrlUtils from "../utils/url_utils";
 import * as XmlUtils from "../utils/xml_utils";
@@ -53,9 +53,9 @@ function processAdaptationSet(
 
   const type = inferMediaType(adaptationSet, representations);
   const codec = resolveCodec(adaptationSet, representations);
-  const language =
-    XmlUtils.attr(adaptationSet, "lang", XmlUtils.parseString) ??
-    LANGUAGE_UNKNOWN;
+  const language = LanguageUtils.toBCP47(
+    XmlUtils.attr(adaptationSet, "lang", XmlUtils.parseString),
+  );
   const switchingSetKey = ManifestUtils.getSwitchingSetKey(
     type,
     codec,
