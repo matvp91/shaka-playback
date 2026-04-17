@@ -164,10 +164,13 @@ export class StreamController {
 
     const { preferences } = this.player_.getConfig();
     for (const [type, streams] of this.streamsMap_) {
+      const matches = StreamUtils.findStreamsMatchingPreferences(
+        type,
+        streams,
+        preferences,
+      );
       const stream =
-        StreamUtils.findBestSuitableStream(type, streams, preferences) ??
-        this.streams_.get(type) ??
-        streams[0];
+        matches?.[0] ?? this.streams_.get(type) ?? streams[0];
       asserts.assertExists(stream, "Missing initial stream");
       this.streams_.set(type, stream);
       log.info("Initial", type, stream);

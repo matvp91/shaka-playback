@@ -33,11 +33,11 @@ export function buildStreams(manifest: Manifest): Map<MediaType, Stream[]> {
   return result;
 }
 
-export function findBestSuitableStream<T extends MediaType>(
+export function findStreamsMatchingPreferences<T extends MediaType>(
   type: T,
   streams: Stream<T>[],
   preferences: Preference[],
-): Stream | null {
+): Stream<T>[] | null {
   asserts.assertExists(streams[0], "No Streams");
 
   for (const preference of preferences) {
@@ -45,17 +45,23 @@ export function findBestSuitableStream<T extends MediaType>(
       continue;
     }
     const matches = streams.filter((s) => matchesPreference(s, preference));
-    if (matches[0]) {
-      return matches[0];
+    if (matches.length === 0) {
+      continue;
     }
+    return matches;
   }
 
   return null;
 }
 
 function matchesPreference(stream: Stream, preference: Preference): boolean {
-  if (preference.codec !== undefined && stream.codec !== preference.codec) {
-    return false;
+  if (preference.codec !== undefined) {
+    const normalizedPreferenceCodec = CodecUtils.getNormalizedCodec(
+      preference.codec,
+    );
+    if (stream.codec !== normalizedPreferenceCodec) {
+      return false;
+    }
   }
   // TODO(matvp): language/channels matching once those fields
   // are added to AudioStream/SubtitleStream.
