@@ -1,5 +1,6 @@
 import type * as txml from "txml";
-import type { SwitchingSet, Track } from "../types/manifest";
+import type { AudioSwitchingSet, SwitchingSet, Track } from "../types/manifest";
+import { LANGUAGE_UNKNOWN } from "../types/manifest";
 import { MediaType } from "../types/media";
 import * as asserts from "../utils/asserts";
 import * as Functional from "../utils/functional";
@@ -52,12 +53,20 @@ function processAdaptationSet(
 
   const type = inferMediaType(adaptationSet, representations);
   const codec = resolveCodec(adaptationSet, representations);
-  const switchingSetKey = ManifestUtils.getSwitchingSetKey(type, codec);
+  const language =
+    XmlUtils.attr(adaptationSet, "lang", XmlUtils.parseString) ??
+    LANGUAGE_UNKNOWN;
+  const switchingSetKey = ManifestUtils.getSwitchingSetKey(
+    type,
+    codec,
+    language,
+  );
   const switchingSet = getOrCreateSwitchingSet(
     ctx,
     switchingSetKey,
     type,
     codec,
+    language,
   );
 
   for (const representation of representations) {
@@ -86,15 +95,28 @@ function getOrCreateSwitchingSet(
   key: string,
   type: MediaType,
   codec: string,
+  language: string,
 ): SwitchingSet {
   const switchingSet = ctx.switchingSets.get(key);
   if (switchingSet) {
     return switchingSet;
   }
-  const newSwitchingSet: SwitchingSet = {
-    type,
+  const commonProps = {
     codec,
     tracks: [],
+  };
+  if (type === MediaType.AUDIO) {
+    const newSwitchingSet: AudioSwitchingSet = {
+      type: MediaType.AUDIO,
+      language,
+      ...commonProps,
+    };
+    ctx.switchingSets.set(key, newSwitchingSet);
+    return newSwitchingSet;
+  }
+  const newSwitchingSet: SwitchingSet = {
+    type,
+    ...commonProps,
   };
   ctx.switchingSets.set(key, newSwitchingSet);
   return newSwitchingSet;
