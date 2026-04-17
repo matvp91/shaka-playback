@@ -1,14 +1,9 @@
 import type { Manifest, SwitchingSet, Track } from "../types/manifest";
-import type { Preference, Stream, VideoStream } from "../types/media";
+import type { Preference, Stream } from "../types/media";
 import { MediaType } from "../types/media";
 import * as asserts from "./asserts";
 import * as CodecUtils from "./codec_utils";
 
-/**
- * Walk the manifest once and produce per-type lists of `Stream`,
- * each carrying a `hierarchy` back-reference to the manifest's own
- * `SwitchingSet` and `Track` objects.
- */
 export function buildStreams(manifest: Manifest): Map<MediaType, Stream[]> {
   const result = new Map<MediaType, Stream[]>();
   for (const ss of manifest.switchingSets) {
@@ -33,52 +28,42 @@ export function buildStreams(manifest: Manifest): Map<MediaType, Stream[]> {
   return result;
 }
 
-/**
- * Return the match set for the highest-priority preference that
- * yields at least one matching stream. Returns `null` if no
- * preference matches. Does not perform quality selection — callers
- * combine this with `pickClosestByBandwidth` or similar when more
- * than one stream matches.
- */
-export function findStreamsMatchingPreferences<T extends MediaType>(
-  type: T,
-  streams: Stream<T>[],
+export function findStreamsMatchingPreferences(
+  type: MediaType,
+  streams: Stream[],
   preferences: Preference[],
-): Stream<T>[] | null {
+): Stream[] {
   asserts.assertExists(streams[0], "No Streams");
 
   for (const preference of preferences) {
     if (preference.type !== type) {
       continue;
     }
-    const normalizedCodec =
-      preference.codec !== undefined
-        ? CodecUtils.getNormalizedCodec(preference.codec)
-        : undefined;
-    const matches = streams.filter((s) =>
-      matchesPreference(s, preference, normalizedCodec),
-    );
+    const matches = streams.filter((s) => matchesPreference(s, preference));
     if (matches.length === 0) {
       continue;
     }
     return matches;
   }
 
-  return null;
+  return [];
 }
 
-function matchesPreference(
-  stream: Stream,
-  _preference: Preference,
-  normalizedCodec: string | undefined,
-): boolean {
-  if (normalizedCodec !== undefined) {
-    if (stream.codec !== normalizedCodec) {
+function matchesPreference(stream: Stream, preference: Preference): boolean {
+  if (stream.type !== preference.type) {
+    throw new Error("Type is not the same for matching");
+  }
+
+  // BasePreference comparison
+  if (preference.codec !== undefined) {
+    if (stream.codec !== preference.codec) {
       return false;
     }
   }
+
   // TODO(matvp): language/channels matching once those fields
   // are added to AudioStream/SubtitleStream.
+
   return true;
 }
 
@@ -111,28 +96,21 @@ function projectStream(ss: SwitchingSet, track: Track): Stream {
   throw new Error(`Failed to map track for type ${track.type}`);
 }
 
-/**
- * Pick the stream in `matches` whose bandwidth is closest to
- * `activeStream.bandwidth`. Ties are broken by iteration order —
- * the first match wins, which in practice means the lower-bandwidth
- * stream when `matches` is sorted ascending (see `buildStreams`).
- */
 export function pickClosestByBandwidth(
-  matches: VideoStream[],
-  activeStream: VideoStream,
-): VideoStream {
-  asserts.assertExists(
-    matches[0],
-    "pickClosestByBandwidth requires a non-empty list",
-  );
-  let best = matches[0];
-  let bestDelta = Math.abs(best.bandwidth - activeStream.bandwidth);
-  for (let i = 1; i < matches.length; i++) {
-    const candidate = matches[i];
+  streams: Stream[],
+  lookupStream: Stream,
+): Stream | null {
+  if (!streams[0]) {
+    return null;
+  }
+  let best = streams[0];
+  let bestDelta = Math.abs(best.bandwidth - lookupStream.bandwidth);
+  for (let i = 1; i < streams.length; i++) {
+    const candidate = streams[i];
     if (candidate === undefined) {
       break;
     }
-    const delta = Math.abs(candidate.bandwidth - activeStream.bandwidth);
+    const delta = Math.abs(candidate.bandwidth - lookupStream.bandwidth);
     if (delta < bestDelta) {
       best = candidate;
       bestDelta = delta;

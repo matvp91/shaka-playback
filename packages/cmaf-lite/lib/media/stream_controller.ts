@@ -157,23 +157,8 @@ export class StreamController {
     this.media_ = null;
   };
 
-  /**
-   * Resolve which stream should be active for `type`, combining
-   * preferences, the currently active stream, and the available
-   * streams. Decision order:
-   *   1. Preferences yield a match set + video + active exists →
-   *      pick the match closest in bandwidth to the active stream.
-   *   2. Preferences yield a match set → first match.
-   *   3. No preference match → keep the active stream if any.
-   *   4. Fallback → first available stream (lowest bandwidth).
-   * Callable wherever a re-selection is needed (initial start,
-   * runtime preference change, manifest refresh, period
-   * transitions, codec fallback).
-   */
-  private resolveStream_<T extends MediaType>(
-    type: T,
-    streams: Stream<T>[],
-  ): Stream<T> {
+  private resolveStream_(type: MediaType, streams: Stream[]): Stream {
+    asserts.assertExists(streams[0], "No Streams");
     const { preferences } = this.player_.getConfig();
     const matches = StreamUtils.findStreamsMatchingPreferences(
       type,
@@ -181,26 +166,25 @@ export class StreamController {
       preferences,
     );
     const activeStream = this.streams_.get(type);
-
-    if (matches) {
-      if (type === MediaType.VIDEO && activeStream) {
-        // @ts-expect-error TS cannot narrow generic T to MediaType.VIDEO
-        // from the runtime check above; the user will address this.
-        return StreamUtils.pickClosestByBandwidth(matches, activeStream);
+    if (matches[0]) {
+      if (activeStream) {
+        // If we have an active stream already (ABR might have set one), we can
+        // find the closest stream of our matches to respect bandwidth estimation.
+        const closestStream = StreamUtils.pickClosestByBandwidth(
+          matches,
+          activeStream,
+        );
+        if (closestStream) {
+          return closestStream;
+        }
       }
-      const first = matches[0];
-      if (first) {
-        return first;
-      }
+      // The first match has the highest priority.
+      return matches[0];
     }
     if (activeStream) {
-      // @ts-expect-error activeStream is Stream<MediaType>, which may be
-      // wider than Stream<T>; the user will address this.
       return activeStream;
     }
-    const first = streams[0];
-    asserts.assertExists(first, `No streams for type ${type}`);
-    return first;
+    return streams[0];
   }
 
   private tryStart_() {

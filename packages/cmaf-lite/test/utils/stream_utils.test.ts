@@ -40,7 +40,7 @@ describe("findStreamsMatchingPreferences", () => {
   it("returns all matching streams for the first type-matching preference", () => {
     const streams = videoStreams();
     const preferences: Preference[] = [
-      { type: MediaType.VIDEO, codec: "avc1.64001f" },
+      { type: MediaType.VIDEO, codec: "avc" },
     ];
     const result = findStreamsMatchingPreferences(
       MediaType.VIDEO,
@@ -48,14 +48,14 @@ describe("findStreamsMatchingPreferences", () => {
       preferences,
     );
     expect(result).toHaveLength(2);
-    expect(result!.every((s) => s.codec === "avc")).toBe(true);
+    expect(result.every((s) => s.codec === "avc")).toBe(true);
   });
 
   it("skips preferences whose type does not match the requested type", () => {
     const streams = videoStreams();
     const preferences: Preference[] = [
-      { type: MediaType.AUDIO, codec: "mp4a.40.2" },
-      { type: MediaType.VIDEO, codec: "av01.0.05M.08" },
+      { type: MediaType.AUDIO, codec: "mp4a" },
+      { type: MediaType.VIDEO, codec: "av1" },
     ];
     const result = findStreamsMatchingPreferences(
       MediaType.VIDEO,
@@ -63,15 +63,15 @@ describe("findStreamsMatchingPreferences", () => {
       preferences,
     );
     expect(result).toHaveLength(1);
-    expect(result![0]!.codec).toBe("av1");
+    expect(result[0]!.codec).toBe("av1");
   });
 
   it("returns the match set for the earliest preference that yields hits", () => {
     const streams = videoStreams();
     const preferences: Preference[] = [
-      { type: MediaType.VIDEO, codec: "hev1.2.4.L120.90" },
-      { type: MediaType.VIDEO, codec: "avc1.64001f" },
-      { type: MediaType.VIDEO, codec: "av01.0.05M.08" },
+      { type: MediaType.VIDEO, codec: "hev" },
+      { type: MediaType.VIDEO, codec: "avc" },
+      { type: MediaType.VIDEO, codec: "av1" },
     ];
     const result = findStreamsMatchingPreferences(
       MediaType.VIDEO,
@@ -79,26 +79,26 @@ describe("findStreamsMatchingPreferences", () => {
       preferences,
     );
     expect(result).toHaveLength(2);
-    expect(result!.every((s) => s.codec === "avc")).toBe(true);
+    expect(result.every((s) => s.codec === "avc")).toBe(true);
   });
 
-  it("returns null when no preference matches any stream", () => {
+  it("returns an empty array when no preference matches any stream", () => {
     const streams = videoStreams();
     const preferences: Preference[] = [
-      { type: MediaType.VIDEO, codec: "hev1.2.4.L120.90" },
+      { type: MediaType.VIDEO, codec: "hev" },
     ];
     const result = findStreamsMatchingPreferences(
       MediaType.VIDEO,
       streams,
       preferences,
     );
-    expect(result).toBeNull();
+    expect(result).toHaveLength(0);
   });
 
-  it("returns null when preferences list is empty", () => {
+  it("returns an empty array when preferences list is empty", () => {
     const streams = videoStreams();
     const result = findStreamsMatchingPreferences(MediaType.VIDEO, streams, []);
-    expect(result).toBeNull();
+    expect(result).toHaveLength(0);
   });
 
   it("treats an undefined codec field as an unconstrained match", () => {
@@ -110,23 +110,6 @@ describe("findStreamsMatchingPreferences", () => {
       preferences,
     );
     expect(result).toHaveLength(streams.length);
-  });
-
-  it("matches preferences expressed with raw RFC 6381 codec strings", () => {
-    const streams = videoStreams();
-    // Preference uses the full RFC 6381 string; streams store the
-    // normalized family name. Without codec normalization on the
-    // preference side, this match would never resolve.
-    const preferences: Preference[] = [
-      { type: MediaType.VIDEO, codec: "avc1.64001f" },
-    ];
-    const result = findStreamsMatchingPreferences(
-      MediaType.VIDEO,
-      streams,
-      preferences,
-    );
-    expect(result).not.toBeNull();
-    expect(result!.every((s) => s.codec === "avc")).toBe(true);
   });
 });
 
@@ -152,27 +135,33 @@ describe("pickClosestByBandwidth", () => {
     return list.filter((s): s is VideoStream => s.type === MediaType.VIDEO);
   };
 
-  it("returns the match whose bandwidth is closest to the active stream", () => {
+  it("returns the match whose bandwidth is closest to the lookup stream", () => {
     const matches = videoStreamsFor([500_000, 2_000_000, 5_000_000]);
-    const active = matches[1]!;
-    const result = pickClosestByBandwidth(matches, active);
-    expect(result.bandwidth).toBe(2_000_000);
+    const lookup = matches[1]!;
+    const result = pickClosestByBandwidth(matches, lookup);
+    expect(result!.bandwidth).toBe(2_000_000);
   });
 
   it("keeps the earlier entry when two matches tie on distance", () => {
-    // matches ascending: [1_000_000, 3_000_000]; active is midpoint 2_000_000.
+    // matches ascending: [1_000_000, 3_000_000]; lookup is midpoint 2_000_000.
     // Distance ties → stable iteration keeps the earlier entry (1M).
     const matches = videoStreamsFor([1_000_000, 3_000_000]);
-    const active = videoStreamsFor([2_000_000])[0]!;
-    const result = pickClosestByBandwidth(matches, active);
-    expect(result.bandwidth).toBe(1_000_000);
+    const lookup = videoStreamsFor([2_000_000])[0]!;
+    const result = pickClosestByBandwidth(matches, lookup);
+    expect(result!.bandwidth).toBe(1_000_000);
   });
 
   it("returns the sole match when the set has a single entry", () => {
     const matches = videoStreamsFor([2_500_000]);
-    const active = videoStreamsFor([9_999_000])[0]!;
-    const result = pickClosestByBandwidth(matches, active);
-    expect(result.bandwidth).toBe(2_500_000);
+    const lookup = videoStreamsFor([9_999_000])[0]!;
+    const result = pickClosestByBandwidth(matches, lookup);
+    expect(result!.bandwidth).toBe(2_500_000);
+  });
+
+  it("returns null when the match set is empty", () => {
+    const lookup = videoStreamsFor([1_000_000])[0]!;
+    const result = pickClosestByBandwidth([], lookup);
+    expect(result).toBeNull();
   });
 });
 
