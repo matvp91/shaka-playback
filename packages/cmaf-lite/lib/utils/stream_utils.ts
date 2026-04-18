@@ -5,19 +5,18 @@ import * as asserts from "./asserts";
 import * as CodecUtils from "./codec_utils";
 
 export function buildStreams(manifest: Manifest): Map<MediaType, Stream[]> {
-  const result = new Map<MediaType, Stream[]>();
+  const result = new Map<MediaType, Stream[]>([
+    [MediaType.VIDEO, []],
+    [MediaType.AUDIO, []],
+  ]);
   for (const ss of manifest.switchingSets) {
     for (const track of ss.tracks) {
       const stream = projectStream(ss, track);
       const list = result.get(stream.type);
-      if (!list) {
-        result.set(stream.type, [stream]);
-        continue;
-      }
+      asserts.assertExists(list, `No list for ${stream.type}`);
       list.push(stream);
     }
   }
-  asserts.assert(result.size > 0, "No streams found");
   // Sorted by bandwidth ascending — index 0 is lowest quality.
   // Required for ABR rules to reason about the quality ladder.
   for (const streams of result.values()) {
