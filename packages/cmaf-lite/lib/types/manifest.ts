@@ -1,6 +1,13 @@
 import type { MediaType } from "./media";
 
 /**
+ * Unknown language.
+ *
+ * @public
+ */
+export const LANGUAGE_UNKNOWN = "unk";
+
+/**
  * Parsed manifest representing a CMAF presentation.
  *
  * @public
@@ -40,6 +47,8 @@ export interface VideoSwitchingSet extends BaseSwitchingSet {
  */
 export interface AudioSwitchingSet extends BaseSwitchingSet {
   type: MediaType.AUDIO;
+  /** Language */
+  language: string;
   /** Audio tracks. */
   tracks: AudioTrack[];
 }
